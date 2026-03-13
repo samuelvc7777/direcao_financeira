@@ -15,6 +15,8 @@ import {
   LogOut
 } from "lucide-react"
 
+import { fetchApi } from "@/lib/api/client"
+
 export default function DashboardLayout({
   children,
 }: {
@@ -26,15 +28,33 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
+    async function loadUser() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
 
-    if (!token || !storedUser) {
-      router.push('/login');
-    } else {
-      setUser(JSON.parse(storedUser));
+      try {
+        // Tenta buscar do banco primeiro para ter o nome mais atualizado
+        const userData = await fetchApi('/me');
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      } catch (err) {
+        console.error("Erro ao sincronizar perfil:", err);
+        // Fallback: se a API falhar (ex: falta de middleware), tenta usar o que está no localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
+          router.push('/login');
+        }
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
+
+    loadUser();
   }, [router]);
 
   const handleLogout = () => {
