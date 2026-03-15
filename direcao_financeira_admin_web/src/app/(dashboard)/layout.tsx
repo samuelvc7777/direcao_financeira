@@ -37,7 +37,14 @@ export default function DashboardLayout({
 
       try {
         // Tenta buscar do banco primeiro para ter o nome mais atualizado
-        const userData = await fetchApi('/me');
+        const userData = await fetchApi('/auth/me');
+        
+        // Bloqueio de segurança no Layout: Chuta o usuário se não for Admin/Attendant
+        if (userData.role === 'USER') {
+          handleLogout();
+          return;
+        }
+
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
       } catch (err) {
@@ -45,7 +52,12 @@ export default function DashboardLayout({
         // Fallback: se a API falhar (ex: falta de middleware), tenta usar o que está no localStorage
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          if (parsedUser.role === 'USER') {
+             handleLogout();
+             return;
+          }
+          setUser(parsedUser);
         } else {
           router.push('/login');
         }

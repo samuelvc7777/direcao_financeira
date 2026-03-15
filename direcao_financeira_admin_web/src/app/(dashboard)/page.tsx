@@ -1,15 +1,79 @@
 "use client"
 
+import { useState, useEffect } from "react";
 import { 
   Users, 
   Gem, 
   TrendingUp, 
   ChevronRight,
-  MoreHorizontal
+  MoreHorizontal,
+  Loader2
 } from "lucide-react"
 import Link from "next/link";
+import { fetchApi } from "@/lib/api/client";
+
+interface DashboardData {
+  metrics: {
+    totalUsers: number;
+    activeUsers: number;
+    newUsers24h: number;
+    estimatedRevenue: number;
+  };
+  plans: Array<{
+    name: string;
+    count: number;
+    revenue: number;
+  }>;
+  recentActivity: Array<{
+    id: string;
+    action: string;
+    details: string;
+    userName: string;
+    createdAt: string;
+  }>;
+}
 
 export default function Home() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const [dashData, usersResponse] = await Promise.all([
+          fetchApi('/admin/dashboard').catch(() => ({
+            metrics: { totalUsers: 0, activeUsers: 0, newUsers24h: 0, estimatedRevenue: 0 },
+            plans: [],
+            recentActivity: []
+          })),
+          fetchApi('/user')
+        ]);
+        
+        setData(dashData);
+        
+        const usersList = Array.isArray(usersResponse) ? usersResponse : usersResponse.data || [];
+        setRecentUsers(usersList.slice(0, 5).map((u: any) => ({
+          ...u,
+          role: typeof u.role === 'string' ? { id: u.role, name: u.role } : u.role
+        })));
+      } catch (error) {
+        console.error("Erro ao carregar dashboard:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadDashboard();
+  }, []);
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-10 space-y-10 animate-fade-in-up">
       {/* Stats Cards */}
@@ -20,8 +84,8 @@ export default function Home() {
           </div>
           <p className="text-sm font-medium text-slate-400 dark:text-slate-500">Total de Usuários</p>
           <div className="flex items-end gap-2 mt-1">
-            <h3 className="text-2xl font-bold">1,284</h3>
-            <span className="text-xs font-bold text-emerald-500 pb-1">+12% vs mês anterior</span>
+            <h3 className="text-2xl font-bold">{data.metrics.totalUsers.toLocaleString()}</h3>
+            <span className="text-xs font-bold text-emerald-500 pb-1">+{data.metrics.newUsers24h} hoje</span>
           </div>
         </div>
         
@@ -29,10 +93,14 @@ export default function Home() {
           <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Gem className="h-6 w-6" />
           </div>
-          <p className="text-sm font-medium text-slate-400 dark:text-slate-500">Planos Ativos</p>
+          <p className="text-sm font-medium text-slate-400 dark:text-slate-500">Usuários Ativos</p>
           <div className="flex items-end gap-2 mt-1">
-            <h3 className="text-2xl font-bold">856</h3>
-            <span className="text-xs font-bold text-emerald-500 pb-1">67% de conversão</span>
+            <h3 className="text-2xl font-bold">{data.metrics.activeUsers.toLocaleString()}</h3>
+            <span className="text-xs font-bold text-emerald-500 pb-1">
+              {data.metrics.totalUsers > 0 
+                ? ((data.metrics.activeUsers / data.metrics.totalUsers) * 100).toFixed(0) 
+                : 0}% da base
+            </span>
           </div>
         </div>
 
@@ -42,8 +110,10 @@ export default function Home() {
           </div>
           <p className="text-sm font-medium text-slate-400 dark:text-slate-500">Receita Estimada</p>
           <div className="flex items-end gap-2 mt-1">
-            <h3 className="text-2xl font-bold">R$ 42.190</h3>
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 pb-1">Previsão Mensal</span>
+            <h3 className="text-2xl font-bold">
+              {(data.metrics.estimatedRevenue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </h3>
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 pb-1">MRR Atual</span>
           </div>
         </div>
       </div>
@@ -67,16 +137,12 @@ export default function Home() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {[
-                { name: "João Silva", email: "joao.silva@email.com", plan: "Premium Mensal", status: "Ativo", color: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" },
-                { name: "Maria Almeida", email: "maria.a@email.com", plan: "Grátis", status: "Ativo", color: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" },
-                { name: "Ricardo Costa", email: "ricardo.c@email.com", plan: "Premium Anual", status: "Pendente", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400", statusColor: "bg-amber-500" }
-              ].map((user, i) => (
-                <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              {recentUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                        {user.name.split(' ').map(n => n[0]).join('')}
+                        {user.name.split(' ').map((n: any) => n[0]).join('')}
                       </div>
                       <div>
                         <p className="text-sm font-bold">{user.name}</p>
@@ -85,20 +151,26 @@ export default function Home() {
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase ${user.color}`}>
-                      {user.plan}
+                    <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase ${
+                      user.plan?.id === 'plan-premium' 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}>
+                      {user.plan?.name || 'Sem Plano'}
                     </span>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${user.statusColor || 'bg-emerald-500'}`}></div>
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{user.status}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        {user.isActive ? 'Ativo' : 'Inativo'}
+                      </span>
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-600 transition-colors">
+                    <Link href={`/users?id=${user.id}`} className="p-2 inline-block hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-600 transition-colors">
                       <MoreHorizontal className="h-5 w-5" />
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}

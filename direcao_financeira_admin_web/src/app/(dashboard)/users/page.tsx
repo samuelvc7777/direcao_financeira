@@ -71,7 +71,7 @@ export default function UsersPage() {
     email: '',
     isActive: true,
     planId: '',
-    roleName: 'COMMON' as 'ADMIN' | 'COMMON'
+    role: 'USER' as 'ADMIN' | 'USER'
   });
 
   const loadData = useCallback(async () => {
@@ -85,12 +85,25 @@ export default function UsersPage() {
       }).toString();
 
       const [usersResponse, plansData] = await Promise.all([
-        fetchApi(`/admin/users?${query}`),
-        fetchApi('/admin/plans')
+        fetchApi('/user'), // Backend atual usa /user
+        fetchApi('/admin/plans').catch(() => []) // Silencia erro se plans não existir
       ]);
 
-      setUsers(usersResponse.data);
-      setMeta(usersResponse.meta);
+      // Adapta o retorno simples do backend para o formato com metadados do frontend
+      const usersData = Array.isArray(usersResponse) ? usersResponse : usersResponse.data || [];
+      const mappedUsers = usersData.map((u: any) => ({
+        ...u,
+        role: typeof u.role === 'string' ? { id: u.role, name: u.role } : u.role,
+        plan: u.plan || { id: 'none', name: 'Sem Plano' }
+      }));
+
+      setUsers(mappedUsers);
+      setMeta(usersResponse.meta || {
+        total: mappedUsers.length,
+        page: 1,
+        limit: 10,
+        totalPages: 1
+      });
       setPlans(plansData);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados');
@@ -116,7 +129,7 @@ export default function UsersPage() {
       email: user.email,
       isActive: user.isActive,
       planId: user.plan?.id || '',
-      roleName: user.role.name as any
+      role: user.role.name as any
     });
     setIsModalOpen(true);
   };
@@ -127,14 +140,14 @@ export default function UsersPage() {
 
     setIsSubmitting(true);
     try {
-      await fetchApi(`/admin/users/${editingUser.id}`, {
+      await fetchApi(`/user/${editingUser.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
           isActive: formData.isActive,
-          planId: formData.planId || null,
-          roleName: formData.roleName
+          planId: formData.planId ? Number(formData.planId) : null,
+          role: formData.role
         })
       });
       setIsModalOpen(false);
@@ -149,7 +162,7 @@ export default function UsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja excluir este usuário?')) return;
     try {
-      await fetchApi(`/admin/users/${id}`, { method: 'DELETE' });
+      await fetchApi(`/user/${id}`, { method: 'DELETE' });
       loadData();
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir usuário');
@@ -307,8 +320,8 @@ export default function UsersPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Cargo (Role)</label>
-                  <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none appearance-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium" value={formData.roleName} onChange={e => setFormData({...formData, roleName: e.target.value as any})}>
-                    <option value="COMMON">Motorista (Comum)</option>
+                  <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none appearance-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as any})}>
+                    <option value="USER">Motorista (Comum)</option>
                     <option value="ADMIN">Administrador</option>
                   </select>
                 </div>

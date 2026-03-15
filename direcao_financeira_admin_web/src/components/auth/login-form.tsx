@@ -34,8 +34,13 @@ export function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
 
+      // Validação de segurança: bloquear motoristas comuns de entrarem no Admin
+      if (data.user.role === 'USER') {
+        throw new Error('Acesso negado: Este portal é restrito a administradores e atendentes.');
+      }
+
       // Salva o token e dados do usuário
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       router.push('/');

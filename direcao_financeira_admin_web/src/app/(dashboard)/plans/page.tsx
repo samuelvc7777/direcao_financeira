@@ -25,7 +25,9 @@ interface Plan {
   name: string;
   description: string | null;
   price: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'CANCELED';
+  isActive: boolean;
+  durationDays: number;
+  color: string;
   createdAt: string;
   _count?: {
     users: number;
@@ -45,7 +47,9 @@ export default function PlansPage() {
     name: '',
     description: '',
     price: 0,
-    status: 'ACTIVE' as const
+    durationDays: 30,
+    color: '#6366f1',
+    isActive: true
   });
 
   const loadPlans = async () => {
@@ -70,12 +74,14 @@ export default function PlansPage() {
       setFormData({
         name: plan.name,
         description: plan.description || '',
-        price: plan.price / 100,
-        status: plan.status
+        price: plan.price,
+        durationDays: plan.durationDays,
+        color: plan.color,
+        isActive: plan.isActive
       });
     } else {
       setEditingPlan(null);
-      setFormData({ name: '', description: '', price: 0, status: 'ACTIVE' });
+      setFormData({ name: '', description: '', price: 0, durationDays: 30, color: '#6366f1', isActive: true });
     }
     setIsModalOpen(true);
   };
@@ -86,7 +92,8 @@ export default function PlansPage() {
     try {
       const payload = {
         ...formData,
-        price: Math.round(Number(formData.price) * 100)
+        price: Number(formData.price),
+        durationDays: Number(formData.durationDays)
       };
 
       if (editingPlan) {
@@ -178,7 +185,7 @@ export default function PlansPage() {
                   <h3 className="text-xl font-bold tracking-tight">{plan.name}</h3>
                   <div className="flex items-baseline gap-1 mt-3">
                     <span className="text-4xl font-black tracking-tighter">
-                      {(plan.price / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {plan.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
                     <span className="text-sm font-bold text-slate-400">
                       {plan.name.toLowerCase().includes('anual') ? '/ano' : '/mês'}
@@ -202,11 +209,11 @@ export default function PlansPage() {
                   <span className="ml-1">{plan._count?.users || 0} usuários</span>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  plan.status === 'ACTIVE' 
+                  plan.isActive 
                   ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-200 dark:border-emerald-800' 
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
                 }`}>
-                  {plan.status === 'ACTIVE' ? 'Ativo' : 'Pausado'}
+                  {plan.isActive ? 'Ativo' : 'Pausado'}
                 </div>
               </div>
             </div>
@@ -279,20 +286,37 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              {/* Status */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Duração (Dias)</label>
+                  <input 
+                    required
+                    type="number" 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                    value={formData.durationDays}
+                    onChange={e => setFormData({...formData, durationDays: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Cor do Card</label>
+                  <input 
+                    type="color" 
+                    className="w-full h-[52px] p-2 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all cursor-pointer"
+                    value={formData.color}
+                    onChange={e => setFormData({...formData, color: e.target.value})}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Status de Disponibilidade</label>
-                <div className="relative group">
-                  <Activity className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <select 
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none appearance-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
-                    value={formData.status}
-                    onChange={e => setFormData({...formData, status: e.target.value as any})}
-                  >
-                    <option value="ACTIVE">Ativo (Visível na loja)</option>
-                    <option value="INACTIVE">Inativo (Oculto)</option>
-                    <option value="CANCELED">Cancelado (Descontinuado)</option>
-                  </select>
+                <div className="flex gap-4">
+                  <button type="button" onClick={() => setFormData({...formData, isActive: true})} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border transition-all ${formData.isActive ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'border-slate-200 text-slate-400'}`}>
+                    Ativo
+                  </button>
+                  <button type="button" onClick={() => setFormData({...formData, isActive: false})} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border transition-all ${!formData.isActive ? 'bg-slate-100 border-slate-400 text-slate-600' : 'border-slate-200 text-slate-400'}`}>
+                    Pausado
+                  </button>
                 </div>
               </div>
 
