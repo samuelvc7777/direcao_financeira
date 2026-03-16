@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'login_controller.dart';
+import '../../../routes/app_pages.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/custom_filled_button.dart';
+import 'widgets/login_header.dart';
+
+class LoginView extends GetView<LoginController> {
+  const LoginView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.petrol,
+              AppColors.backgroundDark.withOpacity(0.9),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const LoginHeader(),
+                        const SizedBox(height: 48),
+
+                        // Form Fields
+                        CustomTextField(
+                          controller: controller.emailController,
+                          label: 'E-mail',
+                          hint: 'seu@email.com',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        Obx(() => CustomTextField(
+                          controller: controller.passwordController,
+                          label: 'Senha',
+                          hint: '••••••',
+                          icon: Icons.lock_outline,
+                          isPassword: true,
+                          obscureText: !controller.isPasswordVisible.value,
+                          onTogglePassword: controller.togglePasswordVisibility,
+                        )),
+                        
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {},
+                            child: Text(
+                              'Esqueceu a senha?',
+                              style: TextStyle(color: AppColors.sand.withOpacity(0.8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Login Button
+                        Obx(() => CustomFilledButton(
+                          text: 'ENTRAR NO PAINEL',
+                          isLoading: controller.isLoading.value,
+                          onPressed: controller.login,
+                        )),
+                        
+                        const SizedBox(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Ainda não tem conta?',
+                              style: TextStyle(color: AppColors.textSecondaryDark),
+                            ),
+                            TextButton(
+                              onPressed: () => Get.toNamed(AppRoutes.register),
+                              child: const Text(
+                                'Cadastre-se',
+                                style: TextStyle(
+                                  color: AppColors.teal,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}

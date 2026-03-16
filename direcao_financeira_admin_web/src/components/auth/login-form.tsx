@@ -13,6 +13,8 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error ? error.message : fallback;
 
   // Redireciona se já estiver logado
   React.useEffect(() => {
@@ -44,8 +46,8 @@ export function LoginForm() {
       localStorage.setItem('user', JSON.stringify(data.user));
       
       router.push('/');
-    } catch (err: any) {
-      setError(err.message || 'Erro ao realizar login. Tente novamente.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Erro ao realizar login. Tente novamente.'));
     } finally {
       setIsLoading(false);
     }

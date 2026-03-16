@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+  ATTENDANT
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
+enum PaymentMethod {
+  PIX
+  CARD
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  WALLET
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum AssetType {
+  BANK_ACCOUNT
+  CREDIT_CARD
+}
+
+enum TransactionStatus {
+  PENDING
+  CLEARED
+  CANCELED
+}
+
+enum InvoiceStatus {
+  OPEN
+  CLOSED
+  PAID
+  OVERDUE
+}
+
+model User {
+  id              Int                 @id @default(autoincrement())
+  email           String              @unique
+  password        String
+  name            String
+  role            Role                @default(USER)
+  isActive        Boolean             @default(true)
+  subscriptions   Subscription[]
+  bankAccounts    BankAccount[]
+  creditCards     CreditCard[]
+  categories      Category[]
+  transactions    Transaction[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model Plan {
+  id            Int            @id @default(autoincrement())
+  code          String         @unique
+  name          String         @unique
+  description   String
+  priceCents    Int
+  durationDays  Int
+  color         String
+  isActive      Boolean
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Subscription {
+  id         Int                @id @default(autoincrement())
+  userId     Int
+  planId     Int
+  status     SubscriptionStatus @default(ACTIVE)
+  startDate  DateTime           @default(now())
+  endDate    DateTime?
+  canceledAt DateTime?
+  autoRenew  Boolean            @default(false)
+  user       User               @relation(fields: [userId], references: [id])
+  plan       Plan               @relation(fields: [planId], references: [id])
+  payments   Payment[]
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([userId, status])
+  @@index([planId])
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  subscriptionId    Int
+  amountCents       Int
+  status            PaymentStatus @default(PENDING)
+  method            PaymentMethod
+  externalReference String?
+  dueDate           DateTime?
+  paidAt            DateTime?
+  subscription      Subscription  @relation(fields: [subscriptionId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([subscriptionId, status])
+}
+
+model BankAccount {
+  id                  Int              @id @default(autoincrement())
+  userId              Int
+  name                String
+  bankName            String
+  accountType         AccountType
+  initialBalanceCents Int
+  currentBalanceCents Int
+  isActive            Boolean          @default(true)
+  user                User             @relation(fields: [userId], references: [id])
+  transactions        Transaction[]
+  invoicePayments     InvoicePayment[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([userId, isActive])
+}
+
+model CreditCard {
+  id                  Int                 @id @default(autoincrement())
+  userId              Int
+  name                String
+  brand               String
+  lastFourDigits      String
+  limitCents          Int
+  availableLimitCents Int
+  closingDay          Int
+  dueDay              Int
+  isActive            Boolean             @default(true)
+  user                User                @relation(fields: [userId], references: [id])
+  transactions        Transaction[]
+  invoices            CreditCardInvoice[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([userId, isActive])
+}
+
+model Category {
+  id           Int           @id @default(autoincrement())
+  userId       Int
+  name         String
+  type         CategoryType
+  color        String
+  icon         String
+  isActive     Boolean       @default(true)
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([userId, name, type])
+  @@index([userId, isActive])
+}
+
+model Transaction {
+  id             Int               @id @default(autoincrement())
+  userId         Int
+  type           TransactionType
+  assetType      AssetType
+  bankAccountId  Int?
+  creditCardId   Int?
+  categoryId     Int
+  invoiceId      Int?
+  description    String
+  amountCents    Int
+  transactionDate DateTime
+  competencyDate DateTime?
+  status         TransactionStatus @default(CLEARED)
+  notes          String?
+  user           User              @relation(fields: [userId], references: [id])
+  bankAccount    BankAccount?      @relation(fields: [bankAccountId], references: [id])
+  creditCard     CreditCard?       @relation(fields: [creditCardId], references: [id])
+  category       Category          @relation(fields: [categoryId], references: [id])
+  invoice        CreditCardInvoice? @relation(fields: [invoiceId], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([userId, transactionDate])
+  @@index([bankAccountId])
+  @@index([creditCardId])
+  @@index([categoryId])
+  @@index([invoiceId])
+}
+
+model CreditCardInvoice {
+  id             Int              @id @default(autoincrement())
+  creditCardId   Int
+  referenceMonth Int
+  referenceYear  Int
+  closingDate    DateTime
+  dueDate        DateTime
+  totalCents     Int              @default(0)
+  paidCents      Int              @default(0)
+  status         InvoiceStatus    @default(OPEN)
+  creditCard     CreditCard       @relation(fields: [creditCardId], references: [id])
+  transactions   Transaction[]
+  payments       InvoicePayment[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([creditCardId, referenceMonth, referenceYear])
+  @@index([creditCardId, status])
+}
+
+model InvoicePayment {
+  id            Int               @id @default(autoincrement())
+  invoiceId     Int
+  bankAccountId Int
+  amountCents   Int
+  paymentDate   DateTime
+  invoice       CreditCardInvoice @relation(fields: [invoiceId], references: [id])
+  bankAccount   BankAccount       @relation(fields: [bankAccountId], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([invoiceId])
+  @@index([bankAccountId])
+}

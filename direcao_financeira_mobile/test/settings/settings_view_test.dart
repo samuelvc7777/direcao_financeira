@@ -1,0 +1,115 @@
+import 'package:direcao_financeira_mobile/app/core/theme/app_theme.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
+import 'package:direcao_financeira_mobile/app/presentation/modules/settings/settings_controller.dart';
+import 'package:direcao_financeira_mobile/app/presentation/modules/settings/settings_view.dart';
+import 'package:direcao_financeira_mobile/app/routes/app_pages.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
+
+class _FakeAuthRepository implements IAuthRepository {
+  bool logoutCalled = false;
+  UserEntity? storedUser;
+
+  @override
+  UserEntity? getStoredUser() => storedUser;
+
+  @override
+  Future<String?> getToken() async => null;
+
+  @override
+  Future<UserEntity> login(String email, String password) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> logout() async {
+    logoutCalled = true;
+  }
+
+  @override
+  Future<Map<String, dynamic>> register(String name, String email, String password) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> saveToken(String token) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> saveUser(UserEntity user) {
+    throw UnimplementedError();
+  }
+}
+
+void main() {
+  setUp(() {
+    Get.testMode = true;
+    Get.reset();
+  });
+
+  tearDown(Get.reset);
+
+  testWidgets('renderiza secoes principais, card de perfil e sair da conta', (
+    tester,
+  ) async {
+    final repository = _FakeAuthRepository()
+      ..storedUser = UserEntity(
+        id: 1,
+        email: 'samuel@example.com',
+        name: 'Samuel Vitor',
+        role: 'user',
+        isActive: true,
+      );
+
+    final controller = SettingsController(authRepository: repository)..onInit();
+    Get.put<SettingsController>(controller);
+
+    await tester.pumpWidget(
+      GetMaterialApp(
+        theme: AppTheme.dark,
+        home: const SettingsView(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ajustes'), findsNWidgets(2));
+    expect(find.text('Plano Anual'), findsOneWidget);
+    expect(find.text('FINANCAS'), findsOneWidget);
+    expect(find.text('CATEGORIAS'), findsOneWidget);
+    expect(find.text('CONFIGURACOES DE TRABALHO (SEMAFORO)'), findsOneWidget);
+    expect(find.text('JORNADA E METAS'), findsOneWidget);
+    expect(find.text('Sair da conta'), findsOneWidget);
+  });
+
+  testWidgets('cta Ver plano navega para rota de assinatura', (tester) async {
+    final repository = _FakeAuthRepository();
+    final controller = SettingsController(authRepository: repository);
+    Get.put<SettingsController>(controller);
+
+    await tester.pumpWidget(
+      GetMaterialApp(
+        theme: AppTheme.dark,
+        initialRoute: AppRoutes.settings,
+        getPages: [
+          GetPage(
+            name: AppRoutes.settings,
+            page: () => const SettingsView(),
+          ),
+          GetPage(
+            name: AppRoutes.subscription,
+            page: () => const Scaffold(body: Text('Subscription Screen')),
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ver plano'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Subscription Screen'), findsOneWidget);
+  });
+}

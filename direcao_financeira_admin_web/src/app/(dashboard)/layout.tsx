@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
@@ -17,6 +17,11 @@ import {
 
 import { fetchApi } from "@/lib/api/client"
 
+interface AuthUser {
+  name: string
+  role: string
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -24,8 +29,14 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/login');
+  }, [router]);
 
   useEffect(() => {
     async function loadUser() {
@@ -37,7 +48,7 @@ export default function DashboardLayout({
 
       try {
         // Tenta buscar do banco primeiro para ter o nome mais atualizado
-        const userData = await fetchApi('/auth/me');
+        const userData = await fetchApi('/auth/me') as AuthUser;
         
         // Bloqueio de segurança no Layout: Chuta o usuário se não for Admin/Attendant
         if (userData.role === 'USER') {
@@ -52,7 +63,7 @@ export default function DashboardLayout({
         // Fallback: se a API falhar (ex: falta de middleware), tenta usar o que está no localStorage
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
+          const parsedUser = JSON.parse(storedUser) as AuthUser;
           if (parsedUser.role === 'USER') {
              handleLogout();
              return;
@@ -67,13 +78,7 @@ export default function DashboardLayout({
     }
 
     loadUser();
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
+  }, [handleLogout, router]);
 
   if (loading || !user) {
     return (
