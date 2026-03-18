@@ -73,7 +73,7 @@ class RegisterController extends GetxController {
         Get.snackbar(
           'Bem-vindo(a)!',
           'Cadastro realizado! Boas vindas, ${userData['name']}.',
-          backgroundColor: const Color(0xFF03A696).withOpacity(0.12),
+          backgroundColor: const Color(0xFF03A696).withValues(alpha: 0.12),
           colorText: Colors.white,
           duration: const Duration(seconds: 4),
         );
@@ -86,7 +86,7 @@ class RegisterController extends GetxController {
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFBF4124).withOpacity(0.12),
+      backgroundColor: const Color(0xFFBF4124).withValues(alpha: 0.12),
       colorText: Colors.white,
     );
   }

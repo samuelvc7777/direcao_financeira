@@ -31,7 +31,9 @@ class AccountsSection extends GetView<HomeController> {
             decoration: BoxDecoration(
               color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+              border: Border.all(
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
             ),
             child: Column(
               children: [
@@ -46,7 +48,7 @@ class AccountsSection extends GetView<HomeController> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.electricCyan.withOpacity(0.15),
+                                color: AppColors.electricCyan.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -73,12 +75,12 @@ class AccountsSection extends GetView<HomeController> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: context.theme.colorScheme.onSurface.withOpacity(0.05),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.chevron_right,
-                          color: context.theme.colorScheme.onSurface.withOpacity(0.38),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
                           size: 20,
                         ),
                       ),
@@ -91,7 +93,9 @@ class AccountsSection extends GetView<HomeController> {
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Text(
                       'Nenhuma conta ativa',
-                      style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.5)),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   )
                 else
@@ -100,7 +104,7 @@ class AccountsSection extends GetView<HomeController> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: contas.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      separatorBuilder: (_, itemIndex) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         final conta = contas[index];
                         return SizedBox(
@@ -120,14 +124,19 @@ class AccountsSection extends GetView<HomeController> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                Divider(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+                Divider(
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Saldo Total',
-                      style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 14),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                        fontSize: 14,
+                      ),
                     ),
                     Flexible(
                       child: FittedBox(
@@ -167,9 +176,9 @@ class AccountsSection extends GetView<HomeController> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.15),
+        color: cor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cor.withOpacity(0.3)),
+        border: Border.all(color: cor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +191,7 @@ class AccountsSection extends GetView<HomeController> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: cor.withOpacity(0.2),
+                  color: cor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -201,7 +210,10 @@ class AccountsSection extends GetView<HomeController> {
             nome,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
+            style: TextStyle(
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              fontSize: 13,
+            ),
           ),
           FittedBox(
             fit: BoxFit.scaleDown,

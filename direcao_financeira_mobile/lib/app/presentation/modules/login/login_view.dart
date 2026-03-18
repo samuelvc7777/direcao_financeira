@@ -64,7 +64,7 @@ class LoginView extends GetView<LoginController> {
                             onPressed: () {},
                             child: Text(
                               'Esqueceu a senha?',
-                              style: TextStyle(color: AppColors.sand.withOpacity(0.8)),
+                              style: TextStyle(color: AppColors.sand.withValues(alpha: 0.8)),
                             ),
                           ),
                         ),

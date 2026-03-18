@@ -28,7 +28,7 @@ class TransactionTypeSelectorSheet extends StatelessWidget {
             width: Responsive.hp(context, 12),
             height: Responsive.vp(context, 0.6),
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.onSurface.withOpacity(0.12),
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(99),
             ),
           ),
@@ -120,9 +120,9 @@ class _SelectorItem extends StatelessWidget {
         width: isFullWidth ? double.infinity : null,
         padding: EdgeInsets.all(Responsive.sp(context, 20)),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(Responsive.sp(context, 24)),
-          border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -131,7 +131,7 @@ class _SelectorItem extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(Responsive.sp(context, 12)),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -153,7 +153,7 @@ class _SelectorItem extends StatelessWidget {
             Text(
               subtitle,
               style: TextStyle(
-                color: context.theme.colorScheme.onSurface.withOpacity(0.5),
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 fontSize: Responsive.sp(context, 12),
               ),
               textAlign: isFullWidth ? TextAlign.center : TextAlign.start,

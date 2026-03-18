@@ -4,12 +4,26 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/entities/plan_entity.dart';
 import '../../../domain/entities/subscription_entity.dart';
-import '../../../domain/repositories/i_subscription_repository.dart';
+import '../../../domain/usecases/subscription_use_cases.dart';
 
 class SubscriptionController extends GetxController {
-  SubscriptionController({required this.subscriptionRepository});
+  SubscriptionController({
+    required this.getMySubscriptionUseCase,
+    required this.getSubscriptionHistoryUseCase,
+    required this.getAvailablePlansUseCase,
+    required this.changePlanUseCase,
+    required this.cancelSubscriptionUseCase,
+    required this.renewSubscriptionUseCase,
+    required this.syncStoredUserSubscriptionUseCase,
+  });
 
-  final ISubscriptionRepository subscriptionRepository;
+  final GetMySubscriptionUseCase getMySubscriptionUseCase;
+  final GetSubscriptionHistoryUseCase getSubscriptionHistoryUseCase;
+  final GetAvailablePlansUseCase getAvailablePlansUseCase;
+  final ChangePlanUseCase changePlanUseCase;
+  final CancelSubscriptionUseCase cancelSubscriptionUseCase;
+  final RenewSubscriptionUseCase renewSubscriptionUseCase;
+  final SyncStoredUserSubscriptionUseCase syncStoredUserSubscriptionUseCase;
 
   final isLoading = true.obs;
   final isActionLoading = false.obs;
@@ -35,27 +49,22 @@ class SubscriptionController extends GetxController {
   Future<void> loadData() async {
     isLoading.value = true;
     errorMessage.value = null;
-    debugPrint('[SubscriptionController] loadData() iniciado');
 
-    final results = await Future.wait<dynamic>([
-      subscriptionRepository.getMySubscription(),
-      subscriptionRepository.getSubscriptionHistory(),
-      subscriptionRepository.getAvailablePlans(),
-    ]);
+    final activeSubscriptionFuture = getMySubscriptionUseCase();
+    final historyFuture = getSubscriptionHistoryUseCase();
+    final plansFuture = getAvailablePlansUseCase();
 
-    // Processar resultado da assinatura ativa
-    results[0].fold(
-      (failure) {
-        debugPrint('[SubscriptionController] getMySubscription() erro -> ${failure.message}');
-        errorMessage.value = failure.message;
-      },
+    final activeResult = await activeSubscriptionFuture;
+    final historyResult = await historyFuture;
+    final plansResult = await plansFuture;
+
+    activeResult.fold(
+      (failure) => errorMessage.value = failure.message,
       (subscription) => activeSubscription.value = subscription,
     );
 
-    // Processar resultado do histórico
-    results[1].fold(
+    historyResult.fold(
       (failure) {
-        debugPrint('[SubscriptionController] getSubscriptionHistory() erro -> ${failure.message}');
         if (errorMessage.value == null) {
           errorMessage.value = failure.message;
         }
@@ -63,11 +72,8 @@ class SubscriptionController extends GetxController {
       (subscriptionHistory) => history.assignAll(subscriptionHistory),
     );
 
-    // Processar resultado dos planos
-    results[2].fold(
-      (failure) {
-        debugPrint('[SubscriptionController] getAvailablePlans() erro -> ${failure.message}');
-      },
+    plansResult.fold(
+      (_) => hasPlanCatalog.value = false,
       (availablePlans) {
         plans.assignAll(availablePlans);
         hasPlanCatalog.value = availablePlans.isNotEmpty;
@@ -75,15 +81,12 @@ class SubscriptionController extends GetxController {
     );
 
     _syncSelectedPlan();
-
-    // Sincronizar com storage local
-    await subscriptionRepository.syncStoredUser(
+    await syncStoredUserSubscriptionUseCase(
       activeSubscription: activeSubscription.value,
       subscriptions: history,
     );
 
     isLoading.value = false;
-    debugPrint('[SubscriptionController] loadData() finalizado');
   }
 
   Future<void> changePlan() async {
@@ -98,23 +101,21 @@ class SubscriptionController extends GetxController {
     }
 
     await _runAction(
-      action: () => subscriptionRepository.changePlan(planId),
+      action: () => changePlanUseCase(planId),
       successMessage: 'Plano alterado com sucesso.',
     );
   }
 
   Future<void> cancelSubscription() async {
     await _runAction(
-      action: subscriptionRepository.cancelSubscription,
+      action: cancelSubscriptionUseCase.call,
       successMessage: 'Assinatura cancelada com sucesso.',
     );
   }
 
   Future<void> renewSubscription({bool autoRenew = true}) async {
     await _runAction(
-      action: () => subscriptionRepository.renewSubscription(
-        autoRenew: autoRenew,
-      ),
+      action: () => renewSubscriptionUseCase(autoRenew: autoRenew),
       successMessage: autoRenew
           ? 'Renovacao automatica ativada com sucesso.'
           : 'Assinatura atualizada com sucesso.',
@@ -203,8 +204,8 @@ class SubscriptionController extends GetxController {
       message,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: isError
-          ? const Color(0xFFBF4124).withOpacity(0.12)
-          : const Color(0xFF03A696).withOpacity(0.12),
+          ? const Color(0xFFBF4124).withValues(alpha: 0.12)
+          : const Color(0xFF03A696).withValues(alpha: 0.12),
       colorText: Colors.white,
       margin: const EdgeInsets.all(16),
     );

@@ -1,44 +1,65 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import 'transactions_controller.dart';
+
 import '../../../data/datasources/transaction_datasource.dart';
 import '../../../data/repositories/transaction_repository.dart';
-import '../../../domain/repositories/i_transaction_repository.dart';
-import '../../../data/repositories/bank_account_repository.dart';
 import '../../../domain/repositories/i_bank_account_repository.dart';
-import '../../../data/repositories/credit_card_repository.dart';
-import '../../../domain/repositories/i_credit_card_repository.dart';
 import '../../../domain/repositories/i_category_repository.dart';
+import '../../../domain/repositories/i_credit_card_repository.dart';
+import '../../../domain/repositories/i_transaction_repository.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
+import 'transactions_controller.dart';
 
 class TransactionsBinding extends Bindings {
   @override
   void dependencies() {
     final dio = Get.find<Dio>();
 
-    // Datasources
-    Get.lazyPut<ITransactionDataSource>(() => TransactionRemoteDataSource(dio: dio));
+    if (!Get.isRegistered<ITransactionDataSource>()) {
+      Get.lazyPut<ITransactionDataSource>(
+        () => TransactionRemoteDataSource(dio: dio),
+      );
+    }
 
-    // Repositories
-    Get.lazyPut<ITransactionRepository>(
-      () => TransactionRepository(dataSource: Get.find<ITransactionDataSource>()),
-    );
-    Get.lazyPut<IBankAccountRepository>(() => BankAccountRepository(dio: dio));
-    Get.lazyPut<ICreditCardRepository>(() => CreditCardRepository(dio: dio));
-    // ICategoryRepository is already provided in CoreBinding
+    if (!Get.isRegistered<ITransactionRepository>()) {
+      Get.lazyPut<ITransactionRepository>(
+        () => TransactionRepository(dataSource: Get.find<ITransactionDataSource>()),
+      );
+    }
 
-    // Use Cases
-    Get.lazyPut(() => CreateTransactionUseCase(Get.find<ITransactionRepository>()));
-    Get.lazyPut(() => GetTransactionsUseCase(Get.find<ITransactionRepository>()));
+    if (!Get.isRegistered<CreateTransactionUseCase>()) {
+      Get.lazyPut(
+        () => CreateTransactionUseCase(Get.find<ITransactionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<GetTransactionsUseCase>()) {
+      Get.lazyPut(
+        () => GetTransactionsUseCase(Get.find<ITransactionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<GetCategoriesUseCase>()) {
+      Get.lazyPut(() => GetCategoriesUseCase(Get.find<ICategoryRepository>()), fenix: true);
+    }
+    if (!Get.isRegistered<GetBankAccountsUseCase>()) {
+      Get.lazyPut(() => GetBankAccountsUseCase(Get.find<IBankAccountRepository>()), fenix: true);
+    }
+    if (!Get.isRegistered<GetCreditCardsUseCase>()) {
+      Get.lazyPut(() => GetCreditCardsUseCase(Get.find<ICreditCardRepository>()), fenix: true);
+    }
 
-    Get.lazyPut<TransactionsController>(
-      () => TransactionsController(
-        createTransactionUseCase: Get.find<CreateTransactionUseCase>(),
-        getTransactionsUseCase: Get.find<GetTransactionsUseCase>(),
-        categoryRepository: Get.find<ICategoryRepository>(),
-        bankAccountRepository: Get.find<IBankAccountRepository>(),
-        creditCardRepository: Get.find<ICreditCardRepository>(),
-      ),
-    );
+    if (!Get.isRegistered<TransactionsController>()) {
+      Get.lazyPut<TransactionsController>(
+        () => TransactionsController(
+          createTransactionUseCase: Get.find<CreateTransactionUseCase>(),
+          getTransactionsUseCase: Get.find<GetTransactionsUseCase>(),
+          getCategoriesUseCase: Get.find<GetCategoriesUseCase>(),
+          getBankAccountsUseCase: Get.find<GetBankAccountsUseCase>(),
+          getCreditCardsUseCase: Get.find<GetCreditCardsUseCase>(),
+        ),
+        fenix: true,
+      );
+    }
   }
 }

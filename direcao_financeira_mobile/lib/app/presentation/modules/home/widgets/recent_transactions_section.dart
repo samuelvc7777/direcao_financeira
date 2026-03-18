@@ -23,7 +23,9 @@ class RecentTransactionsSection extends GetView<HomeController> {
         decoration: BoxDecoration(
           color: context.theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+          border: Border.all(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
         ),
         child: Column(
           children: [
@@ -35,7 +37,7 @@ class RecentTransactionsSection extends GetView<HomeController> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withOpacity(0.15),
+                          color: AppColors.royalBlue.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -62,7 +64,7 @@ class RecentTransactionsSection extends GetView<HomeController> {
                 Text(
                   'Ver todas',
                   style: TextStyle(
-                    color: AppColors.royalBlue.withOpacity(0.7),
+                    color: AppColors.royalBlue.withValues(alpha: 0.7),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -77,7 +79,7 @@ class RecentTransactionsSection extends GetView<HomeController> {
                 child: Text(
                   'Nenhuma transacao registrada.',
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withOpacity(0.3),
+                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.3),
                     fontSize: 13,
                   ),
                 ),
@@ -100,9 +102,11 @@ class RecentTransactionsSection extends GetView<HomeController> {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: context.theme.colorScheme.onSurface.withOpacity(0.03),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.05)),
+            border: Border.all(
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+            ),
           ),
           child: isCompact
               ? Column(
@@ -145,8 +149,8 @@ class RecentTransactionsSection extends GetView<HomeController> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: (isNegativo ? AppColors.rose : AppColors.emerald).withOpacity(
-          0.1,
+        color: (isNegativo ? AppColors.rose : AppColors.emerald).withValues(
+          alpha: 0.1,
         ),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -173,7 +177,10 @@ class RecentTransactionsSection extends GetView<HomeController> {
         const SizedBox(height: 2),
         Text(
           '${transacao.categoryName ?? 'Sem categoria'} • ${dateFormat.format(transacao.transactionDate)}',
-          style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.4), fontSize: 11),
+          style: TextStyle(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            fontSize: 11,
+          ),
         ),
       ],
     );

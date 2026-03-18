@@ -2,6 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../preferences/app_preferences.dart';
+import '../../data/datasources/auth_datasource.dart';
+import '../../data/datasources/bank_account_datasource.dart';
+import '../../data/datasources/category_datasource.dart';
+import '../../data/datasources/credit_card_datasource.dart';
+import '../../data/datasources/subscription_datasource.dart';
 import '../../data/datasources/transaction_datasource.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/bank_account_repository.dart';
@@ -15,16 +21,17 @@ import '../../domain/repositories/i_category_repository.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
 import '../../domain/repositories/i_subscription_repository.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
-import '../../domain/usecases/transaction_use_cases.dart';
 
 class CoreBinding extends Bindings {
   @override
   void dependencies() {
-    // 1. Storage
     final storage = GetStorage();
     Get.put(storage, permanent: true);
+    Get.put<AppPreferences>(
+      GetStorageAppPreferences(storage: storage),
+      permanent: true,
+    );
 
-    // 2. Dio (Infra)
     final dio = Dio(
       BaseOptions(
         baseUrl: 'http://100.88.15.104:3000',
@@ -44,28 +51,68 @@ class CoreBinding extends Bindings {
     );
     Get.put(dio, permanent: true);
 
-    // 3. Repositório (Data)
+    Get.put<IAuthRemoteDataSource>(
+      AuthRemoteDataSource(dio: dio),
+      permanent: true,
+    );
+    Get.put<IAuthLocalDataSource>(
+      AuthLocalDataSource(storage: storage),
+      permanent: true,
+    );
+    Get.put<IBankAccountDataSource>(
+      BankAccountRemoteDataSource(dio: dio),
+      permanent: true,
+    );
+    Get.put<ICategoryDataSource>(
+      CategoryRemoteDataSource(dio: dio),
+      permanent: true,
+    );
+    Get.put<ICreditCardDataSource>(
+      CreditCardRemoteDataSource(dio: dio),
+      permanent: true,
+    );
+    Get.put<ISubscriptionRemoteDataSource>(
+      SubscriptionRemoteDataSource(dio: dio),
+      permanent: true,
+    );
+    Get.put<ISubscriptionLocalDataSource>(
+      SubscriptionLocalDataSource(storage: storage),
+      permanent: true,
+    );
+    Get.put<ITransactionDataSource>(
+      TransactionRemoteDataSource(dio: dio),
+      permanent: true,
+    );
+
     Get.put<IAuthRepository>(
-      AuthRepository(dio: dio, storage: storage),
+      AuthRepository(
+        remoteDataSource: Get.find<IAuthRemoteDataSource>(),
+        localDataSource: Get.find<IAuthLocalDataSource>(),
+      ),
+      permanent: true,
+    );
+    Get.put<IBankAccountRepository>(
+      BankAccountRepository(dataSource: Get.find<IBankAccountDataSource>()),
+      permanent: true,
+    );
+    Get.put<ICategoryRepository>(
+      CategoryRepository(dataSource: Get.find<ICategoryDataSource>()),
+      permanent: true,
+    );
+    Get.put<ICreditCardRepository>(
+      CreditCardRepository(dataSource: Get.find<ICreditCardDataSource>()),
       permanent: true,
     );
     Get.put<ISubscriptionRepository>(
-      SubscriptionRepository(dio: dio, storage: storage),
+      SubscriptionRepository(
+        remoteDataSource: Get.find<ISubscriptionRemoteDataSource>(),
+        localDataSource: Get.find<ISubscriptionLocalDataSource>(),
+      ),
       permanent: true,
     );
-    Get.put<ICategoryRepository>(CategoryRepository(dio: dio), permanent: true);
-    Get.put<IBankAccountRepository>(BankAccountRepository(dio: dio), permanent: true);
-    Get.put<ICreditCardRepository>(CreditCardRepository(dio: dio), permanent: true);
-
-    // 4. Transações (Data & Domain)
-    Get.put<ITransactionDataSource>(TransactionRemoteDataSource(dio: dio), permanent: true);
     Get.put<ITransactionRepository>(
       TransactionRepository(dataSource: Get.find<ITransactionDataSource>()),
       permanent: true,
     );
-    
-    // Use Cases Globais
-    Get.put(CreateTransactionUseCase(Get.find<ITransactionRepository>()), permanent: true);
-    Get.put(GetTransactionsUseCase(Get.find<ITransactionRepository>()), permanent: true);
   }
 }

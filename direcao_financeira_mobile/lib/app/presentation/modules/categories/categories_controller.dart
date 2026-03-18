@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../domain/entities/category_entity.dart';
-import '../../../domain/repositories/i_category_repository.dart';
+import '../../../domain/usecases/category_use_cases.dart';
 
 class CategoriesController extends GetxController {
-  CategoriesController({required this.categoryRepository});
+  CategoriesController({
+    required this.loadCategoriesUseCase,
+    required this.createCategoryUseCase,
+    required this.updateCategoryUseCase,
+    required this.deactivateCategoryUseCase,
+    required this.reactivateCategoryUseCase,
+  });
 
-  final ICategoryRepository categoryRepository;
+  final LoadCategoriesUseCase loadCategoriesUseCase;
+  final CreateCategoryUseCase createCategoryUseCase;
+  final UpdateCategoryUseCase updateCategoryUseCase;
+  final DeactivateCategoryUseCase deactivateCategoryUseCase;
+  final ReactivateCategoryUseCase reactivateCategoryUseCase;
 
   final isLoading = true.obs;
   final isSubmitting = false.obs;
@@ -66,7 +76,7 @@ class CategoriesController extends GetxController {
   Future<void> loadCategories() async {
     isLoading.value = true;
     errorMessage.value = null;
-    final result = await categoryRepository.getCategories();
+    final result = await loadCategoriesUseCase();
 
     result.fold(
       (failure) => errorMessage.value = failure.message,
@@ -83,7 +93,7 @@ class CategoriesController extends GetxController {
     required String icon,
   }) async {
     await _runSubmission(
-      action: () => categoryRepository.createCategory(
+      action: () => createCategoryUseCase(
         name: name,
         type: type,
         color: color,
@@ -101,7 +111,7 @@ class CategoriesController extends GetxController {
     required String icon,
   }) async {
     await _runSubmission(
-      action: () => categoryRepository.updateCategory(
+      action: () => updateCategoryUseCase(
         id: id,
         name: name,
         type: type,
@@ -118,37 +128,37 @@ class CategoriesController extends GetxController {
     final actionNameCap = isDeactivating ? 'Desativar' : 'Reativar';
 
     final confirmed =
-        await Get.dialog<bool>(
-          AlertDialog(
-            backgroundColor: const Color(0xFF022C35),
-            title: Text(
-              '$actionNameCap categoria',
-              style: const TextStyle(color: Colors.white),
-            ),
-            content: Text(
-              'A categoria "${category.name}" sera ${actionName}ada.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75),
-                height: 1.4,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Get.back(result: true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: isDeactivating
-                      ? const Color(0xFFBF4124)
-                      : const Color(0xFF03A696),
+            await Get.dialog<bool>(
+              AlertDialog(
+                backgroundColor: const Color(0xFF022C35),
+                title: Text(
+                  '$actionNameCap categoria',
+                  style: const TextStyle(color: Colors.white),
                 ),
-                child: Text(actionNameCap),
+                content: Text(
+                  'A categoria "${category.name}" sera ${actionName}ada.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    height: 1.4,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Get.back(result: true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: isDeactivating
+                          ? const Color(0xFFBF4124)
+                          : const Color(0xFF03A696),
+                    ),
+                    child: Text(actionNameCap),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ) ??
+            ) ??
         false;
 
     if (!confirmed) {
@@ -157,8 +167,8 @@ class CategoriesController extends GetxController {
 
     isSubmitting.value = true;
     final result = isDeactivating
-        ? await categoryRepository.deactivateCategory(category.id)
-        : await categoryRepository.reactivateCategory(category.id);
+        ? await deactivateCategoryUseCase(category.id)
+        : await reactivateCategoryUseCase(category.id);
 
     result.fold(
       (failure) => _showFeedback('Erro', failure.message, isError: true),
@@ -167,10 +177,7 @@ class CategoriesController extends GetxController {
         if (Get.isBottomSheetOpen ?? false) {
           Get.back();
         }
-        _showFeedback(
-          'Sucesso',
-          'Categoria ${actionName}ada com sucesso.',
-        );
+        _showFeedback('Sucesso', 'Categoria ${actionName}ada com sucesso.');
       },
     );
 

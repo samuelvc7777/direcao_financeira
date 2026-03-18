@@ -40,7 +40,7 @@ class BalanceCard extends GetView<HomeController> {
                   ],
                 ),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.royalBlue.withOpacity(0.15)),
+                border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.15)),
               ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,7 +54,7 @@ class BalanceCard extends GetView<HomeController> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.electricCyan.withOpacity(0.15),
+                              color: AppColors.electricCyan.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
@@ -69,7 +69,7 @@ class BalanceCard extends GetView<HomeController> {
                               'Saldo Atual',
                               overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: context.theme.colorScheme.onSurface.withOpacity(0.7),
+                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                               ),
@@ -81,7 +81,7 @@ class BalanceCard extends GetView<HomeController> {
                     IconButton(
                       icon: Icon(
                         isVisible ? Icons.visibility : Icons.visibility_off,
-                        color: context.theme.colorScheme.onSurface.withOpacity(0.38),
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
                         size: 22,
                       ),
                       onPressed: controller.toggleBalanceVisibility,
@@ -112,8 +112,8 @@ class BalanceCard extends GetView<HomeController> {
                   ),
                   decoration: BoxDecoration(
                     color: isPositivo
-                        ? AppColors.emerald.withOpacity(0.15)
-                        : AppColors.rose.withOpacity(0.15),
+                        ? AppColors.emerald.withValues(alpha: 0.15)
+                        : AppColors.rose.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -141,7 +141,9 @@ class BalanceCard extends GetView<HomeController> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Divider(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+                Divider(
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -192,7 +194,7 @@ class BalanceCard extends GetView<HomeController> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 18),
@@ -204,7 +206,10 @@ class BalanceCard extends GetView<HomeController> {
             children: [
               Text(
                 label,
-                style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 12),
+                style: TextStyle(
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                  fontSize: 12,
+                ),
               ),
               FittedBox(
                 fit: BoxFit.scaleDown,

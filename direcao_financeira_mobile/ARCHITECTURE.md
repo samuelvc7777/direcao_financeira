@@ -1,68 +1,53 @@
-# Arquitetura Direcao Financeira Mobile
+# Arquitetura do Mobile
 
-Este projeto utiliza Clean Architecture, principios SOLID e Design Patterns com GetX para coordenacao de UI e injecao de dependencias.
+## Objetivo
+Este app segue `Clean Architecture + GetX` com separacao previsivel entre `presentation`, `domain`, `data` e `core`.
 
-## Camadas do Sistema
+## Estrutura
+- `lib/app/core`
+  - configuracoes transversais, tema, bindings globais e erros
+- `lib/app/domain`
+  - `entities`, `repositories` e `usecases`
+  - nao deve depender de Flutter, Dio, GetStorage ou detalhes de API
+- `lib/app/data`
+  - `datasources`, `models` e `repositories`
+  - concentra serializacao, IO, chamadas HTTP e persistencia local
+- `lib/app/presentation`
+  - `modules`, `controllers`, `views` e `widgets`
+  - expõe estado para UI e delega fluxo para use cases
 
-### 1. Domain (Negocio)
-- Entities: classes puras de dados.
-- Use Cases: regras de negocio de grao fino.
-- Repositories (abstract): contratos para acesso a dados.
+## Fluxo permitido
+- `view/widget -> controller -> use case -> repository -> datasource`
+- `datasource -> model -> entity`
 
-### 2. Data (Infraestrutura)
-- Models: extensoes das entidades para serializacao.
-- Repositories (implementation): conectam interfaces do dominio a fontes reais.
-- Data Sources: clientes HTTP ou banco local.
+## Regras
+- controller nao acessa datasource diretamente
+- controller nao depende de implementacao concreta de repository
+- repository retorna `Either<Failure, T>` nos fluxos falháveis
+- `try/catch` fica em repository ou infraestrutura equivalente
+- widgets nao carregam regra de negocio
+- bindings montam dependencias por feature
 
-### 3. Presentation (Interface)
-- Modules: conjunto de View + Controller + Binding.
-- Controllers: gerenciam estado e invocam os use cases.
-- Bindings: configuram injecao de dependencias.
-- Views: widgets puras e reativas.
+## Bindings
+- `CoreBinding`
+  - registra infra compartilhada: `Dio`, `GetStorage`, datasources e repositories
+- bindings de feature
+  - registram `usecases` e `controllers`
+  - podem reutilizar dependencias ja registradas com `Get.isRegistered`
 
-## Estrutura de Pastas
+## Padrao por feature
+1. definir ou ajustar `Entity`
+2. definir interface do `Repository`
+3. criar `UseCases`
+4. criar `Model`
+5. criar `DataSource`
+6. implementar `Repository`
+7. registrar no `Binding`
+8. ligar o `Controller`
+9. conectar a `View`
 
-```text
-lib/
-  app/
-    core/               # Temas, utils, constantes e erros globais
-    domain/             # Entities, use cases e interfaces de repositorio
-    data/               # Models, repositorios concretos e data sources
-    presentation/       # Modules, rotas e widgets compartilhados
-    bindings/           # DI geral
-    routes/             # Rotas do app
-  main.dart
-```
-
-## Global Style & Design System
-
-Para garantir uma experiencia premium e consistente, o app utiliza um sistema de design centralizado em `app/core/theme`:
-- Typography: fonte Inter para legibilidade.
-- Color Palette: tons de Petrol, Teal, Sand e Rust.
-- Theming: suporte a Light Mode e Dark Mode.
-- Material 3: componentes alinhados com as diretrizes atuais do Google.
-
-### Padrao de Componentizacao
-1. Widgets globais (`app/presentation/widgets/`): componentes genericos e reutilizaveis em qualquer modulo.
-2. Widgets locais (`app/presentation/modules/{module}/widgets/`): componentes especificos de cada modulo para reduzir o tamanho da view e isolar responsabilidades visuais.
-
-## Responsividade & Design Adaptativo
-
-O aplicativo e mobile-only e deve oferecer uma experiencia consistente em qualquer tamanho de tela Android.
-- Layouts fluidos: uso de `Flexible`, `Expanded`, `Spacer`, `Wrap` e constraints adaptativas para evitar overflow.
-- Scaling inteligente: dimensoes baseadas em `MediaQuery` ou `LayoutBuilder` quando necessario.
-- Scrollable areas: telas com inputs devem usar `SingleChildScrollView` para evitar que o teclado cubra o conteudo.
-- Adaptabilidade: fontes, paddings e distribuicao visual devem ser testados em celulares compactos, intermediarios e telas Android maiores.
-
-## Principios Aplicados
-- Single Responsibility: cada use case faz apenas uma coisa.
-- Open/Closed: extensibilidade via abstracoes.
-- Liskov Substitution: repositories seguem interfaces rigorosas.
-- Interface Segregation: interfaces pequenas e especificas.
-- Dependency Inversion: controllers dependem de abstracoes, nao de implementacoes.
-
-## Design Patterns
-- Repository Pattern: abstracao de persistencia.
-- Mapper Pattern: conversao entre camadas.
-- Observer Pattern: gerenciamento reativo com GetX.
-- Factory Pattern: criacao de instancias e desserializacao.
+## Anti-padroes
+- controller chamando repository diretamente quando a feature ja tem use case
+- repository misturando HTTP e estado local sem separar datasource remoto/local
+- bindings duplicando a mesma composicao sem checagem
+- `dynamic` e casts evitaveis na presentation

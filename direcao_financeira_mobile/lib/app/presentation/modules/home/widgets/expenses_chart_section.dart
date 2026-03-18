@@ -27,7 +27,9 @@ class ExpensesChartSection extends GetView<HomeController> {
             decoration: BoxDecoration(
               color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+              border: Border.all(
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,7 +40,7 @@ class ExpensesChartSection extends GetView<HomeController> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.sky.withOpacity(0.15),
+                        color: AppColors.sky.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -63,7 +65,7 @@ class ExpensesChartSection extends GetView<HomeController> {
                           Text(
                             'Distribuicao das suas saidas no periodo',
                             style: TextStyle(
-                              color: context.theme.colorScheme.onSurface.withOpacity(0.4),
+                              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
                               fontSize: 12,
                             ),
                           ),
@@ -87,14 +89,19 @@ class ExpensesChartSection extends GetView<HomeController> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                Divider(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+                Divider(
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Total de saidas',
-                      style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 14),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                        fontSize: 14,
+                      ),
                     ),
                     Flexible(
                       child: FittedBox(
@@ -161,13 +168,16 @@ class ExpensesChartSection extends GetView<HomeController> {
               Expanded(
                 child: Text(
                   g['categoria'],
-                  style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 13,
+                  ),
                 ),
               ),
               Text(
                 '${(g['percentual'] as double).toStringAsFixed(0)}%',
                 style: TextStyle(
-                  color: context.theme.colorScheme.onSurface.withOpacity(0.54),
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -192,7 +202,7 @@ class _DonutChartPainter extends CustomPainter {
     const strokeWidth = 28.0;
 
     final bgPaint = Paint()
-      ..color = Get.theme.colorScheme.onSurface.withOpacity(0.06)
+      ..color = Get.theme.colorScheme.onSurface.withValues(alpha: 0.06)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, radius - strokeWidth / 2, bgPaint);

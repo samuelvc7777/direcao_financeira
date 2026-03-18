@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
-import { UserModule } from './user/user.module';
-import { AuthModule } from './auth/auth.module';
-import { PlanModule } from './plan/plan.module';
-import { AdminModule } from './admin/admin.module';
-import { SubscriptionModule } from './subscription/subscription.module';
-import { FinanceModule } from './finance/finance.module';
+import { UserModule } from './modules/user/interface/user.module';
+import { AuthModule } from './modules/auth/interface/auth.module';
+import { PlanModule } from './modules/plan/interface/plan.module';
+import { AdminModule } from './modules/admin/interface/admin.module';
+import { SubscriptionModule } from './modules/subscription/interface/subscription.module';
+import { FinanceModule } from './modules/finance/interface/finance.module';
 
 @Module({
   imports: [

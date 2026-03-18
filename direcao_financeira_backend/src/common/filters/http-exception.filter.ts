@@ -8,6 +8,11 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+interface HttpExceptionResponseBody {
+  error?: string;
+  message?: string | string[];
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -26,14 +31,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getResponse()
         : (exception as Error).message || 'Internal server error';
+    const normalizedMessage =
+      typeof message === 'string'
+        ? message
+        : (message as HttpExceptionResponseBody);
 
     const errorResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      error: typeof message === 'string' ? message : (message as any).error || 'Error',
-      message: typeof message === 'string' ? message : (message as any).message || message,
+      error:
+        typeof normalizedMessage === 'string'
+          ? normalizedMessage
+          : normalizedMessage.error || 'Error',
+      message:
+        typeof normalizedMessage === 'string'
+          ? normalizedMessage
+          : normalizedMessage.message || normalizedMessage,
     };
 
     // Log detalhado no terminal para o desenvolvedor

@@ -257,7 +257,8 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: widget.controller.colorOptions.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         final colorHex = widget.controller.colorOptions[index];
                         final isSelected = _selectedColor == colorHex;
@@ -303,7 +304,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                   const SizedBox(height: 20),
                   Text(
                     'Icone',
-                    style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
+                    style: TextStyle(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -716,7 +717,7 @@ class _CategoryTile extends StatelessWidget {
                                 child: Text(
                                   'INATIVA',
                                   style: TextStyle(
-                                    color: context.theme.colorScheme.onSurface.withOpacity(0.54),
+                                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
                                     fontSize: 8,
                                     fontWeight: FontWeight.w900,
                                   ),

@@ -1,8 +1,10 @@
 import 'package:dartz/dartz.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
+import 'package:direcao_financeira_mobile/app/core/preferences/app_preferences.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_theme.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/auth_session_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/settings/settings_controller.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/settings/settings_view.dart';
 import 'package:direcao_financeira_mobile/app/routes/app_pages.dart';
@@ -47,6 +49,18 @@ class _FakeAuthRepository implements IAuthRepository {
   }
 }
 
+class _FakePreferences implements AppPreferences {
+  _FakePreferences({this.initialValue});
+
+  final bool? initialValue;
+
+  @override
+  bool? readBool(String key) => initialValue;
+
+  @override
+  Future<void> writeBool(String key, bool value) async {}
+}
+
 void main() {
   setUp(() {
     Get.testMode = true;
@@ -67,7 +81,12 @@ void main() {
         isActive: true,
       );
 
-    final controller = SettingsController(authRepository: repository)..onInit();
+    final preferences = _FakePreferences(initialValue: true);
+    final controller = SettingsController(
+      preferences: preferences,
+      getStoredUserUseCase: GetStoredUserUseCase(repository),
+      logoutUseCase: LogoutUseCase(repository),
+    )..onInit();
     Get.put<SettingsController>(controller);
 
     await tester.pumpWidget(
@@ -89,7 +108,12 @@ void main() {
 
   testWidgets('cta Ver plano navega para rota de assinatura', (tester) async {
     final repository = _FakeAuthRepository();
-    final controller = SettingsController(authRepository: repository);
+    final preferences = _FakePreferences(initialValue: true);
+    final controller = SettingsController(
+      preferences: preferences,
+      getStoredUserUseCase: GetStoredUserUseCase(repository),
+      logoutUseCase: LogoutUseCase(repository),
+    );
     Get.put<SettingsController>(controller);
 
     await tester.pumpWidget(

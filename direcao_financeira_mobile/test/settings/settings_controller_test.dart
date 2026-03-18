@@ -1,7 +1,9 @@
 import 'package:dartz/dartz.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
+import 'package:direcao_financeira_mobile/app/core/preferences/app_preferences.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/auth_session_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/settings/settings_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +46,21 @@ class _FakeAuthRepository implements IAuthRepository {
   }
 }
 
+class _FakePreferences implements AppPreferences {
+  _FakePreferences({this.initialValue});
+
+  final bool? initialValue;
+  bool? lastWrittenValue;
+
+  @override
+  bool? readBool(String key) => initialValue;
+
+  @override
+  Future<void> writeBool(String key, bool value) async {
+    lastWrittenValue = value;
+  }
+}
+
 void main() {
   setUpAll(() {
     WidgetsFlutterBinding.ensureInitialized();
@@ -52,22 +69,32 @@ void main() {
   group('SettingsController', () {
     test('toggleTheme alterna o estado local do switch', () {
       final repository = _FakeAuthRepository();
-      final controller = SettingsController(authRepository: repository);
+      final preferences = _FakePreferences(initialValue: true);
+      final controller = SettingsController(
+        preferences: preferences,
+        getStoredUserUseCase: GetStoredUserUseCase(repository),
+        logoutUseCase: LogoutUseCase(repository),
+      );
       Get.put(controller);
 
       expect(controller.isDarkModeEnabled.value, isTrue);
 
-      // Usamos getX para testar logica limpa
-      controller.isDarkModeEnabled.value = false;
+      controller.toggleTheme(false);
 
       expect(controller.isDarkModeEnabled.value, isFalse);
+      expect(preferences.lastWrittenValue, isFalse);
       
       Get.delete<SettingsController>();
     });
 
     test('logout reutiliza o repositorio de autenticacao', () async {
       final repository = _FakeAuthRepository();
-      final controller = SettingsController(authRepository: repository);
+      final preferences = _FakePreferences();
+      final controller = SettingsController(
+        preferences: preferences,
+        getStoredUserUseCase: GetStoredUserUseCase(repository),
+        logoutUseCase: LogoutUseCase(repository),
+      );
       Get.put(controller);
 
       // Omitimos a execucao real do logout por causa do Get.offAllNamed (dependencia de UI)

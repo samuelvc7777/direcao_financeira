@@ -29,7 +29,7 @@ class LoginHeader extends StatelessWidget {
         Text(
           'Gestão de Elite para Motoristas',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: colorScheme.onSurface.withOpacity(0.6)),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ],
     );

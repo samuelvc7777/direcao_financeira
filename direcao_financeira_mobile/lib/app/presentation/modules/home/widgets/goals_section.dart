@@ -29,7 +29,9 @@ class GoalsSection extends GetView<HomeController> {
             decoration: BoxDecoration(
               color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+              border: Border.all(
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
             ),
             child: Column(
               children: [
@@ -41,7 +43,7 @@ class GoalsSection extends GetView<HomeController> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppColors.amber.withOpacity(0.15),
+                                  color: AppColors.amber.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(
@@ -66,7 +68,7 @@ class GoalsSection extends GetView<HomeController> {
                                     Text(
                                       '$concluidas de $totalMetas concluidas',
                                       style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface.withOpacity(0.4),
+                                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -92,7 +94,7 @@ class GoalsSection extends GetView<HomeController> {
                                   decoration: BoxDecoration(
                                     color: const Color(
                                       0xFF6B21A8,
-                                    ).withOpacity(0.15),
+                                    ).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
@@ -116,7 +118,7 @@ class GoalsSection extends GetView<HomeController> {
                                     Text(
                                       '$concluidas de $totalMetas concluidas',
                                       style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface.withOpacity(0.4),
+                                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -134,12 +136,15 @@ class GoalsSection extends GetView<HomeController> {
                   children: [
                     Text(
                       'Progresso Geral',
-                      style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 13),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                        fontSize: 13,
+                      ),
                     ),
                     Text(
                       '${progressoGeral.toStringAsFixed(0)}%',
                       style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withOpacity(0.54),
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -151,7 +156,7 @@ class GoalsSection extends GetView<HomeController> {
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: progressoGeral / 100,
-                    backgroundColor: context.theme.colorScheme.onSurface.withOpacity(0.08),
+                    backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.lime,
                     ),
@@ -172,7 +177,9 @@ class GoalsSection extends GetView<HomeController> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        border: Border.all(
+          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -181,14 +188,14 @@ class GoalsSection extends GetView<HomeController> {
           Text(
             'Gerenciar',
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withOpacity(0.6),
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),
           const SizedBox(width: 4),
           Icon(
             Icons.chevron_right,
-            color: context.theme.colorScheme.onSurface.withOpacity(0.6),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
             size: 16,
           ),
         ],
@@ -205,15 +212,21 @@ class GoalsSection extends GetView<HomeController> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.theme.colorScheme.onSurface.withOpacity(0.03),
+        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.05)),
+        border: Border.all(
+          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        ),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Icon(Icons.flag_outlined, color: context.theme.colorScheme.onSurface.withOpacity(0.38), size: 18),
+              Icon(
+                Icons.flag_outlined,
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                size: 18,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -228,7 +241,7 @@ class GoalsSection extends GetView<HomeController> {
               Text(
                 '${percentual.toStringAsFixed(0)}%',
                 style: TextStyle(
-                  color: context.theme.colorScheme.onSurface.withOpacity(0.54),
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -241,7 +254,7 @@ class GoalsSection extends GetView<HomeController> {
             child: Text(
               'R\$ ${atual.toStringAsFixed(2).replaceAll('.', ',')} de R\$ ${objetivo.toStringAsFixed(2).replaceAll('.', ',')}',
               style: TextStyle(
-                color: context.theme.colorScheme.onSurface.withOpacity(0.4),
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 fontSize: 12,
               ),
             ),
@@ -251,7 +264,7 @@ class GoalsSection extends GetView<HomeController> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: percentual / 100,
-              backgroundColor: context.theme.colorScheme.onSurface.withOpacity(0.08),
+              backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.teal),
               minHeight: 5,
             ),

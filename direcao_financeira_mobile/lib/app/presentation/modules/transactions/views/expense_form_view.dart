@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../domain/entities/bank_account_entity.dart';
 import '../../../../domain/entities/category_entity.dart';
 import '../../../../domain/entities/credit_card_entity.dart';
@@ -49,12 +50,12 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
         showBackButton: true,
       ),
       body: Obx(() {
-        if (controller.isLoadingDependencies.value) {
+        if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator(color: AppColors.aqua));
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(Responsive.sp(context, 24)),
           child: Form(
             key: _formKey,
             child: Column(
@@ -80,7 +81,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: Responsive.vp(context, 2.5)),
                 CustomTextField(
                   controller: _descriptionController,
                   label: 'Descricao',
@@ -88,12 +89,16 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                   icon: Icons.edit_note_rounded,
                   validator: (v) => v?.isEmpty ?? true ? 'Informe a descricao.' : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.vp(context, 3)),
                 Text(
                   'Pagar com',
-                  style: TextStyle(color: context.theme.colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
+                    fontSize: Responsive.sp(context, 14),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: Responsive.vp(context, 1.5)),
                 Row(
                   children: [
                     Expanded(
@@ -106,7 +111,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                         }),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: Responsive.hp(context, 2)),
                     Expanded(
                       child: _AssetTab(
                         title: 'Cartao',
@@ -119,10 +124,10 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: Responsive.vp(context, 2)),
                 if (_selectedAssetType == AssetType.bankAccount)
                   DropdownButtonFormField<BankAccountEntity>(
-                    value: _selectedAccount,
+                    initialValue: _selectedAccount,
                     dropdownColor: context.theme.colorScheme.surface,
                     style: TextStyle(color: context.theme.colorScheme.onSurface),
                     decoration: _dropdownDecoration('Selecione uma conta'),
@@ -134,7 +139,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                   )
                 else
                   DropdownButtonFormField<CreditCardEntity>(
-                    value: _selectedCard,
+                    initialValue: _selectedCard,
                     dropdownColor: context.theme.colorScheme.surface,
                     style: TextStyle(color: context.theme.colorScheme.onSurface),
                     decoration: _dropdownDecoration('Selecione um cartao'),
@@ -144,14 +149,18 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                     onChanged: (v) => setState(() => _selectedCard = v),
                     validator: (v) => v == null ? 'Selecione o cartao' : null,
                   ),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.vp(context, 3)),
                 Text(
                   'Categoria',
-                  style: TextStyle(color: context.theme.colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
+                    fontSize: Responsive.sp(context, 14),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: Responsive.vp(context, 1.5)),
                 DropdownButtonFormField<CategoryEntity>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   dropdownColor: context.theme.colorScheme.surface,
                   style: TextStyle(color: context.theme.colorScheme.onSurface),
                   decoration: _dropdownDecoration('Selecione a categoria'),
@@ -161,7 +170,7 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
                   onChanged: (v) => setState(() => _selectedCategory = v),
                   validator: (v) => v == null ? 'Selecione a categoria' : null,
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: Responsive.vp(context, 5)),
                 CustomFilledButton(
                   text: 'SALVAR DESPESA',
                   icon: Icons.check_rounded,
@@ -179,22 +188,28 @@ class _ExpenseFormViewState extends State<ExpenseFormView> {
   InputDecoration _dropdownDecoration(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: context.theme.colorScheme.onSurface.withOpacity(0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      fillColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: Responsive.sp(context, 16),
+        vertical: Responsive.sp(context, 16),
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
+        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
+        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
         borderSide: const BorderSide(color: AppColors.royalBlue),
       ),
       hintText: hint,
-      hintStyle: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.3)),
+      hintStyle: TextStyle(
+        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        fontSize: Responsive.sp(context, 14),
+      ),
     );
   }
 
@@ -234,10 +249,10 @@ class _AssetTab extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1.5)),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.royalBlue.withOpacity(0.15) : context.theme.colorScheme.onSurface.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? AppColors.royalBlue.withValues(alpha: 0.15) : context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(Responsive.sp(context, 12)),
           border: Border.all(
             color: isSelected ? AppColors.royalBlue : Colors.transparent,
             width: 1.5,
@@ -247,7 +262,8 @@ class _AssetTab extends StatelessWidget {
           child: Text(
             title,
             style: TextStyle(
-              color: isSelected ? context.theme.colorScheme.onSurface : context.theme.colorScheme.onSurface.withOpacity(0.54),
+              color: isSelected ? context.theme.colorScheme.onSurface : context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+              fontSize: Responsive.sp(context, 14),
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../domain/entities/bank_account_entity.dart';
 import '../../../../domain/entities/category_entity.dart';
 import '../../../../domain/entities/transaction_entity.dart';
@@ -46,12 +47,12 @@ class _IncomeFormViewState extends State<IncomeFormView> {
         showBackButton: true,
       ),
       body: Obx(() {
-        if (controller.isLoadingDependencies.value) {
+        if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator(color: AppColors.aqua));
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(Responsive.sp(context, 24)),
           child: Form(
             key: _formKey,
             child: Column(
@@ -77,7 +78,7 @@ class _IncomeFormViewState extends State<IncomeFormView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: Responsive.vp(context, 2.5)),
                 CustomTextField(
                   controller: _descriptionController,
                   label: 'Descricao',
@@ -85,14 +86,18 @@ class _IncomeFormViewState extends State<IncomeFormView> {
                   icon: Icons.edit_note_rounded,
                   validator: (v) => v?.isEmpty ?? true ? 'Informe a descricao.' : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.vp(context, 3)),
                 Text(
                   'Receber em',
-                  style: TextStyle(color: context.theme.colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
+                    fontSize: Responsive.sp(context, 14),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: Responsive.vp(context, 1.5)),
                 DropdownButtonFormField<BankAccountEntity>(
-                  value: _selectedAccount,
+                  initialValue: _selectedAccount,
                   dropdownColor: context.theme.colorScheme.surface,
                   style: TextStyle(color: context.theme.colorScheme.onSurface),
                   decoration: _dropdownDecoration('Selecione uma conta'),
@@ -102,14 +107,18 @@ class _IncomeFormViewState extends State<IncomeFormView> {
                   onChanged: (v) => setState(() => _selectedAccount = v),
                   validator: (v) => v == null ? 'Selecione a conta' : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.vp(context, 3)),
                 Text(
                   'Categoria',
-                  style: TextStyle(color: context.theme.colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
+                    fontSize: Responsive.sp(context, 14),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: Responsive.vp(context, 1.5)),
                 DropdownButtonFormField<CategoryEntity>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   dropdownColor: context.theme.colorScheme.surface,
                   style: TextStyle(color: context.theme.colorScheme.onSurface),
                   decoration: _dropdownDecoration('Selecione a categoria'),
@@ -119,7 +128,7 @@ class _IncomeFormViewState extends State<IncomeFormView> {
                   onChanged: (v) => setState(() => _selectedCategory = v),
                   validator: (v) => v == null ? 'Selecione a categoria' : null,
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: Responsive.vp(context, 5)),
                 CustomFilledButton(
                   text: 'SALVAR RECEITA',
                   icon: Icons.check_rounded,
@@ -137,22 +146,28 @@ class _IncomeFormViewState extends State<IncomeFormView> {
   InputDecoration _dropdownDecoration(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: context.theme.colorScheme.onSurface.withOpacity(0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      fillColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: Responsive.sp(context, 16),
+        vertical: Responsive.sp(context, 16),
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
+        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
+        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
         borderSide: const BorderSide(color: AppColors.royalBlue),
       ),
       hintText: hint,
-      hintStyle: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.3)),
+      hintStyle: TextStyle(
+        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        fontSize: Responsive.sp(context, 14),
+      ),
     );
   }
 

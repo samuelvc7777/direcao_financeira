@@ -1,13 +1,34 @@
 import 'package:get/get.dart';
 
+import '../../../core/preferences/app_preferences.dart';
 import '../../../domain/repositories/i_auth_repository.dart';
+import '../../../domain/usecases/auth_session_use_cases.dart';
 import 'settings_controller.dart';
 
 class SettingsBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<SettingsController>(
-      () => SettingsController(authRepository: Get.find<IAuthRepository>()),
-    );
+    if (!Get.isRegistered<GetStoredUserUseCase>()) {
+      Get.lazyPut(
+        () => GetStoredUserUseCase(Get.find<IAuthRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<LogoutUseCase>()) {
+      Get.lazyPut(
+        () => LogoutUseCase(Get.find<IAuthRepository>()),
+        fenix: true,
+      );
+    }
+
+    if (!Get.isRegistered<SettingsController>()) {
+      Get.lazyPut<SettingsController>(
+        () => SettingsController(
+          preferences: Get.find<AppPreferences>(),
+          getStoredUserUseCase: Get.find<GetStoredUserUseCase>(),
+          logoutUseCase: Get.find<LogoutUseCase>(),
+        ),
+      );
+    }
   }
 }

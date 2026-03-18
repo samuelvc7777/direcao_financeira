@@ -21,12 +21,17 @@ class MonthSelector extends GetView<HomeController> {
         decoration: BoxDecoration(
           color: context.theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+          border: Border.all(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
         ),
         child: Row(
           children: [
             IconButton(
-              icon: Icon(Icons.chevron_left, color: context.theme.colorScheme.onSurface.withOpacity(0.7)),
+              icon: Icon(
+                Icons.chevron_left,
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
               onPressed: controller.previousMonth,
               splashRadius: 20,
             ),
@@ -44,7 +49,10 @@ class MonthSelector extends GetView<HomeController> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.chevron_right, color: context.theme.colorScheme.onSurface.withOpacity(0.7)),
+              icon: Icon(
+                Icons.chevron_right,
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
               onPressed: controller.nextMonth,
               splashRadius: 20,
             ),

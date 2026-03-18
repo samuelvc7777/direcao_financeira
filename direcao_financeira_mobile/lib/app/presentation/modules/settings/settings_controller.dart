@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 
+import '../../../core/preferences/app_preferences.dart';
 import '../../../domain/entities/subscription_entity.dart';
-import '../../../domain/repositories/i_auth_repository.dart';
+import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../../../routes/app_pages.dart';
 
 class SettingsController extends GetxController {
-  SettingsController({required this.authRepository});
+  SettingsController({
+    required this.preferences,
+    required this.getStoredUserUseCase,
+    required this.logoutUseCase,
+  });
 
-  final IAuthRepository authRepository;
+  final AppPreferences preferences;
+  final GetStoredUserUseCase getStoredUserUseCase;
+  final LogoutUseCase logoutUseCase;
 
-  final isDarkModeEnabled = (GetStorage().read<bool>('isDarkMode') ?? Get.isPlatformDarkMode).obs;
+  late final RxBool isDarkModeEnabled =
+      (preferences.readBool('isDarkMode') ?? Get.isPlatformDarkMode).obs;
   final userName = 'Samuel Vitor'.obs;
   final userEmail = 'samuelvitorcarvalho717@gmail.com'.obs;
   final planName = 'Plano Anual'.obs;
@@ -93,9 +100,9 @@ class SettingsController extends GetxController {
   }
 
   void _loadUser() {
-    final result = authRepository.getStoredUser();
+    final result = getStoredUserUseCase();
     result.fold(
-      (failure) => debugPrint('[SettingsController] Erro ao carregar usuário: ${failure.message}'),
+      (failure) => debugPrint('[SettingsController] Erro ao carregar usuario: ${failure.message}'),
       (user) {
         if (user == null) return;
         userName.value = user.name;
@@ -156,7 +163,7 @@ class SettingsController extends GetxController {
   void toggleTheme(bool value) {
     isDarkModeEnabled.value = value;
     Get.changeThemeMode(value ? ThemeMode.dark : ThemeMode.light);
-    GetStorage().write('isDarkMode', value);
+    preferences.writeBool('isDarkMode', value);
   }
 
   void openSubscription() => Get.toNamed(AppRoutes.subscription);
@@ -188,7 +195,7 @@ class SettingsController extends GetxController {
   }
 
   Future<void> logout() async {
-    await authRepository.logout();
+    await logoutUseCase();
     Get.offAllNamed(AppRoutes.login);
   }
 

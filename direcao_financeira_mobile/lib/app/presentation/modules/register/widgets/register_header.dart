@@ -33,7 +33,7 @@ class RegisterHeader extends StatelessWidget {
         Text(
           'Junte-se à elite dos motoristas',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: colorScheme.onSurface.withOpacity(0.6)),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ],
     );

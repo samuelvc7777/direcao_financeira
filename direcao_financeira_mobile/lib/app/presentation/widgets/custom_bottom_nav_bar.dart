@@ -57,10 +57,12 @@ class CustomBottomNavBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.deepNavy,
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: AppColors.royalBlue.withOpacity(0.15)),
+                  border: Border.all(
+                    color: AppColors.royalBlue.withValues(alpha: 0.15),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.32),
+                      color: Colors.black.withValues(alpha: 0.32),
                       blurRadius: 24,
                       offset: const Offset(0, 12),
                     ),
@@ -69,8 +71,8 @@ class CustomBottomNavBar extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: edgeSpacing),
                   child: GNav(
-                    rippleColor: AppColors.royalBlue.withOpacity(0.08),
-                    hoverColor: AppColors.royalBlue.withOpacity(0.08),
+                    rippleColor: AppColors.royalBlue.withValues(alpha: 0.08),
+                    hoverColor: AppColors.royalBlue.withValues(alpha: 0.08),
                     gap: isVeryCompact
                         ? 2
                         : isCompact

@@ -55,7 +55,9 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
             decoration: BoxDecoration(
               color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+              border: Border.all(
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
             ),
             child: Column(
               children: [
@@ -70,7 +72,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.violet.withOpacity(0.15),
+                                color: AppColors.violet.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -97,12 +99,12 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: context.theme.colorScheme.onSurface.withOpacity(0.05),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.chevron_right,
-                          color: context.theme.colorScheme.onSurface.withOpacity(0.38),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
                           size: 20,
                         ),
                       ),
@@ -133,7 +135,9 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Text(
                       _showOpenInvoices ? 'Nenhuma fatura aberta' : 'Nenhuma fatura fechada',
-                      style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.5)),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   )
                 else
@@ -142,7 +146,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: cartoesFiltrados.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      separatorBuilder: (_, itemIndex) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         final cartao = cartoesFiltrados[index];
                         return SizedBox(
@@ -153,14 +157,19 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                Divider(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
+                Divider(
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       _showOpenInvoices ? 'Faturas Totais (Abertas)' : 'Faturas Totais (Fechadas)',
-                      style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.54), fontSize: 14),
+                      style: TextStyle(
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                        fontSize: 14,
+                      ),
                     ),
                     Flexible(
                       child: FittedBox(
@@ -191,14 +200,18 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: isActive ? context.theme.colorScheme.onSurface.withOpacity(0.12) : Colors.transparent,
+        color: isActive
+            ? context.theme.colorScheme.onSurface.withValues(alpha: 0.12)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: isActive ? context.theme.colorScheme.onSurface : context.theme.colorScheme.onSurface.withOpacity(0.38),
+          color: isActive
+              ? context.theme.colorScheme.onSurface
+              : context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
           fontSize: 13,
           fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
         ),
@@ -216,12 +229,12 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.violet.withOpacity(0.25),
-            AppColors.violet.withOpacity(0.10),
+            AppColors.violet.withValues(alpha: 0.25),
+            AppColors.violet.withValues(alpha: 0.10),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.violet.withOpacity(0.3)),
+        border: Border.all(color: AppColors.violet.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,13 +247,13 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.violet.withOpacity(0.2),
+                  color: AppColors.violet.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   cartao.brand.toUpperCase(),
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withOpacity(0.9),
+                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.9),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -261,7 +274,10 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
           ),
           Text(
             isOpenInvoice ? 'Fecha dia ${cartao.closingDay}' : 'Vence dia ${cartao.dueDay}',
-            style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.38), fontSize: 12),
+            style: TextStyle(
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 8),
           FittedBox(
@@ -283,7 +299,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: percentual,
-              backgroundColor: context.theme.colorScheme.onSurface.withOpacity(0.1),
+              backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(
                 percentual > 0.9 ? AppColors.rose : AppColors.violet,
               ),
@@ -295,7 +311,10 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
             isVisible
                 ? 'Disponivel: ${currencyFormat.format(disponivel)}'
                 : 'Disponivel: R\$ ....',
-            style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.38), fontSize: 12),
+            style: TextStyle(
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
+              fontSize: 12,
+            ),
           ),
         ],
       ),

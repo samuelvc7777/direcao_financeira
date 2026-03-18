@@ -85,7 +85,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Ative ou renove seu plano para continuar com os recursos premium.',
-              style: TextStyle(color: Colors.white.withOpacity(0.72), height: 1.5),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72), height: 1.5),
             ),
             const SizedBox(height: 18),
             Obx(
@@ -109,8 +109,8 @@ class _CurrentSubscriptionCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _parsePlanColor(plan?.color).withOpacity(0.2),
-            AppColors.surfaceDark.withOpacity(0.96),
+            _parsePlanColor(plan?.color).withValues(alpha: 0.2),
+            AppColors.surfaceDark.withValues(alpha: 0.96),
           ],
         ),
       ),
@@ -125,7 +125,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: controller.statusColor(subscription.status).withOpacity(0.18),
+                  color: controller.statusColor(subscription.status).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -149,7 +149,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             plan?.description ?? 'Sem descricao disponivel.',
-            style: TextStyle(color: Colors.white.withOpacity(0.74), height: 1.5),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.74), height: 1.5),
           ),
           const SizedBox(height: 18),
           Wrap(
@@ -229,7 +229,7 @@ class _PlansSection extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'A API deste ambiente nao retornou uma lista de planos disponiveis.',
-              style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.5),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), height: 1.5),
             ),
           ],
         ),
@@ -253,7 +253,7 @@ class _PlansSection extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Selecione uma opcao para atualizar sua assinatura.',
-            style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.5),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), height: 1.5),
           ),
           const SizedBox(height: 16),
           ...controller.plans.map(
@@ -267,13 +267,13 @@ class _PlansSection extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: controller.selectedPlanId.value == plan.id
-                          ? _parsePlanColor(plan.color).withOpacity(0.18)
-                          : Colors.white.withOpacity(0.04),
+                          ? _parsePlanColor(plan.color).withValues(alpha: 0.18)
+                          : Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: controller.selectedPlanId.value == plan.id
                             ? _parsePlanColor(plan.color)
-                            : Colors.white.withOpacity(0.08),
+                            : Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
                     child: Row(
@@ -301,7 +301,7 @@ class _PlansSection extends StatelessWidget {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.aqua.withOpacity(0.16),
+                                        color: AppColors.aqua.withValues(alpha: 0.16),
                                         borderRadius: BorderRadius.circular(999),
                                       ),
                                       child: const Text(
@@ -318,7 +318,7 @@ class _PlansSection extends StatelessWidget {
                               Text(
                                 plan.description,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: Colors.white.withValues(alpha: 0.7),
                                   height: 1.4,
                                 ),
                               ),
@@ -333,11 +333,9 @@ class _PlansSection extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Radio<int>(
-                          value: plan.id,
-                          groupValue: controller.selectedPlanId.value,
-                          onChanged: (value) => controller.selectedPlanId.value = value,
-                          activeColor: _parsePlanColor(plan.color),
+                        _PlanSelectionIndicator(
+                          isSelected: controller.selectedPlanId.value == plan.id,
+                          color: _parsePlanColor(plan.color),
                         ),
                       ],
                     ),
@@ -385,16 +383,16 @@ class _HistorySection extends StatelessWidget {
           if (controller.history.isEmpty)
             Text(
               'Nenhum historico de assinatura encontrado.',
-              style: TextStyle(color: Colors.white.withOpacity(0.68)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
             ),
           ...controller.history.map(
             (subscription) => Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,11 +426,11 @@ class _HistorySection extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           'Inicio: ${controller.formatDate(subscription.startDate)}',
-                          style: TextStyle(color: Colors.white.withOpacity(0.68)),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
                         ),
                         Text(
                           'Fim: ${controller.formatDate(subscription.endDate)}',
-                          style: TextStyle(color: Colors.white.withOpacity(0.68)),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
                         ),
                       ],
                     ),
@@ -464,7 +462,7 @@ class _InfoBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 148),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -474,7 +472,7 @@ class _InfoBadge extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(color: Colors.white.withOpacity(0.62), fontSize: 12),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.62), fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
@@ -486,6 +484,40 @@ class _InfoBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PlanSelectionIndicator extends StatelessWidget {
+  const _PlanSelectionIndicator({
+    required this.isSelected,
+    required this.color,
+  });
+
+  final bool isSelected;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isSelected ? color : Colors.transparent,
+        border: Border.all(
+          color: isSelected ? color : Colors.white.withValues(alpha: 0.24),
+          width: 2,
+        ),
+      ),
+      child: isSelected
+          ? const Icon(
+              Icons.check,
+              size: 14,
+              color: Colors.white,
+            )
+          : null,
     );
   }
 }
@@ -521,7 +553,7 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               message,
-              style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.5),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
@@ -542,9 +574,9 @@ class _ErrorState extends StatelessWidget {
 BoxDecoration _panelDecoration({Gradient? gradient}) {
   return BoxDecoration(
     gradient: gradient,
-    color: gradient == null ? AppColors.surfaceDark.withOpacity(0.92) : null,
+    color: gradient == null ? AppColors.surfaceDark.withValues(alpha: 0.92) : null,
     borderRadius: BorderRadius.circular(28),
-    border: Border.all(color: Colors.white.withOpacity(0.08)),
+    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
   );
 }
 

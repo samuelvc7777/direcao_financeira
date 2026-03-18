@@ -1,36 +1,43 @@
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
-import 'package:get_storage/get_storage.dart';
 
 import '../../core/errors/failures.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/i_auth_repository.dart';
+import '../datasources/auth_datasource.dart';
 import '../models/user_model.dart';
 
 class AuthRepository implements IAuthRepository {
-  final Dio dio;
-  final GetStorage storage;
+  AuthRepository({
+    required this.remoteDataSource,
+    required this.localDataSource,
+  });
 
-  AuthRepository({required this.dio, required this.storage});
+  final IAuthRemoteDataSource remoteDataSource;
+  final IAuthLocalDataSource localDataSource;
 
   @override
   Future<Either<Failure, UserEntity>> login(String email, String password) async {
     try {
-      final response = await dio.post('/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+      final response = await remoteDataSource.login(
+        email: email,
+        password: password,
+      );
+      final token = response['access_token'];
+      final userData = response['user'];
 
-      final token = response.data['access_token'];
-      final userData = response.data['user'];
+      if (token is String && token.isNotEmpty) {
+        await localDataSource.saveToken(token);
+      }
+      if (userData is Map<String, dynamic>) {
+        await localDataSource.saveUser(userData);
+        return Right(UserModel.fromJson(userData));
+      }
 
-      await storage.write('token', token);
-      await storage.write('user', userData);
-
-      return Right(UserModel.fromJson(userData));
+      return Left(ServerFailure('Resposta invalida ao realizar login.'));
     } on DioException catch (e) {
-      final message = e.response?.data['message'] ?? 'Erro ao realizar login';
-      return Left(ServerFailure(message is List ? message.first.toString() : message.toString()));
+      final message = _extractMessage(e, 'Erro ao realizar login.');
+      return Left(ServerFailure(message));
     } catch (e) {
       return Left(ServerFailure('Erro inesperado ao realizar login.'));
     }
@@ -43,26 +50,25 @@ class AuthRepository implements IAuthRepository {
     String password,
   ) async {
     try {
-      final response = await dio.post('/auth/register', data: {
-        'name': name,
-        'email': email,
-        'password': password,
-      });
+      final response = await remoteDataSource.register(
+        name: name,
+        email: email,
+        password: password,
+      );
+      final token = response['access_token'];
+      final userData = response['user'];
 
-      final token = response.data['access_token'];
-      final userData = response.data['user'];
-
-      if (token != null) {
-        await storage.write('token', token);
+      if (token is String && token.isNotEmpty) {
+        await localDataSource.saveToken(token);
       }
-      if (userData != null) {
-        await storage.write('user', userData);
+      if (userData is Map<String, dynamic>) {
+        await localDataSource.saveUser(userData);
       }
 
-      return Right(response.data);
+      return Right(response);
     } on DioException catch (e) {
-      final message = e.response?.data['message'] ?? 'Erro ao realizar cadastro.';
-      return Left(ServerFailure(message is List ? message.first.toString() : message.toString()));
+      final message = _extractMessage(e, 'Erro ao realizar cadastro.');
+      return Left(ServerFailure(message));
     } catch (e) {
       return Left(ServerFailure('Erro inesperado ao realizar cadastro.'));
     }
@@ -71,7 +77,7 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<Either<Failure, void>> saveToken(String token) async {
     try {
-      await storage.write('token', token);
+      await localDataSource.saveToken(token);
       return const Right(null);
     } catch (e) {
       return Left(DatabaseFailure('Erro ao salvar token.'));
@@ -81,7 +87,7 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<Either<Failure, String?>> getToken() async {
     try {
-      return Right(storage.read('token'));
+      return Right(localDataSource.getToken());
     } catch (e) {
       return Left(DatabaseFailure('Erro ao ler token.'));
     }
@@ -104,7 +110,7 @@ class AuthRepository implements IAuthRepository {
               subscriptions: user.subscriptions,
             );
 
-      await storage.write('user', userModel.toJson());
+      await localDataSource.saveUser(userModel.toJson());
       return const Right(null);
     } catch (e) {
       return Left(DatabaseFailure('Erro ao salvar dados do usuário.'));
@@ -114,11 +120,7 @@ class AuthRepository implements IAuthRepository {
   @override
   Either<Failure, UserEntity?> getStoredUser() {
     try {
-      final user = storage.read('user');
-      if (user is! Map<String, dynamic>) {
-        return const Right(null);
-      }
-      return Right(UserModel.fromJson(user));
+      return Right(localDataSource.getStoredUser());
     } catch (e) {
       return Left(DatabaseFailure('Erro ao ler dados do usuário.'));
     }
@@ -127,11 +129,25 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      await storage.remove('token');
-      await storage.remove('user');
+      await localDataSource.clearSession();
       return const Right(null);
     } catch (e) {
       return Left(DatabaseFailure('Erro ao fazer logout.'));
     }
+  }
+
+  String _extractMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is List && message.isNotEmpty) {
+        return message.first.toString();
+      }
+      if (message != null) {
+        return message.toString();
+      }
+    }
+
+    return fallback;
   }
 }

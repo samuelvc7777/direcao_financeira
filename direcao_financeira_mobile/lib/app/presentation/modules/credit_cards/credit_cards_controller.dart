@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../domain/entities/credit_card_entity.dart';
-import '../../../domain/repositories/i_credit_card_repository.dart';
+import '../../../domain/usecases/credit_card_use_cases.dart';
 
 class CreditCardsController extends GetxController {
-  CreditCardsController({required this.creditCardRepository});
+  CreditCardsController({
+    required this.loadCreditCardsUseCase,
+    required this.createCreditCardUseCase,
+    required this.updateCreditCardUseCase,
+    required this.deactivateCreditCardUseCase,
+    required this.reactivateCreditCardUseCase,
+  });
 
-  final ICreditCardRepository creditCardRepository;
+  final LoadCreditCardsUseCase loadCreditCardsUseCase;
+  final CreateCreditCardUseCase createCreditCardUseCase;
+  final UpdateCreditCardUseCase updateCreditCardUseCase;
+  final DeactivateCreditCardUseCase deactivateCreditCardUseCase;
+  final ReactivateCreditCardUseCase reactivateCreditCardUseCase;
 
   final isLoading = true.obs;
   final isSubmitting = false.obs;
@@ -29,7 +39,7 @@ class CreditCardsController extends GetxController {
   Future<void> loadCreditCards() async {
     isLoading.value = true;
     errorMessage.value = null;
-    final result = await creditCardRepository.getCreditCards();
+    final result = await loadCreditCardsUseCase();
 
     result.fold(
       (failure) => errorMessage.value = failure.message,
@@ -48,7 +58,7 @@ class CreditCardsController extends GetxController {
     required String lastFourDigits,
   }) async {
     await _runSubmission(
-      action: () => creditCardRepository.createCreditCard(
+      action: () => createCreditCardUseCase(
         name: name,
         brand: brand,
         limitCents: limitCents,
@@ -70,7 +80,7 @@ class CreditCardsController extends GetxController {
     required String lastFourDigits,
   }) async {
     await _runSubmission(
-      action: () => creditCardRepository.updateCreditCard(
+      action: () => updateCreditCardUseCase(
         id: id,
         name: name,
         brand: brand,
@@ -89,43 +99,44 @@ class CreditCardsController extends GetxController {
     final actionNameCap = isDeactivating ? 'Desativar' : 'Reativar';
 
     final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        backgroundColor: Get.theme.colorScheme.surface,
-        title: Text(
-          '$actionNameCap cartao',
-          style: TextStyle(color: Get.theme.colorScheme.onSurface),
-        ),
-        content: Text(
-          'O cartao "${card.name}" sera ${actionName}ado.',
-          style: TextStyle(
-            color: Get.theme.colorScheme.onSurface.withValues(alpha: 0.75),
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Get.back(result: true),
-            style: FilledButton.styleFrom(
-              backgroundColor: isDeactivating
-                  ? const Color(0xFFBF4124)
-                  : const Color(0xFF03A696),
+          AlertDialog(
+            backgroundColor: Get.theme.colorScheme.surface,
+            title: Text(
+              '$actionNameCap cartao',
+              style: TextStyle(color: Get.theme.colorScheme.onSurface),
             ),
-            child: Text(actionNameCap),
+            content: Text(
+              'O cartao "${card.name}" sera ${actionName}ado.',
+              style: TextStyle(
+                color: Get.theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                height: 1.4,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Get.back(result: true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: isDeactivating
+                      ? const Color(0xFFBF4124)
+                      : const Color(0xFF03A696),
+                ),
+                child: Text(actionNameCap),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
 
     if (!confirmed) return;
 
     isSubmitting.value = true;
     final result = isDeactivating
-        ? await creditCardRepository.deactivateCreditCard(card.id)
-        : await creditCardRepository.reactivateCreditCard(card.id);
+        ? await deactivateCreditCardUseCase(card.id)
+        : await reactivateCreditCardUseCase(card.id);
 
     result.fold(
       (failure) => _showFeedback('Erro', failure.message, isError: true),

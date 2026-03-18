@@ -48,7 +48,7 @@ class LoginController extends GetxController {
           'Sucesso',
           'Bem-vindo(a), ${user.name}!',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFF03A696).withOpacity(0.12),
+          backgroundColor: const Color(0xFF03A696).withValues(alpha: 0.12),
           colorText: Colors.white,
         );
       },
@@ -60,7 +60,7 @@ class LoginController extends GetxController {
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFBF4124).withOpacity(0.12),
+      backgroundColor: const Color(0xFFBF4124).withValues(alpha: 0.12),
       colorText: Colors.white,
     );
   }

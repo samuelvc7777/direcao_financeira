@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../domain/entities/bank_account_entity.dart';
-import '../../../domain/repositories/i_bank_account_repository.dart';
+import '../../../domain/usecases/bank_account_use_cases.dart';
 
 class BankAccountsController extends GetxController {
-  BankAccountsController({required this.bankAccountRepository});
+  BankAccountsController({
+    required this.loadBankAccountsUseCase,
+    required this.createBankAccountUseCase,
+    required this.updateBankAccountUseCase,
+    required this.deactivateBankAccountUseCase,
+    required this.reactivateBankAccountUseCase,
+  });
 
-  final IBankAccountRepository bankAccountRepository;
+  final LoadBankAccountsUseCase loadBankAccountsUseCase;
+  final CreateBankAccountUseCase createBankAccountUseCase;
+  final UpdateBankAccountUseCase updateBankAccountUseCase;
+  final DeactivateBankAccountUseCase deactivateBankAccountUseCase;
+  final ReactivateBankAccountUseCase reactivateBankAccountUseCase;
 
   final isLoading = true.obs;
   final isSubmitting = false.obs;
@@ -29,7 +39,7 @@ class BankAccountsController extends GetxController {
   Future<void> loadBankAccounts() async {
     isLoading.value = true;
     errorMessage.value = null;
-    final result = await bankAccountRepository.getBankAccounts();
+    final result = await loadBankAccountsUseCase();
 
     result.fold(
       (failure) => errorMessage.value = failure.message,
@@ -46,7 +56,7 @@ class BankAccountsController extends GetxController {
     required int initialBalanceCents,
   }) async {
     await _runSubmission(
-      action: () => bankAccountRepository.createBankAccount(
+      action: () => createBankAccountUseCase(
         name: name,
         bankName: bankName,
         accountType: accountType,
@@ -64,7 +74,7 @@ class BankAccountsController extends GetxController {
     required int initialBalanceCents,
   }) async {
     await _runSubmission(
-      action: () => bankAccountRepository.updateBankAccount(
+      action: () => updateBankAccountUseCase(
         id: id,
         name: name,
         bankName: bankName,
@@ -81,43 +91,44 @@ class BankAccountsController extends GetxController {
     final actionNameCap = isDeactivating ? 'Desativar' : 'Reativar';
 
     final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        backgroundColor: Get.theme.colorScheme.surface,
-        title: Text(
-          '$actionNameCap conta',
-          style: TextStyle(color: Get.theme.colorScheme.onSurface),
-        ),
-        content: Text(
-          'A conta "${account.name}" sera ${actionName}ada.',
-          style: TextStyle(
-            color: Get.theme.colorScheme.onSurface.withValues(alpha: 0.75),
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Get.back(result: true),
-            style: FilledButton.styleFrom(
-              backgroundColor: isDeactivating
-                  ? const Color(0xFFBF4124)
-                  : const Color(0xFF03A696),
+          AlertDialog(
+            backgroundColor: Get.theme.colorScheme.surface,
+            title: Text(
+              '$actionNameCap conta',
+              style: TextStyle(color: Get.theme.colorScheme.onSurface),
             ),
-            child: Text(actionNameCap),
+            content: Text(
+              'A conta "${account.name}" sera ${actionName}ada.',
+              style: TextStyle(
+                color: Get.theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                height: 1.4,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Get.back(result: true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: isDeactivating
+                      ? const Color(0xFFBF4124)
+                      : const Color(0xFF03A696),
+                ),
+                child: Text(actionNameCap),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
 
     if (!confirmed) return;
 
     isSubmitting.value = true;
     final result = isDeactivating
-        ? await bankAccountRepository.deactivateBankAccount(account.id)
-        : await bankAccountRepository.reactivateBankAccount(account.id);
+        ? await deactivateBankAccountUseCase(account.id)
+        : await reactivateBankAccountUseCase(account.id);
 
     result.fold(
       (failure) => _showFeedback('Erro', failure.message, isError: true),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../domain/entities/category_entity.dart';
 import '../../../../domain/entities/credit_card_entity.dart';
 import '../../../../domain/entities/transaction_entity.dart';
@@ -46,12 +47,12 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
         showBackButton: true,
       ),
       body: Obx(() {
-        if (controller.isLoadingDependencies.value) {
+        if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator(color: AppColors.aqua));
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(Responsive.sp(context, 24)),
           child: Form(
             key: _formKey,
             child: Column(
@@ -77,7 +78,7 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: Responsive.vp(context, 2.5)),
                 CustomTextField(
                   controller: _descriptionController,
                   label: 'Descricao',
@@ -85,14 +86,18 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
                   icon: Icons.edit_note_rounded,
                   validator: (v) => v?.isEmpty ?? true ? 'Informe a descricao.' : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.vp(context, 3)),
                 Text(
                   'Cartao de Credito',
-                  style: TextStyle(color: context.theme.colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
+                    fontSize: Responsive.sp(context, 14),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: Responsive.vp(context, 1.5)),
                 DropdownButtonFormField<CreditCardEntity>(
-                  value: _selectedCard,
+                  initialValue: _selectedCard,
                   dropdownColor: context.theme.colorScheme.surface,
                   style: TextStyle(color: context.theme.colorScheme.onSurface),
                   decoration: _dropdownDecoration('Selecione um cartao'),
@@ -102,14 +107,18 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
                   onChanged: (v) => setState(() => _selectedCard = v),
                   validator: (v) => v == null ? 'Selecione o cartao' : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: Responsive.vp(context, 3)),
                 Text(
                   'Categoria',
-                  style: TextStyle(color: context.theme.colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
+                    fontSize: Responsive.sp(context, 14),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: Responsive.vp(context, 1.5)),
                 DropdownButtonFormField<CategoryEntity>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   dropdownColor: context.theme.colorScheme.surface,
                   style: TextStyle(color: context.theme.colorScheme.onSurface),
                   decoration: _dropdownDecoration('Selecione a categoria'),
@@ -119,7 +128,7 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
                   onChanged: (v) => setState(() => _selectedCategory = v),
                   validator: (v) => v == null ? 'Selecione a categoria' : null,
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: Responsive.vp(context, 5)),
                 CustomFilledButton(
                   text: 'SALVAR COMPRA',
                   icon: Icons.check_rounded,
@@ -137,22 +146,28 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
   InputDecoration _dropdownDecoration(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: context.theme.colorScheme.onSurface.withOpacity(0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      fillColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: Responsive.sp(context, 16),
+        vertical: Responsive.sp(context, 16),
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
+        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
+        borderSide: BorderSide(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
         borderSide: const BorderSide(color: AppColors.royalBlue),
       ),
       hintText: hint,
-      hintStyle: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.3)),
+      hintStyle: TextStyle(
+        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        fontSize: Responsive.sp(context, 14),
+      ),
     );
   }
 
@@ -162,7 +177,7 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
     final rawAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final amountCents = int.tryParse(rawAmount) ?? 0;
 
-    final success = await controller.createTransaction(
+    await controller.createTransaction(
       type: TransactionType.expense,
       assetType: AssetType.creditCard,
       amountCents: amountCents,
@@ -171,9 +186,5 @@ class _CreditCardFormViewState extends State<CreditCardFormView> {
       transactionDate: DateTime.now(),
       creditCardId: _selectedCard!.id,
     );
-
-    if (success) {
-      Get.back();
-    }
   }
 }

@@ -49,7 +49,7 @@ class CustomTextField extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: colorScheme.onSurface.withOpacity(0.7),
+            color: colorScheme.onSurface.withValues(alpha: 0.7),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -68,22 +68,24 @@ class CustomTextField extends StatelessWidget {
           style: TextStyle(color: colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.3)),
-            prefixIcon: Icon(icon, color: AppColors.royalBlue.withOpacity(0.7)),
+            hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.3)),
+            prefixIcon: Icon(icon, color: AppColors.royalBlue.withValues(alpha: 0.7)),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
                       obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: colorScheme.onSurface.withOpacity(0.38),
+                      color: colorScheme.onSurface.withValues(alpha: 0.38),
                     ),
                     onPressed: onTogglePassword,
                   )
                 : suffixIcon,
             filled: true,
-            fillColor: colorScheme.onSurface.withOpacity(0.05),
+            fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.1)),
+              borderSide: BorderSide(
+                color: colorScheme.onSurface.withValues(alpha: 0.1),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

@@ -3,12 +3,12 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../domain/entities/transaction_entity.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/scale_button.dart';
-import '../home/home_controller.dart';
 import 'transactions_controller.dart';
 import 'widgets/transaction_type_selector_sheet.dart';
-import '../../../domain/entities/transaction_entity.dart';
 
 class TransactionsView extends GetView<TransactionsController> {
   const TransactionsView({super.key});
@@ -27,7 +27,7 @@ class TransactionsView extends GetView<TransactionsController> {
         showBackButton: false,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: Responsive.hp(context, 4)),
             child: ScaleButton(
               onTap: () {
                 Get.bottomSheet(
@@ -37,26 +37,30 @@ class TransactionsView extends GetView<TransactionsController> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.hp(context, 3.2),
+                  vertical: Responsive.vp(context, 1),
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.teal.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.teal.withOpacity(0.3)),
+                  color: AppColors.teal.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(Responsive.sp(context, 12)),
+                  border: Border.all(color: AppColors.teal.withValues(alpha: 0.3)),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add_rounded, color: AppColors.teal, size: 20),
-                    SizedBox(width: 4),
+                    Icon(
+                      Icons.add_rounded,
+                      color: AppColors.teal,
+                      size: Responsive.sp(context, 20),
+                    ),
+                    SizedBox(width: Responsive.hp(context, 1)),
                     Text(
                       'Nova',
                       style: TextStyle(
                         color: AppColors.teal,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: Responsive.sp(context, 13),
                       ),
                     ),
                   ],
@@ -70,22 +74,19 @@ class TransactionsView extends GetView<TransactionsController> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final horizontalPadding = width < 360
-              ? 12.0
+              ? Responsive.hp(context, 3.2)
               : width < 430
-              ? 16.0
-              : 20.0;
+                  ? Responsive.hp(context, 4.2)
+                  : Responsive.hp(context, 5.2);
 
           return Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: BoxDecoration(
-              color: context.theme.scaffoldBackgroundColor,
-            ),
+            color: context.theme.scaffoldBackgroundColor,
             child: Obx(() {
-              final homeController = Get.find<HomeController>();
-              final transacoes = homeController.ultimasTransacoes;
+              final transacoes = controller.transactions;
 
-              if (homeController.isLoading.value) {
+              if (controller.isLoading.value) {
                 return const Center(
                   child: CircularProgressIndicator(color: AppColors.aqua),
                 );
@@ -97,32 +98,31 @@ class TransactionsView extends GetView<TransactionsController> {
                     ? Center(
                         key: const ValueKey('empty'),
                         child: Padding(
-                          padding: const EdgeInsets.all(32),
+                          padding: EdgeInsets.all(Responsive.sp(context, 32)),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.receipt_long_outlined,
-                                color: context.theme.colorScheme.onSurface
-                                    .withOpacity(0.1),
-                                size: 80,
+                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                                size: Responsive.sp(context, 80),
                               ),
-                              const SizedBox(height: 24),
+                              SizedBox(height: Responsive.vp(context, 3)),
                               Text(
                                 'Nenhuma transacao',
                                 style: TextStyle(
                                   color: context.theme.colorScheme.onSurface,
-                                  fontSize: 20,
+                                  fontSize: Responsive.sp(context, 20),
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: Responsive.vp(context, 1.5)),
                               Text(
                                 'Sua lista de despesas e receitas aparecera aqui.',
                                 style: TextStyle(
-                                  color: context.theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
+                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                   height: 1.5,
+                                  fontSize: Responsive.sp(context, 14),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -134,17 +134,18 @@ class TransactionsView extends GetView<TransactionsController> {
                         key: const ValueKey('list'),
                         padding: EdgeInsets.fromLTRB(
                           horizontalPadding,
-                          16,
+                          Responsive.vp(context, 2),
                           horizontalPadding,
-                          100,
+                          Responsive.vp(context, 12),
                         ),
                         itemCount: transacoes.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (context, index) =>
+                            SizedBox(height: Responsive.vp(context, 1.5)),
                         itemBuilder: (context, index) {
-                          final t = transacoes[index];
+                          final transaction = transacoes[index];
                           return _buildTransactionItem(
                             context,
-                            t,
+                            transaction,
                             currencyFormat,
                             dateFormat,
                             constraints.maxWidth,
@@ -171,12 +172,12 @@ class TransactionsView extends GetView<TransactionsController> {
     final isCompact = maxWidth < 390;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(Responsive.sp(context, 16)),
       decoration: BoxDecoration(
         color: context.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
         border: Border.all(
-          color: context.theme.colorScheme.onSurface.withOpacity(0.05),
+          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
         ),
       ),
       child: isCompact
@@ -185,28 +186,28 @@ class TransactionsView extends GetView<TransactionsController> {
               children: [
                 Row(
                   children: [
-                    _buildLeading(isNegativo),
-                    const SizedBox(width: 14),
+                    _buildLeading(context, isNegativo),
+                    SizedBox(width: Responsive.hp(context, 3.5)),
                     Expanded(child: _buildInfo(context, transacao, dateFormat)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: Responsive.vp(context, 1.2)),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: _buildValue(valor, isNegativo, currencyFormat),
+                  child: _buildValue(context, valor, isNegativo, currencyFormat),
                 ),
               ],
             )
           : Row(
               children: [
-                _buildLeading(isNegativo),
-                const SizedBox(width: 14),
+                _buildLeading(context, isNegativo),
+                SizedBox(width: Responsive.hp(context, 3.5)),
                 Expanded(child: _buildInfo(context, transacao, dateFormat)),
-                const SizedBox(width: 12),
+                SizedBox(width: Responsive.hp(context, 3)),
                 Flexible(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: _buildValue(valor, isNegativo, currencyFormat),
+                    child: _buildValue(context, valor, isNegativo, currencyFormat),
                   ),
                 ),
               ],
@@ -214,19 +215,17 @@ class TransactionsView extends GetView<TransactionsController> {
     );
   }
 
-  Widget _buildLeading(bool isNegativo) {
+  Widget _buildLeading(BuildContext context, bool isNegativo) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(Responsive.sp(context, 12)),
       decoration: BoxDecoration(
-        color: (isNegativo ? AppColors.rose : AppColors.emerald).withOpacity(
-          0.15,
-        ),
-        borderRadius: BorderRadius.circular(14),
+        color: (isNegativo ? AppColors.rose : AppColors.emerald).withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 14)),
       ),
       child: Icon(
         isNegativo ? Icons.arrow_downward : Icons.arrow_upward,
         color: isNegativo ? AppColors.rose : AppColors.emerald,
-        size: 20,
+        size: Responsive.sp(context, 20),
       ),
     );
   }
@@ -243,16 +242,16 @@ class TransactionsView extends GetView<TransactionsController> {
           transacao.description,
           style: TextStyle(
             color: context.theme.colorScheme.onSurface,
-            fontSize: 16,
+            fontSize: Responsive.sp(context, 16),
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: Responsive.vp(context, 0.5)),
         Text(
-          '${transacao.categoryName ?? 'Sem categoria'} • ${dateFormat.format(transacao.transactionDate)}',
+          '${transacao.categoryName ?? 'Sem categoria'} - ${dateFormat.format(transacao.transactionDate)}',
           style: TextStyle(
-            color: context.theme.colorScheme.onSurface.withOpacity(0.5),
-            fontSize: 13,
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            fontSize: Responsive.sp(context, 13),
           ),
         ),
       ],
@@ -260,6 +259,7 @@ class TransactionsView extends GetView<TransactionsController> {
   }
 
   Widget _buildValue(
+    BuildContext context,
     double valor,
     bool isNegativo,
     NumberFormat currencyFormat,
@@ -268,7 +268,7 @@ class TransactionsView extends GetView<TransactionsController> {
       '${isNegativo ? '- ' : '+ '}${currencyFormat.format(valor)}',
       style: TextStyle(
         color: isNegativo ? AppColors.rose : AppColors.emerald,
-        fontSize: 16,
+        fontSize: Responsive.sp(context, 16),
         fontWeight: FontWeight.w900,
       ),
     );
