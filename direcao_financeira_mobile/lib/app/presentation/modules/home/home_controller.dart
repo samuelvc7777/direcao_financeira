@@ -1,73 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:dartz/dartz.dart' as dartz;
+import '../../../domain/entities/bank_account_entity.dart';
+import '../../../domain/entities/credit_card_entity.dart';
+import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/repositories/i_auth_repository.dart';
+import '../../../domain/repositories/i_bank_account_repository.dart';
+import '../../../domain/repositories/i_credit_card_repository.dart';
+import '../../../domain/usecases/transaction_use_cases.dart';
 import '../../../routes/app_pages.dart';
 
 class HomeController extends GetxController {
   final IAuthRepository authRepository;
+  final IBankAccountRepository bankAccountRepository;
+  final ICreditCardRepository creditCardRepository;
+  final GetTransactionsUseCase getTransactionsUseCase;
 
-  HomeController({required this.authRepository});
+  HomeController({
+    required this.authRepository,
+    required this.bankAccountRepository,
+    required this.creditCardRepository,
+    required this.getTransactionsUseCase,
+  });
 
-  // Dados do usuário
-  var userName = ''.obs;
+  // Loading state
+  final isLoading = true.obs;
+
+  // Dados do usuario
+  final userName = ''.obs;
   
-  // Mês selecionado
-  var selectedMonth = DateTime.now().obs;
+  // Mes selecionado
+  final selectedMonth = DateTime.now().obs;
 
   // Visibilidade do saldo
-  var isBalanceVisible = true.obs;
+  final isBalanceVisible = true.obs;
 
-  // Dados mockados de saldo
-  var saldoAtual = 1273.00.obs;
-  var entradas = 0.00.obs;
-  var saidas = 250.00.obs;
+  // Real Data
+  final contas = <BankAccountEntity>[].obs;
+  final cartoes = <CreditCardEntity>[].obs;
+  final ultimasTransacoes = <TransactionEntity>[].obs;
 
-  // Contas
-  final contas = <Map<String, dynamic>>[
-    {
-      'nome': 'Meu Nubank',
-      'tipo': 'CORRENTE',
-      'saldo': 1220.00,
-      'icon': Icons.account_balance,
-      'cor': const Color(0xFF6B21A8), // Roxo
-    },
-    {
-      'nome': 'Carteira',
-      'tipo': 'CARTEIRA',
-      'saldo': 53.00,
-      'icon': Icons.account_balance_wallet,
-      'cor': const Color(0xFF047857), // Verde
-    },
-  ].obs;
-
-  // Cartões de crédito
-  final cartoes = <Map<String, dynamic>>[
-    {
-      'nome': 'Cartão Nubank',
-      'fechamento': '03/04/2026',
-      'fatura': 250.00,
-      'limite': 300.00,
-      'disponivel': 50.00,
-    },
-  ].obs;
-
-  // Gastos por categoria
+  // Gastos por categoria (Ainda mockados ate o dashboard de graficos reais)
   final gastosPorCategoria = <Map<String, dynamic>>[
-    {'categoria': 'Manutenção', 'valor': 250.00, 'percentual': 100.0, 'cor': const Color(0xFF3B82F6)},
+    {'categoria': 'Manutencao', 'valor': 250.00, 'percentual': 100.0, 'cor': const Color(0xFF3B82F6)},
   ].obs;
 
-  // Últimas transações
-  final ultimasTransacoes = <Map<String, dynamic>>[
-    {
-      'titulo': 'troca de pneu (1/2)',
-      'categoria': 'Manutenção',
-      'data': '25/02',
-      'hora': '00:00',
-      'valor': -250.00,
-    },
-  ].obs;
-
-  // Metas
+  // Metas (Ainda mockadas)
   final metas = <Map<String, dynamic>>[
     {
       'nome': 'Pagar contas',
@@ -77,24 +55,76 @@ class HomeController extends GetxController {
     },
   ].obs;
 
-  // Navegação
-  var currentTabIndex = 0.obs;
+  // Navegacao
+  final currentTabIndex = 0.obs;
 
   @override
   void onInit() {
     super.onInit();
     _loadUserData();
+    loadDashboardData();
+  }
+
+  Future<void> loadDashboardData({bool silent = false}) async {
+    if (!silent) isLoading.value = true;
+    
+    // Buscar contas, cartoes e transacoes em paralelo
+    final responses = await Future.wait([
+      bankAccountRepository.getBankAccounts(),
+      creditCardRepository.getCreditCards(),
+      getTransactionsUseCase(),
+    ]);
+
+    final bankResult = responses[0] as dartz.Either<dynamic, List<BankAccountEntity>>;
+    final cardResult = responses[1] as dartz.Either<dynamic, List<CreditCardEntity>>;
+    final transactionResult = responses[2] as dartz.Either<dynamic, List<TransactionEntity>>;
+
+    bankResult.fold(
+      (failure) => debugPrint('[HomeController] Erro ao carregar contas: ${failure.message}'),
+      (data) => contas.assignAll(data.where((a) => a.isActive).toList()),
+    );
+
+    cardResult.fold(
+      (failure) => debugPrint('[HomeController] Erro ao carregar cartoes: ${failure.message}'),
+      (data) => cartoes.assignAll(data.where((c) => c.isActive).toList()),
+    );
+
+    transactionResult.fold(
+      (failure) => debugPrint('[HomeController] Erro ao carregar transacoes: ${failure.message}'),
+      (data) {
+        final sortedData = List<TransactionEntity>.from(data)
+          ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+        ultimasTransacoes.assignAll(sortedData);
+      },
+    );
+
+    if (!silent) isLoading.value = false;
   }
 
   void _loadUserData() {
-    final user = authRepository.getStoredUser();
-    if (user != null) {
-      userName.value = user.name;
-    }
+    final result = authRepository.getStoredUser();
+    result.fold(
+      (failure) => debugPrint('[HomeController] Erro ao carregar usuario: ${failure.message}'),
+      (user) {
+        if (user != null) {
+          userName.value = user.name;
+        }
+      },
+    );
   }
 
-  bool get isSaldoPositivo => saldoAtual.value >= 0;
-  double get saldoTotal => contas.fold(0.0, (total, c) => total + (c['saldo'] as double));
+  // Calculos Reais
+  double get saldoTotal => contas.fold(0.0, (total, c) => total + c.currentBalance);
+  bool get isSaldoPositivo => saldoTotal >= 0;
+  
+  double get entradas => ultimasTransacoes
+      .where((t) => t.type == TransactionType.income)
+      .fold(0.0, (total, t) => total + t.amount);
+      
+  double get saidas => ultimasTransacoes
+      .where((t) => t.type == TransactionType.expense)
+      .fold(0.0, (total, t) => total + t.amount);
+      
   double get totalSaidas => gastosPorCategoria.fold(0.0, (total, g) => total + (g['valor'] as double));
 
   void toggleBalanceVisibility() => isBalanceVisible.toggle();

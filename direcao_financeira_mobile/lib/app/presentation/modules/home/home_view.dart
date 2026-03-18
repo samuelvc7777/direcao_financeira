@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
+
 import '../../widgets/custom_app_bar.dart';
 import 'home_controller.dart';
 import 'widgets/accounts_section.dart';
@@ -18,7 +18,7 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.petrol,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(
         title: 'Dashboard',
         subtitle: 'Resumo financeiro do mes',
@@ -37,14 +37,10 @@ class HomeView extends GetView<HomeController> {
           return Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.petrol, AppColors.backgroundDark],
-              ),
+              color: context.theme.scaffoldBackgroundColor,
             ),
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: const ClampingScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
                 horizontalPadding,
                 8,
@@ -54,8 +50,8 @@ class HomeView extends GetView<HomeController> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       MonthSelector(),
                       BalanceCard(),
                       AccountsSection(),

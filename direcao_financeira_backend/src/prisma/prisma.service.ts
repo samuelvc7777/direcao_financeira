@@ -9,10 +9,15 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   public readonly client: PrismaClient;
 
   constructor() {
-    // No Prisma 7, conexões diretas são feitas via Driver Adapters
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const adapter = new PrismaPg(pool);
+    // Configuração recomendada para o Pool do pg com Prisma Adapter para evitar avisos de concorrência
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
     
+    const adapter = new PrismaPg(pool);
     this.client = new PrismaClient({ adapter });
   }
 

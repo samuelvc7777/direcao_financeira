@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class CustomTextField extends StatelessWidget {
@@ -11,6 +12,12 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTogglePassword;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextAlign textAlign;
+  final Widget? suffixIcon;
+  final TextCapitalization textCapitalization;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -23,17 +30,26 @@ class CustomTextField extends StatelessWidget {
     this.onTogglePassword,
     this.keyboardType,
     this.validator,
+    this.inputFormatters,
+    this.textAlign = TextAlign.start,
+    this.suffixIcon,
+    this.textCapitalization = TextCapitalization.none,
+    this.textInputAction,
+    this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
+          style: TextStyle(
+            color: colorScheme.onSurface.withOpacity(0.7),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -44,29 +60,34 @@ class CustomTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Colors.white),
+          inputFormatters: inputFormatters,
+          textAlign: textAlign,
+          textCapitalization: textCapitalization,
+          textInputAction: textInputAction,
+          onChanged: onChanged,
+          style: TextStyle(color: colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white24),
-            prefixIcon: Icon(icon, color: AppColors.teal.withOpacity(0.7)),
+            hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.3)),
+            prefixIcon: Icon(icon, color: AppColors.royalBlue.withOpacity(0.7)),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
                       obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white38,
+                      color: colorScheme.onSurface.withOpacity(0.38),
                     ),
                     onPressed: onTogglePassword,
                   )
-                : null,
+                : suffixIcon,
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: colorScheme.onSurface.withOpacity(0.05),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.1)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.teal, width: 2),
+              borderSide: const BorderSide(color: AppColors.royalBlue, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

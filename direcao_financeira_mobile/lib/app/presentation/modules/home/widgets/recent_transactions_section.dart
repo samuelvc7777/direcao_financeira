@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../home_controller.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
+import '../../../../domain/entities/transaction_entity.dart';
 
 class RecentTransactionsSection extends GetView<HomeController> {
   const RecentTransactionsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.simpleCurrency(locale: 'pt_BR');
+    final dateFormat = DateFormat('dd/MM', 'pt_BR');
+
     return Obx(() {
       final transacoes = controller.ultimasTransacoes;
       final isVisible = controller.isBalanceVisible.value;
@@ -16,9 +21,9 @@ class RecentTransactionsSection extends GetView<HomeController> {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
+          color: context.theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
         ),
         child: Column(
           children: [
@@ -30,22 +35,22 @@ class RecentTransactionsSection extends GetView<HomeController> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.teal.withOpacity(0.15),
+                          color: AppColors.royalBlue.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
                           Icons.receipt_long,
-                          color: AppColors.teal,
+                          color: AppColors.royalBlue,
                           size: 18,
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Flexible(
+                      Flexible(
                         child: Text(
                           'Ultimas Transacoes',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: AppColors.teal,
+                            color: AppColors.royalBlue,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -57,7 +62,7 @@ class RecentTransactionsSection extends GetView<HomeController> {
                 Text(
                   'Ver todas',
                   style: TextStyle(
-                    color: AppColors.teal.withOpacity(0.7),
+                    color: AppColors.royalBlue.withOpacity(0.7),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -65,14 +70,14 @@ class RecentTransactionsSection extends GetView<HomeController> {
               ],
             ),
             const SizedBox(height: 16),
-            ...transacoes.map((t) => _buildTransactionItem(t, isVisible)),
+            ...transacoes.map((t) => _buildTransactionItem(context, t, isVisible, currencyFormat, dateFormat)),
             if (transacoes.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text(
                   'Nenhuma transacao registrada.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
+                    color: context.theme.colorScheme.onSurface.withOpacity(0.3),
                     fontSize: 13,
                   ),
                 ),
@@ -83,9 +88,9 @@ class RecentTransactionsSection extends GetView<HomeController> {
     });
   }
 
-  Widget _buildTransactionItem(Map<String, dynamic> transacao, bool isVisible) {
-    final valor = transacao['valor'] as double;
-    final isNegativo = valor < 0;
+  Widget _buildTransactionItem(BuildContext context, TransactionEntity transacao, bool isVisible, NumberFormat currencyFormat, DateFormat dateFormat) {
+    final valor = transacao.amount;
+    final isNegativo = transacao.type == TransactionType.expense;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -95,9 +100,9 @@ class RecentTransactionsSection extends GetView<HomeController> {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
+            color: context.theme.colorScheme.onSurface.withOpacity(0.03),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.05)),
           ),
           child: isCompact
               ? Column(
@@ -107,13 +112,13 @@ class RecentTransactionsSection extends GetView<HomeController> {
                       children: [
                         _buildLeading(isNegativo),
                         const SizedBox(width: 14),
-                        Expanded(child: _buildInfo(transacao)),
+                        Expanded(child: _buildInfo(context, transacao, dateFormat)),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: _buildValue(valor, isNegativo, isVisible),
+                      child: _buildValue(valor, isNegativo, isVisible, currencyFormat),
                     ),
                   ],
                 )
@@ -121,12 +126,12 @@ class RecentTransactionsSection extends GetView<HomeController> {
                   children: [
                     _buildLeading(isNegativo),
                     const SizedBox(width: 14),
-                    Expanded(child: _buildInfo(transacao)),
+                    Expanded(child: _buildInfo(context, transacao, dateFormat)),
                     const SizedBox(width: 12),
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: _buildValue(valor, isNegativo, isVisible),
+                        child: _buildValue(valor, isNegativo, isVisible, currencyFormat),
                       ),
                     ),
                   ],
@@ -140,47 +145,47 @@ class RecentTransactionsSection extends GetView<HomeController> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: (isNegativo ? Colors.redAccent : Colors.greenAccent).withOpacity(
+        color: (isNegativo ? AppColors.rose : AppColors.emerald).withOpacity(
           0.1,
         ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(
         isNegativo ? Icons.arrow_downward : Icons.arrow_upward,
-        color: isNegativo ? Colors.redAccent : Colors.greenAccent,
+        color: isNegativo ? AppColors.rose : AppColors.emerald,
         size: 18,
       ),
     );
   }
 
-  Widget _buildInfo(Map<String, dynamic> transacao) {
+  Widget _buildInfo(BuildContext context, TransactionEntity transacao, DateFormat dateFormat) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          transacao['titulo'],
-          style: const TextStyle(
-            color: Colors.white,
+          transacao.description,
+          style: TextStyle(
+            color: context.theme.colorScheme.onSurface,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 2),
         Text(
-          '${transacao['categoria']} • ${transacao['data']} • ${transacao['hora']}',
-          style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+          '${transacao.categoryName ?? 'Sem categoria'} • ${dateFormat.format(transacao.transactionDate)}',
+          style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.4), fontSize: 11),
         ),
       ],
     );
   }
 
-  Widget _buildValue(double valor, bool isNegativo, bool isVisible) {
+  Widget _buildValue(double valor, bool isNegativo, bool isVisible, NumberFormat currencyFormat) {
     return Text(
       isVisible
-          ? '${isNegativo ? '- ' : '+ '}R\$ ${valor.abs().toStringAsFixed(2).replaceAll('.', ',')}'
+          ? '${isNegativo ? '- ' : '+ '}${currencyFormat.format(valor)}'
           : 'R\$ ....',
       style: TextStyle(
-        color: isNegativo ? Colors.redAccent : Colors.greenAccent,
+        color: isNegativo ? AppColors.rose : AppColors.emerald,
         fontSize: 15,
         fontWeight: FontWeight.bold,
       ),

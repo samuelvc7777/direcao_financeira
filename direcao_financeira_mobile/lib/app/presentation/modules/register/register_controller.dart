@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../domain/usecases/register_use_case.dart';
 
 class RegisterController extends GetxController {
@@ -11,12 +12,11 @@ class RegisterController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-  
+
   var isLoading = false.obs;
   var isPasswordVisible = false.obs;
   var isConfirmPasswordVisible = false.obs;
 
-  // Requisitos de senha (reativos)
   var hasMinLength = false.obs;
   var hasUppercase = false.obs;
   var hasLowercase = false.obs;
@@ -38,7 +38,7 @@ class RegisterController extends GetxController {
     hasUppercase.value = password.contains(RegExp(r'[A-Z]'));
     hasLowercase.value = password.contains(RegExp(r'[a-z]'));
     hasSpecial.value = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
-    
+
     passwordsMatch.value = password.isNotEmpty && password == confirmPassword;
   }
 
@@ -52,50 +52,43 @@ class RegisterController extends GetxController {
     final confirmPassword = confirmPasswordController.text.trim();
 
     if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      Get.snackbar(
-        'Erro',
-        'Por favor, preencha todos os campos.',
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      _showError('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
 
     if (!passwordsMatch.value) {
-      Get.snackbar(
-        'Erro',
-        'As senhas não coincidem.',
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      _showError('Erro', 'As senhas não coincidem.');
       return;
     }
 
-    try {
-      isLoading.value = true;
-      final result = await registerUseCase.execute(name, email, password);
-      final userData = result['user'];
-      
-      // Redireciona direto para o Dashboard (Login Automático)
-      Get.offAllNamed('/dashboard');
-      
-      Get.snackbar(
-        'Bem-vindo(a)!',
-        'Cadastro realizado! Boas vindas, ${userData['name']}.',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Erro no Cadastro',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
+    isLoading.value = true;
+    final result = await registerUseCase.execute(name, email, password);
+    isLoading.value = false;
+
+    result.fold(
+      (failure) => _showError('Erro no Cadastro', failure.message),
+      (data) {
+        final userData = data['user'];
+        Get.offAllNamed('/initial');
+        Get.snackbar(
+          'Bem-vindo(a)!',
+          'Cadastro realizado! Boas vindas, ${userData['name']}.',
+          backgroundColor: const Color(0xFF03A696).withOpacity(0.12),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      },
+    );
+  }
+
+  void _showError(String title, String message) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFBF4124).withOpacity(0.12),
+      colorText: Colors.white,
+    );
   }
 
   @override

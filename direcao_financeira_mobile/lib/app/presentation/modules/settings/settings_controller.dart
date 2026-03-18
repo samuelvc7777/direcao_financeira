@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 import '../../../domain/entities/subscription_entity.dart';
-import '../../../domain/entities/user_entity.dart';
 import '../../../domain/repositories/i_auth_repository.dart';
 import '../../../routes/app_pages.dart';
 
@@ -11,7 +11,7 @@ class SettingsController extends GetxController {
 
   final IAuthRepository authRepository;
 
-  final isDarkModeEnabled = true.obs;
+  final isDarkModeEnabled = (GetStorage().read<bool>('isDarkMode') ?? Get.isPlatformDarkMode).obs;
   final userName = 'Samuel Vitor'.obs;
   final userEmail = 'samuelvitorcarvalho717@gmail.com'.obs;
   final planName = 'Plano Anual'.obs;
@@ -93,14 +93,16 @@ class SettingsController extends GetxController {
   }
 
   void _loadUser() {
-    final UserEntity? user = authRepository.getStoredUser();
-    if (user == null) {
-      return;
-    }
-
-    userName.value = user.name;
-    userEmail.value = user.email;
-    _loadSubscription(user.activeSubscription);
+    final result = authRepository.getStoredUser();
+    result.fold(
+      (failure) => debugPrint('[SettingsController] Erro ao carregar usuário: ${failure.message}'),
+      (user) {
+        if (user == null) return;
+        userName.value = user.name;
+        userEmail.value = user.email;
+        _loadSubscription(user.activeSubscription);
+      },
+    );
   }
 
   void _loadSubscription(SubscriptionEntity? subscription) {
@@ -153,10 +155,8 @@ class SettingsController extends GetxController {
 
   void toggleTheme(bool value) {
     isDarkModeEnabled.value = value;
-    _showInfo(
-      'Tema escuro',
-      'A troca real de tema sera ligada nas proximas iteracoes.',
-    );
+    Get.changeThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+    GetStorage().write('isDarkMode', value);
   }
 
   void openSubscription() => Get.toNamed(AppRoutes.subscription);
@@ -164,6 +164,16 @@ class SettingsController extends GetxController {
   void openSettingItem(SettingsItemData item) {
     if (item.title == 'Categorias') {
       Get.toNamed(AppRoutes.categories);
+      return;
+    }
+
+    if (item.title == 'Contas Bancarias e Carteira') {
+      Get.toNamed(AppRoutes.bankAccounts);
+      return;
+    }
+
+    if (item.title == 'Cartoes de Credito') {
+      Get.toNamed(AppRoutes.creditCards);
       return;
     }
 

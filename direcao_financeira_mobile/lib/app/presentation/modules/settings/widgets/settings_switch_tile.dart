@@ -20,7 +20,7 @@ class SettingsSwitchTile extends StatelessWidget {
         Text(
           'PERSONALIZACAO',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -32,9 +32,9 @@ class SettingsSwitchTile extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.surfaceDark.withValues(alpha: 0.92),
+              color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
             ),
             child: Row(
               children: [
@@ -52,10 +52,10 @@ class SettingsSwitchTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Tema Escuro',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: context.theme.colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -66,7 +66,7 @@ class SettingsSwitchTile extends StatelessWidget {
                             ? 'Toque para mudar para claro'
                             : 'Toque para mudar para escuro',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.62),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.62),
                           fontSize: 13,
                         ),
                       ),
@@ -77,9 +77,9 @@ class SettingsSwitchTile extends StatelessWidget {
                   value: controller.isDarkModeEnabled.value,
                   onChanged: controller.toggleTheme,
                   activeThumbColor: AppColors.aqua,
-                  activeTrackColor: AppColors.teal,
-                  inactiveThumbColor: AppColors.sand,
-                  inactiveTrackColor: Colors.white24,
+                  activeTrackColor: AppColors.royalBlue.withValues(alpha: 0.3),
+                  inactiveThumbColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  inactiveTrackColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
               ],
             ),

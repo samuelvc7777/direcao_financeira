@@ -39,7 +39,7 @@ class SubscriptionView extends GetView<SubscriptionController> {
             color: AppColors.teal,
             onRefresh: controller.loadData,
             child: ListView(
-              physics: const BouncingScrollPhysics(
+              physics: const ClampingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),

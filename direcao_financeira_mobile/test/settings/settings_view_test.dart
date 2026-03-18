@@ -1,3 +1,5 @@
+import 'package:dartz/dartz.dart';
+import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_theme.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
@@ -13,33 +15,34 @@ class _FakeAuthRepository implements IAuthRepository {
   UserEntity? storedUser;
 
   @override
-  UserEntity? getStoredUser() => storedUser;
+  Either<Failure, UserEntity?> getStoredUser() => Right(storedUser);
 
   @override
-  Future<String?> getToken() async => null;
+  Future<Either<Failure, String?>> getToken() async => const Right(null);
 
   @override
-  Future<UserEntity> login(String email, String password) {
+  Future<Either<Failure, UserEntity>> login(String email, String password) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> logout() async {
+  Future<Either<Failure, void>> logout() async {
     logoutCalled = true;
+    return const Right(null);
   }
 
   @override
-  Future<Map<String, dynamic>> register(String name, String email, String password) {
+  Future<Either<Failure, Map<String, dynamic>>> register(String name, String email, String password) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> saveToken(String token) {
+  Future<Either<Failure, void>> saveToken(String token) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> saveUser(UserEntity user) {
+  Future<Either<Failure, void>> saveUser(UserEntity user) {
     throw UnimplementedError();
   }
 }
@@ -75,8 +78,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Ajustes'), findsNWidgets(2));
-    expect(find.text('Plano Anual'), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget); // O CustomAppBar tem apenas 1 titulo 'Ajustes' renderizado visivelmente.
+    expect(find.text('Sem plano ativo'), findsOneWidget);
     expect(find.text('FINANCAS'), findsOneWidget);
     expect(find.text('CATEGORIAS'), findsOneWidget);
     expect(find.text('CONFIGURACOES DE TRABALHO (SEMAFORO)'), findsOneWidget);

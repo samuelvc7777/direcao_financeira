@@ -7,31 +7,33 @@ class RegisterHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Column(
       children: [
         Align(
           alignment: Alignment.centerLeft,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            icon: Icon(Icons.arrow_back_ios_new, color: colorScheme.onSurface),
             onPressed: () => Get.back(),
           ),
         ),
         const Icon(Icons.person_add_rounded, size: 80, color: AppColors.teal),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Criar Conta',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: colorScheme.onSurface,
             letterSpacing: 1.2,
           ),
         ),
-        const Text(
+        Text(
           'Junte-se à elite dos motoristas',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondaryDark),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurface.withOpacity(0.6)),
         ),
       ],
     );

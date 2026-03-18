@@ -14,7 +14,7 @@ class SettingsView extends GetView<SettingsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.petrol,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(
         title: 'Ajustes',
         subtitle: 'Configuracoes do app',
@@ -33,16 +33,12 @@ class SettingsView extends GetView<SettingsController> {
           return Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.petrol, AppColors.backgroundDark],
-              ),
+              color: context.theme.scaffoldBackgroundColor,
             ),
             child: SafeArea(
               top: false,
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics: const ClampingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   horizontalPadding,
                   8,
@@ -101,7 +97,7 @@ class _LogoutCard extends StatelessWidget {
         Text(
           'CONTA',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -115,9 +111,9 @@ class _LogoutCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.surfaceDark.withValues(alpha: 0.92),
+              color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
             ),
             child: Row(
               children: [
@@ -125,12 +121,12 @@ class _LogoutCard extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: AppColors.rust.withValues(alpha: 0.14),
+                    color: AppColors.rose.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
                     Icons.logout_rounded,
-                    color: AppColors.rust,
+                    color: AppColors.rose,
                     size: 22,
                   ),
                 ),
@@ -139,7 +135,7 @@ class _LogoutCard extends StatelessWidget {
                   child: Text(
                     'Sair da conta',
                     style: TextStyle(
-                      color: AppColors.rust,
+                      color: AppColors.rose,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),

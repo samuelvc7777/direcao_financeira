@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../settings_controller.dart';
@@ -23,7 +24,7 @@ class SettingsSectionCard extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -32,9 +33,9 @@ class SettingsSectionCard extends StatelessWidget {
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surfaceDark.withValues(alpha: 0.92),
+            color: context.theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
           ),
           child: Column(
             children: List.generate(
@@ -88,8 +89,8 @@ class _SettingsItemTile extends StatelessWidget {
                     children: [
                       Text(
                         item.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.theme.colorScheme.onSurface,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -98,7 +99,7 @@ class _SettingsItemTile extends StatelessWidget {
                       Text(
                         item.subtitle,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.62),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.62),
                           fontSize: 13,
                           height: 1.35,
                         ),
@@ -108,7 +109,7 @@ class _SettingsItemTile extends StatelessWidget {
                         Text(
                           item.footnote!,
                           style: const TextStyle(
-                            color: AppColors.sand,
+                            color: AppColors.amber,
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -120,13 +121,13 @@ class _SettingsItemTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: Colors.white.withValues(alpha: 0.56),
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.56),
                 ),
               ],
             ),
             if (!isLast) ...[
               const SizedBox(height: 16),
-              Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+              Divider(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08), height: 1),
             ],
           ],
         ),

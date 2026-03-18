@@ -1,3 +1,4 @@
+import 'package:direcao_financeira_mobile/app/presentation/widgets/scale_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -14,7 +15,7 @@ class CategoriesView extends GetView<CategoriesController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.petrol,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: CustomAppBar(
         title: 'Categorias',
         subtitle: 'Entradas e saidas personalizadas',
@@ -22,30 +23,26 @@ class CategoriesView extends GetView<CategoriesController> {
         actions: [
           IconButton(
             onPressed: () => _showCategoryForm(context),
-            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            icon: Icon(Icons.add_rounded, color: context.theme.colorScheme.onSurface),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCategoryForm(context),
-        backgroundColor: AppColors.teal,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.royalBlue,
+        foregroundColor: context.theme.colorScheme.onSurface,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Categoria'),
       ),
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.petrol, AppColors.backgroundDark],
-          ),
+          color: context.theme.scaffoldBackgroundColor,
         ),
         child: Obx(() {
           if (controller.isLoading.value) {
             return const Center(
-              child: CircularProgressIndicator(color: AppColors.aqua),
+              child: CircularProgressIndicator(color: AppColors.royalBlue),
             );
           }
 
@@ -62,10 +59,10 @@ class CategoriesView extends GetView<CategoriesController> {
           }
 
           return RefreshIndicator(
-            color: AppColors.teal,
+            color: AppColors.royalBlue,
             onRefresh: controller.loadCategories,
             child: ListView(
-              physics: const BouncingScrollPhysics(
+              physics: const ClampingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
@@ -145,19 +142,19 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surfaceDark,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        decoration: BoxDecoration(
+          color: context.theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: SafeArea(
           top: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             child: Form(
               key: _formKey,
               child: Column(
@@ -165,39 +162,41 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                 children: [
                   Center(
                     child: Container(
-                      width: 54,
+                      width: 48,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(999),
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(99),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Text(
                     widget.category == null
                         ? 'Nova categoria'
                         : 'Editar categoria',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Defina nome, tipo, cor e icone da categoria.',
+                    'Configure os detalhes para organizar seus lancamentos.',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.68),
+                      color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                      fontSize: 15,
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   CustomTextField(
                     controller: _nameController,
-                    label: 'Nome',
-                    hint: 'Ex.: Combustivel',
-                    icon: Icons.title_rounded,
+                    label: 'Nome da Categoria',
+                    hint: 'Ex.: Supermercado, Salario...',
+                    icon: Icons.label_important_rounded,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Informe o nome da categoria.';
@@ -205,23 +204,23 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Tipo',
+                  const SizedBox(height: 20),
+                  Text(
+                    'Tipo de Movimentacao',
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       _TypeChip(
                         title: 'Entrada',
-                        icon: Icons.trending_up_rounded,
+                        icon: Icons.arrow_upward_rounded,
                         isSelected: _selectedType == CategoryType.income,
-                        accentColor: AppColors.aqua,
+                        accentColor: AppColors.emerald,
                         onTap: () => setState(() {
                           _selectedType = CategoryType.income;
                         }),
@@ -229,150 +228,185 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                       const SizedBox(width: 12),
                       _TypeChip(
                         title: 'Saida',
-                        icon: Icons.trending_down_rounded,
+                        icon: Icons.arrow_downward_rounded,
                         isSelected: _selectedType == CategoryType.expense,
-                        accentColor: AppColors.rust,
+                        accentColor: AppColors.rose,
                         onTap: () => setState(() {
                           _selectedType = CategoryType.expense;
                         }),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  const Text(
+                  const SizedBox(height: 20),
+                  Text(
+                    'Identificacao Visual',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
                     'Cor',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
                   ),
                   const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: widget.controller.colorOptions
-                        .map(
-                          (colorHex) => GestureDetector(
-                            onTap: () => setState(() {
-                              _selectedColor = colorHex;
-                            }),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: widget.controller.colorFromHex(colorHex),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: _selectedColor == colorHex
-                                      ? Colors.white
-                                      : Colors.white.withValues(alpha: 0.18),
-                                  width: _selectedColor == colorHex ? 3 : 1,
-                                ),
-                              ),
-                              child: _selectedColor == colorHex
-                                  ? const Icon(
-                                      Icons.check_rounded,
-                                      color: Colors.white,
-                                    )
-                                  : null,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Icone',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: widget.controller.iconOptions
-                        .map(
-                          (iconCode) => GestureDetector(
-                            onTap: () => setState(() {
-                              _selectedIcon = iconCode;
-                            }),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              width: 58,
-                              height: 58,
-                              decoration: BoxDecoration(
-                                color: _selectedIcon == iconCode
-                                    ? widget.controller
-                                          .colorFromHex(_selectedColor)
-                                          .withValues(alpha: 0.18)
-                                    : Colors.white.withValues(alpha: 0.04),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: _selectedIcon == iconCode
-                                      ? widget.controller.colorFromHex(
-                                          _selectedColor,
-                                        )
-                                      : Colors.white.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              child: Icon(
-                                widget.controller.iconForCode(iconCode),
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  Obx(
-                    () => CustomFilledButton(
-                      text: widget.category == null
-                          ? 'SALVAR CATEGORIA'
-                          : 'ATUALIZAR CATEGORIA',
-                      isLoading: widget.controller.isSubmitting.value,
-                      onPressed: () async {
-                        if (!_formKey.currentState!.validate()) {
-                          return;
-                        }
+                  SizedBox(
+                    height: 54,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.controller.colorOptions.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final colorHex = widget.controller.colorOptions[index];
+                        final isSelected = _selectedColor == colorHex;
+                        final color = widget.controller.colorFromHex(colorHex);
 
-                        if (widget.category == null) {
-                          await widget.controller.createCategory(
-                            name: _nameController.text.trim(),
-                            type: _selectedType,
-                            color: _selectedColor,
-                            icon: _selectedIcon,
-                          );
-                        } else {
-                          await widget.controller.updateCategory(
-                            id: widget.category!.id,
-                            name: _nameController.text.trim(),
-                            type: _selectedType,
-                            color: _selectedColor,
-                            icon: _selectedIcon,
-                          );
-                        }
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedColor = colorHex),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? context.theme.colorScheme.onSurface
+                                    : Colors.transparent,
+                                width: isSelected ? 3 : 0,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: color.withValues(alpha: 0.4),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      ),
+                                    ]
+                                  : [],
+                            ),
+                            child: isSelected
+                                ? Icon(
+                                    Icons.check_rounded,
+                                    color: context.theme.colorScheme.surface,
+                                  )
+                                : null,
+                          ),
+                        );
                       },
                     ),
                   ),
-                  if (widget.category != null) ...[
-                    const SizedBox(height: 12),
-                    Obx(
-                      () => CustomFilledButton(
-                        text: 'DESATIVAR CATEGORIA',
-                        backgroundColor: AppColors.rust,
-                        isLoading: widget.controller.isSubmitting.value,
-                        onPressed: () => widget.controller.deactivateCategory(
-                          widget.category!,
+                  const SizedBox(height: 20),
+                  Text(
+                    'Icone',
+                    style: TextStyle(color: context.theme.colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: widget.controller.iconOptions.map((iconCode) {
+                      final isSelected = _selectedIcon == iconCode;
+                      final accentColor = widget.controller.colorFromHex(
+                        _selectedColor,
+                      );
+
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedIcon = iconCode),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? accentColor.withValues(alpha: 0.15)
+                                : context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected
+                                  ? accentColor
+                                  : context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Icon(
+                            widget.controller.iconForCode(iconCode),
+                            color: isSelected ? context.theme.colorScheme.onSurface : context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                            size: 24,
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 32),
+                  Obx(() {
+                    final isLoading = widget.controller.isSubmitting.value;
+
+                    if (widget.category == null) {
+                      return CustomFilledButton(
+                        text: 'SALVAR CATEGORIA',
+                        icon: Icons.add_rounded,
+                        isLoading: isLoading,
+                        onPressed: _handleSave,
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: ScaleButton(
+                            onTap: isLoading
+                                ? () {}
+                                : () => widget.controller.toggleCategoryStatus(
+                                    widget.category!,
+                                  ),
+                            child: Container(
+                              height: 58,
+                              decoration: BoxDecoration(
+                                color: (widget.category!.isActive
+                                        ? AppColors.rose
+                                        : AppColors.emerald)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: (widget.category!.isActive
+                                          ? AppColors.rose
+                                          : AppColors.emerald)
+                                      .withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  widget.category!.isActive
+                                      ? Icons.visibility_off_rounded
+                                      : Icons.visibility_rounded,
+                                  color: widget.category!.isActive
+                                      ? AppColors.rose
+                                      : AppColors.emerald,
+                                  size: 26,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 3,
+                          child: CustomFilledButton(
+                            text: 'ATUALIZAR',
+                            icon: Icons.check_rounded,
+                            isLoading: isLoading,
+                            onPressed: _handleSave,
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),
@@ -380,6 +414,29 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (widget.category == null) {
+      await widget.controller.createCategory(
+        name: _nameController.text.trim(),
+        type: _selectedType,
+        color: _selectedColor,
+        icon: _selectedIcon,
+      );
+    } else {
+      await widget.controller.updateCategory(
+        id: widget.category!.id,
+        name: _nameController.text.trim(),
+        type: _selectedType,
+        color: _selectedColor,
+        icon: _selectedIcon,
+      );
+    }
   }
 }
 
@@ -408,12 +465,12 @@ class _TypeChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? accentColor.withValues(alpha: 0.18)
-                : Colors.white.withValues(alpha: 0.04),
+                : context.theme.colorScheme.onSurface.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
                   ? accentColor
-                  : Colors.white.withValues(alpha: 0.08),
+                  : context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
             ),
           ),
           child: Column(
@@ -421,14 +478,14 @@ class _TypeChip extends StatelessWidget {
               Icon(
                 icon,
                 color: isSelected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.62),
+                    ? context.theme.colorScheme.onSurface
+                    : context.theme.colorScheme.onSurface.withValues(alpha: 0.62),
               ),
               const SizedBox(height: 6),
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: isSelected ? 1 : 0.72),
+                  color: context.theme.colorScheme.onSurface.withValues(alpha: isSelected ? 1 : 0.72),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -455,24 +512,24 @@ class _SummaryCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.teal.withValues(alpha: 0.22),
-            AppColors.surfaceDark.withValues(alpha: 0.96),
+            AppColors.royalBlue.withValues(alpha: 0.22),
+            context.theme.colorScheme.surface.withValues(alpha: 0.96),
           ],
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
               Icons.category_rounded,
-              color: AppColors.sand,
+              color: AppColors.amber,
               size: 28,
             ),
           ),
@@ -481,10 +538,10 @@ class _SummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Categorias ativas',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: context.theme.colorScheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -493,7 +550,7 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   '${controller.incomeCategories.length} entradas • ${controller.expenseCategories.length} saidas',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.72),
+                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -531,7 +588,7 @@ class _CategorySection extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -541,16 +598,16 @@ class _CategorySection extends StatelessWidget {
         Text(
           subtitle,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.66),
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.66),
             height: 1.4,
           ),
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surfaceDark.withValues(alpha: 0.92),
+            color: context.theme.colorScheme.surface.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
           ),
           child: categories.isEmpty
               ? Padding(
@@ -558,7 +615,7 @@ class _CategorySection extends StatelessWidget {
                   child: Text(
                     emptyMessage,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 )
@@ -595,6 +652,7 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accentColor = controller.colorFromHex(category.color);
+    final isActive = category.isActive;
 
     return InkWell(
       borderRadius: BorderRadius.vertical(
@@ -602,79 +660,107 @@ class _CategoryTile extends StatelessWidget {
         bottom: isLast ? const Radius.circular(24) : Radius.zero,
       ),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        accentColor.withValues(alpha: 0.95),
-                        accentColor.withValues(alpha: 0.7),
+      child: Opacity(
+        opacity: isActive ? 1.0 : 0.4,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          accentColor.withValues(alpha: 0.95),
+                          accentColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      controller.iconForCode(category.icon),
+                      color: context.theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              category.name,
+                              style: TextStyle(
+                                color: context.theme.colorScheme.onSurface,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (!isActive) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'INATIVA',
+                                  style: TextStyle(
+                                    color: context.theme.colorScheme.onSurface.withOpacity(0.54),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              category.type.label,
+                              style: TextStyle(
+                                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.64),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  child: Icon(
-                    controller.iconForCode(category.icon),
-                    color: Colors.white,
+                  Icon(
+                    isActive ? Icons.edit_rounded : Icons.visibility_off_rounded,
+                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.52),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        category.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: accentColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            category.type.label,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.64),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.edit_rounded,
-                  color: Colors.white.withValues(alpha: 0.52),
-                ),
+                ],
+              ),
+              if (!isLast) ...[
+                const SizedBox(height: 16),
+                Divider(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08), height: 1),
               ],
-            ),
-            if (!isLast) ...[
-              const SizedBox(height: 16),
-              Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -697,7 +783,7 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(
               Icons.error_outline_rounded,
-              color: AppColors.sand,
+              color: AppColors.amber,
               size: 44,
             ),
             const SizedBox(height: 14),
@@ -714,7 +800,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -774,7 +860,7 @@ class _EmptyState extends StatelessWidget {
             Text(
               'Crie categorias de entrada e saida para organizar melhor suas financas.',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
+                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
                 height: 1.45,
               ),
               textAlign: TextAlign.center,

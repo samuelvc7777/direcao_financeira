@@ -46,13 +46,13 @@ class CategoriesController extends GetxController {
       categories.where((category) => category.isActive).toList();
 
   List<CategoryEntity> get incomeCategories =>
-      activeCategories
+      categories
           .where((category) => category.type == CategoryType.income)
           .toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   List<CategoryEntity> get expenseCategories =>
-      activeCategories
+      categories
           .where((category) => category.type == CategoryType.expense)
           .toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -64,16 +64,16 @@ class CategoriesController extends GetxController {
   }
 
   Future<void> loadCategories() async {
-    try {
-      isLoading.value = true;
-      errorMessage.value = null;
-      final result = await categoryRepository.getCategories();
-      categories.assignAll(result);
-    } catch (e) {
-      errorMessage.value = e.toString().replaceAll('Exception: ', '');
-    } finally {
-      isLoading.value = false;
-    }
+    isLoading.value = true;
+    errorMessage.value = null;
+    final result = await categoryRepository.getCategories();
+
+    result.fold(
+      (failure) => errorMessage.value = failure.message,
+      (data) => categories.assignAll(data),
+    );
+
+    isLoading.value = false;
   }
 
   Future<void> createCategory({
@@ -112,17 +112,21 @@ class CategoriesController extends GetxController {
     );
   }
 
-  Future<void> deactivateCategory(CategoryEntity category) async {
+  Future<void> toggleCategoryStatus(CategoryEntity category) async {
+    final isDeactivating = category.isActive;
+    final actionName = isDeactivating ? 'desativar' : 'reativar';
+    final actionNameCap = isDeactivating ? 'Desativar' : 'Reativar';
+
     final confirmed =
         await Get.dialog<bool>(
           AlertDialog(
             backgroundColor: const Color(0xFF022C35),
-            title: const Text(
-              'Desativar categoria',
-              style: TextStyle(color: Colors.white),
+            title: Text(
+              '$actionNameCap categoria',
+              style: const TextStyle(color: Colors.white),
             ),
             content: Text(
-              'A categoria "${category.name}" sera desativada e deixara de aparecer nas opcoes normais.',
+              'A categoria "${category.name}" sera ${actionName}ada.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.75),
                 height: 1.4,
@@ -136,9 +140,11 @@ class CategoriesController extends GetxController {
               FilledButton(
                 onPressed: () => Get.back(result: true),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFBF4124),
+                  backgroundColor: isDeactivating
+                      ? const Color(0xFFBF4124)
+                      : const Color(0xFF03A696),
                 ),
-                child: const Text('Desativar'),
+                child: Text(actionNameCap),
               ),
             ],
           ),
@@ -149,23 +155,26 @@ class CategoriesController extends GetxController {
       return;
     }
 
-    try {
-      isSubmitting.value = true;
-      await categoryRepository.deactivateCategory(category.id);
-      await loadCategories();
-      if (Get.isBottomSheetOpen ?? false) {
-        Get.back();
-      }
-      _showFeedback('Sucesso', 'Categoria desativada com sucesso.');
-    } catch (e) {
-      _showFeedback(
-        'Erro',
-        e.toString().replaceAll('Exception: ', ''),
-        isError: true,
-      );
-    } finally {
-      isSubmitting.value = false;
-    }
+    isSubmitting.value = true;
+    final result = isDeactivating
+        ? await categoryRepository.deactivateCategory(category.id)
+        : await categoryRepository.reactivateCategory(category.id);
+
+    result.fold(
+      (failure) => _showFeedback('Erro', failure.message, isError: true),
+      (_) async {
+        await loadCategories();
+        if (Get.isBottomSheetOpen ?? false) {
+          Get.back();
+        }
+        _showFeedback(
+          'Sucesso',
+          'Categoria ${actionName}ada com sucesso.',
+        );
+      },
+    );
+
+    isSubmitting.value = false;
   }
 
   IconData iconForCode(String iconCode) {
@@ -198,26 +207,24 @@ class CategoriesController extends GetxController {
   }
 
   Future<void> _runSubmission({
-    required Future<void> Function() action,
+    required Future<dynamic> Function() action,
     required String successMessage,
   }) async {
-    try {
-      isSubmitting.value = true;
-      await action();
-      await loadCategories();
-      if (Get.isBottomSheetOpen ?? false) {
-        Get.back();
-      }
-      _showFeedback('Sucesso', successMessage);
-    } catch (e) {
-      _showFeedback(
-        'Erro',
-        e.toString().replaceAll('Exception: ', ''),
-        isError: true,
-      );
-    } finally {
-      isSubmitting.value = false;
-    }
+    isSubmitting.value = true;
+    final result = await action();
+
+    result.fold(
+      (failure) => _showFeedback('Erro', failure.message, isError: true),
+      (_) async {
+        await loadCategories();
+        if (Get.isBottomSheetOpen ?? false) {
+          Get.back();
+        }
+        _showFeedback('Sucesso', successMessage);
+      },
+    );
+
+    isSubmitting.value = false;
   }
 
   void _showFeedback(String title, String message, {bool isError = false}) {
@@ -227,8 +234,8 @@ class CategoriesController extends GetxController {
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.all(16),
       backgroundColor: isError
-          ? Colors.red.withValues(alpha: 0.12)
-          : Colors.green.withValues(alpha: 0.12),
+          ? const Color(0xFFBF4124).withValues(alpha: 0.12)
+          : const Color(0xFF03A696).withValues(alpha: 0.12),
       colorText: Colors.white,
     );
   }

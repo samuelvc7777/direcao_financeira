@@ -55,34 +55,22 @@ class CustomBottomNavBar extends StatelessWidget {
                   vertical: shellVerticalPadding,
                 ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.surfaceDark.withOpacity(0.96),
-                      AppColors.petrol.withOpacity(0.92),
-                    ],
-                  ),
+                  color: AppColors.deepNavy,
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: AppColors.teal.withOpacity(0.18)),
+                  border: Border.all(color: AppColors.royalBlue.withOpacity(0.15)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.28),
+                      color: Colors.black.withOpacity(0.32),
                       blurRadius: 24,
                       offset: const Offset(0, 12),
-                    ),
-                    BoxShadow(
-                      color: AppColors.teal.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: edgeSpacing),
                   child: GNav(
-                    rippleColor: AppColors.aqua.withOpacity(0.08),
-                    hoverColor: AppColors.aqua.withOpacity(0.08),
+                    rippleColor: AppColors.royalBlue.withOpacity(0.08),
+                    hoverColor: AppColors.royalBlue.withOpacity(0.08),
                     gap: isVeryCompact
                         ? 2
                         : isCompact
@@ -102,14 +90,7 @@ class CustomBottomNavBar extends StatelessWidget {
                     duration: const Duration(milliseconds: 120),
                     curve: Curves.linear,
                     tabBorderRadius: 20,
-                    tabBackgroundGradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.teal.withOpacity(0.95),
-                        AppColors.aqua.withOpacity(0.78),
-                      ],
-                    ),
+                    tabBackgroundColor: AppColors.royalBlue,
                     textStyle: TextStyle(
                       color: Colors.white,
                       fontSize: isVeryCompact
@@ -126,7 +107,7 @@ class CustomBottomNavBar extends StatelessWidget {
                       GButton(icon: Icons.home_rounded, text: 'Inicio'),
                       GButton(
                         icon: Icons.receipt_long_rounded,
-                        text: 'Transferencias',
+                        text: 'Financas',
                       ),
                       GButton(
                         icon: Icons.account_balance_wallet_rounded,

@@ -1,5 +1,7 @@
+import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 
+import '../../core/errors/failures.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/repositories/i_category_repository.dart';
 import '../models/category_model.dart';
@@ -10,31 +12,35 @@ class CategoryRepository implements ICategoryRepository {
   CategoryRepository({required this.dio});
 
   @override
-  Future<List<CategoryEntity>> getCategories() async {
+  Future<Either<Failure, List<CategoryEntity>>> getCategories() async {
     try {
       final response = await dio.get('/finance/categories');
       final data = response.data;
       final items = data is List
           ? data
           : data is Map<String, dynamic>
-          ? (data['data'] ?? data['categories'] ?? [])
-          : [];
+              ? (data['data'] ?? data['categories'] ?? [])
+              : [];
 
       if (items is! List) {
-        return [];
+        return const Right([]);
       }
 
-      return items
-          .whereType<Map<String, dynamic>>()
-          .map(CategoryModel.fromJson)
-          .toList();
+      return Right(
+        items
+            .whereType<Map<String, dynamic>>()
+            .map(CategoryModel.fromJson)
+            .toList(),
+      );
     } on DioException catch (e) {
-      throw Exception(_extractMessage(e, 'Erro ao carregar categorias.'));
+      return Left(ServerFailure(_extractMessage(e, 'Erro ao carregar categorias.')));
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado ao carregar categorias.'));
     }
   }
 
   @override
-  Future<CategoryEntity> createCategory({
+  Future<Either<Failure, CategoryEntity>> createCategory({
     required String name,
     required CategoryType type,
     required String color,
@@ -51,14 +57,16 @@ class CategoryRepository implements ICategoryRepository {
         },
       );
 
-      return _parseCategory(response.data);
+      return Right(_parseCategory(response.data));
     } on DioException catch (e) {
-      throw Exception(_extractMessage(e, 'Erro ao criar categoria.'));
+      return Left(ServerFailure(_extractMessage(e, 'Erro ao criar categoria.')));
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado ao criar categoria.'));
     }
   }
 
   @override
-  Future<CategoryEntity> updateCategory({
+  Future<Either<Failure, CategoryEntity>> updateCategory({
     required int id,
     required String name,
     required CategoryType type,
@@ -76,18 +84,43 @@ class CategoryRepository implements ICategoryRepository {
         },
       );
 
-      return _parseCategory(response.data);
+      return Right(_parseCategory(response.data));
     } on DioException catch (e) {
-      throw Exception(_extractMessage(e, 'Erro ao atualizar categoria.'));
+      return Left(ServerFailure(_extractMessage(e, 'Erro ao atualizar categoria.')));
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado ao atualizar categoria.'));
     }
   }
-
+@override
+Future<Either<Failure, void>> deactivateCategory(int id) async {
+  try {
+    await dio.patch(
+      '/finance/categories/$id',
+      data: {'isActive': false},
+    );
+    return const Right(null);
+  } on DioException catch (e) {
+    return Left(
+      ServerFailure(_extractMessage(e, 'Erro ao desativar categoria.')),
+    );
+  } catch (e) {
+    return Left(ServerFailure('Erro inesperado ao desativar categoria.'));
+  }
+}
   @override
-  Future<void> deactivateCategory(int id) async {
+  Future<Either<Failure, void>> reactivateCategory(int id) async {
     try {
-      await dio.delete('/finance/categories/$id');
+      await dio.patch(
+        '/finance/categories/$id',
+        data: {'isActive': true},
+      );
+      return const Right(null);
     } on DioException catch (e) {
-      throw Exception(_extractMessage(e, 'Erro ao desativar categoria.'));
+      return Left(
+        ServerFailure(_extractMessage(e, 'Erro ao reativar categoria.')),
+      );
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado ao reativar categoria.'));
     }
   }
 

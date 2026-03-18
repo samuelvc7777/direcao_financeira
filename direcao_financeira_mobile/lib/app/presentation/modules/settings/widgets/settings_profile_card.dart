@@ -23,15 +23,15 @@ class SettingsProfileCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.teal.withValues(alpha: 0.22),
-              AppColors.surfaceDark.withValues(alpha: 0.96),
+              AppColors.royalBlue.withValues(alpha: 0.22),
+              context.theme.colorScheme.surface,
             ],
           ),
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: AppColors.aqua.withValues(alpha: 0.18)),
+          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.18)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.teal.withValues(alpha: 0.1),
+              color: AppColors.royalBlue.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -51,8 +51,8 @@ class SettingsProfileCard extends StatelessWidget {
                     children: [
                       Text(
                         controller.userName.value,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.theme.colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -61,7 +61,7 @@ class SettingsProfileCard extends StatelessWidget {
                       Text(
                         controller.userEmail.value,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.72),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
                           fontSize: 13,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -70,14 +70,14 @@ class SettingsProfileCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.aqua.withValues(alpha: 0.12),
+                          color: AppColors.royalBlue.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: AppColors.aqua.withValues(alpha: 0.15)),
+                          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.15)),
                         ),
                         child: Text(
                           controller.planStatus.value,
                           style: const TextStyle(
-                            color: AppColors.aqua,
+                            color: AppColors.royalBlue,
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -98,8 +98,8 @@ class SettingsProfileCard extends StatelessWidget {
                     children: [
                       Text(
                         controller.planName.value,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.theme.colorScheme.onSurface,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
@@ -108,7 +108,7 @@ class SettingsProfileCard extends StatelessWidget {
                       Text(
                         '${controller.remainingDays.value} dias restantes',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
                           fontSize: 13,
                         ),
                       ),
@@ -119,8 +119,8 @@ class SettingsProfileCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: controller.openSubscription,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.aqua,
-                    side: BorderSide(color: AppColors.aqua.withValues(alpha: 0.34)),
+                    foregroundColor: AppColors.royalBlue,
+                    side: BorderSide(color: AppColors.royalBlue.withValues(alpha: 0.34)),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(
@@ -138,7 +138,7 @@ class SettingsProfileCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: controller.planProgress.value,
                 minHeight: 6,
-                backgroundColor: Colors.white.withValues(alpha: 0.08),
+                backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.sand),
               ),
             ),
@@ -169,13 +169,13 @@ class _Avatar extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.aqua.withValues(alpha: 0.92),
-            AppColors.teal.withValues(alpha: 0.82),
+            AppColors.royalBlue.withValues(alpha: 0.92),
+            AppColors.royalBlue.withValues(alpha: 0.62),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.aqua.withValues(alpha: 0.22),
+              color: AppColors.royalBlue.withValues(alpha: 0.22),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -184,8 +184,8 @@ class _Avatar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initials.isEmpty ? 'SV' : initials,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: context.theme.colorScheme.onSurface,
           fontSize: 20,
           fontWeight: FontWeight.w800,
         ),

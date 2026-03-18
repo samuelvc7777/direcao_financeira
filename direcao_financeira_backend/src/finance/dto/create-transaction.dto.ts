@@ -21,6 +21,11 @@ export class CreateTransactionDto {
   assetType: AssetType;
 
   @IsOptional()
+  @IsInt({ message: 'accountId deve ser inteiro.' })
+  @Min(1, { message: 'accountId invalido.' })
+  accountId?: number;
+
+  @IsOptional()
   @IsInt({ message: 'bankAccountId deve ser inteiro.' })
   @Min(1, { message: 'bankAccountId invalido.' })
   bankAccountId?: number;

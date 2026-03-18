@@ -6,28 +6,30 @@ class LoginHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
       children: [
-        Icon(
+        const Icon(
           Icons.directions_car_filled_rounded,
           size: 80,
           color: AppColors.teal,
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Text(
           'Direção Financeira',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: colorScheme.onSurface,
             letterSpacing: 1.2,
           ),
         ),
         Text(
           'Gestão de Elite para Motoristas',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondaryDark),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurface.withOpacity(0.6)),
         ),
       ],
     );

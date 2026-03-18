@@ -1,19 +1,23 @@
+import 'package:dartz/dartz.dart';
+
+import '../../core/errors/failures.dart';
 import '../entities/category_entity.dart';
 
 abstract class ICategoryRepository {
-  Future<List<CategoryEntity>> getCategories();
-  Future<CategoryEntity> createCategory({
+  Future<Either<Failure, List<CategoryEntity>>> getCategories();
+  Future<Either<Failure, CategoryEntity>> createCategory({
     required String name,
     required CategoryType type,
     required String color,
     required String icon,
   });
-  Future<CategoryEntity> updateCategory({
+  Future<Either<Failure, CategoryEntity>> updateCategory({
     required int id,
     required String name,
     required CategoryType type,
     required String color,
     required String icon,
   });
-  Future<void> deactivateCategory(int id);
+  Future<Either<Failure, void>> deactivateCategory(int id);
+  Future<Either<Failure, void>> reactivateCategory(int id);
 }

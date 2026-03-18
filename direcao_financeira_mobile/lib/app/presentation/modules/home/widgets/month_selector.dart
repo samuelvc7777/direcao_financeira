@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../home_controller.dart';
-import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class MonthSelector extends GetView<HomeController> {
   const MonthSelector({super.key});
@@ -20,14 +19,14 @@ class MonthSelector extends GetView<HomeController> {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
+          color: context.theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: context.theme.colorScheme.onSurface.withOpacity(0.08)),
         ),
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, color: Colors.white70),
+              icon: Icon(Icons.chevron_left, color: context.theme.colorScheme.onSurface.withOpacity(0.7)),
               onPressed: controller.previousMonth,
               splashRadius: 20,
             ),
@@ -36,8 +35,8 @@ class MonthSelector extends GetView<HomeController> {
                 formatted,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.theme.colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.0,
@@ -45,7 +44,7 @@ class MonthSelector extends GetView<HomeController> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.chevron_right, color: Colors.white70),
+              icon: Icon(Icons.chevron_right, color: context.theme.colorScheme.onSurface.withOpacity(0.7)),
               onPressed: controller.nextMonth,
               splashRadius: 20,
             ),

@@ -42,7 +42,7 @@ export class FinanceService {
   }
 
   async updateBankAccount(userId: number, id: number, dto: UpdateBankAccountDto) {
-    await this.getBankAccountOrThrow(userId, id);
+    await this.getBankAccountOrThrow(userId, id, false);
 
     return this.prisma.client.bankAccount.update({
       where: { id },
@@ -77,7 +77,7 @@ export class FinanceService {
   }
 
   async updateCreditCard(userId: number, id: number, dto: UpdateCreditCardDto) {
-    const card = await this.getCreditCardOrThrow(userId, id);
+    const card = await this.getCreditCardOrThrow(userId, id, false);
     let nextAvailableLimit = card.availableLimitCents;
 
     if (dto.limitCents !== undefined) {
@@ -135,7 +135,7 @@ export class FinanceService {
   }
 
   async updateCategory(userId: number, id: number, dto: UpdateCategoryDto) {
-    await this.getCategoryOrThrow(userId, id);
+    await this.getCategoryOrThrow(userId, id, false);
 
     try {
       return await this.prisma.client.category.update({
@@ -204,12 +204,15 @@ export class FinanceService {
       );
     }
 
-    const hasBankAccount = dto.bankAccountId !== undefined;
-    const hasCreditCard = dto.creditCardId !== undefined;
+    const bankAccountId = dto.bankAccountId ?? (dto.assetType === AssetType.BANK_ACCOUNT ? dto.accountId : undefined);
+    const creditCardId = dto.creditCardId ?? (dto.assetType === AssetType.CREDIT_CARD ? dto.accountId : undefined);
+
+    const hasBankAccount = bankAccountId !== undefined;
+    const hasCreditCard = creditCardId !== undefined;
 
     if (hasBankAccount === hasCreditCard) {
       throw new ConflictException(
-        'A transacao deve apontar para conta bancaria ou cartao, nunca ambos.',
+        'A transacao deve apontar para uma conta bancaria ou cartao, nunca ambos ou nenhum.',
       );
     }
 
@@ -233,9 +236,9 @@ export class FinanceService {
     const competencyDate = dto.competencyDate ? new Date(dto.competencyDate) : null;
 
     return this.prisma.client.$transaction(async (tx) => {
-      if (dto.assetType === AssetType.BANK_ACCOUNT && dto.bankAccountId) {
+      if (dto.assetType === AssetType.BANK_ACCOUNT && bankAccountId) {
         const bankAccount = await tx.bankAccount.findFirst({
-          where: { id: dto.bankAccountId, userId, isActive: true },
+          where: { id: bankAccountId, userId, isActive: true },
         });
 
         if (!bankAccount) {
@@ -259,7 +262,7 @@ export class FinanceService {
             userId,
             type: dto.type,
             assetType: dto.assetType,
-            bankAccountId: dto.bankAccountId,
+            bankAccountId: bankAccountId,
             categoryId: dto.categoryId,
             description: dto.description,
             amountCents: dto.amountCents,
@@ -287,7 +290,7 @@ export class FinanceService {
       }
 
       const creditCard = await tx.creditCard.findFirst({
-        where: { id: dto.creditCardId, userId, isActive: true },
+        where: { id: creditCardId, userId, isActive: true },
       });
 
       if (!creditCard) {
@@ -308,7 +311,7 @@ export class FinanceService {
           userId,
           type: dto.type,
           assetType: dto.assetType,
-          creditCardId: dto.creditCardId,
+          creditCardId: creditCardId,
           categoryId: dto.categoryId,
           invoiceId: invoice?.id,
           description: dto.description,
@@ -476,37 +479,58 @@ export class FinanceService {
     });
   }
 
-  private async getBankAccountOrThrow(userId: number, id: number) {
+  private async getBankAccountOrThrow(userId: number, id: number, onlyActive = true) {
+    const where: any = { id, userId };
+    if (onlyActive) {
+      where.isActive = true;
+    }
+
     const account = await this.prisma.client.bankAccount.findFirst({
-      where: { id, userId },
+      where,
     });
 
     if (!account) {
-      throw new NotFoundException('Conta bancaria nao encontrada.');
+      throw new NotFoundException(
+        onlyActive ? 'Conta bancaria ativa nao encontrada.' : 'Conta bancaria nao encontrada.',
+      );
     }
 
     return account;
   }
 
-  private async getCreditCardOrThrow(userId: number, id: number) {
+  private async getCreditCardOrThrow(userId: number, id: number, onlyActive = true) {
+    const where: any = { id, userId };
+    if (onlyActive) {
+      where.isActive = true;
+    }
+
     const card = await this.prisma.client.creditCard.findFirst({
-      where: { id, userId },
+      where,
     });
 
     if (!card) {
-      throw new NotFoundException('Cartao de credito nao encontrado.');
+      throw new NotFoundException(
+        onlyActive ? 'Cartao de credito ativo nao encontrado.' : 'Cartao de credito nao encontrado.',
+      );
     }
 
     return card;
   }
 
-  private async getCategoryOrThrow(userId: number, id: number) {
+  private async getCategoryOrThrow(userId: number, id: number, onlyActive = true) {
+    const where: any = { id, userId };
+    if (onlyActive) {
+      where.isActive = true;
+    }
+
     const category = await this.prisma.client.category.findFirst({
-      where: { id, userId, isActive: true },
+      where,
     });
 
     if (!category) {
-      throw new NotFoundException('Categoria ativa nao encontrada.');
+      throw new NotFoundException(
+        onlyActive ? 'Categoria ativa nao encontrada.' : 'Categoria nao encontrada.',
+      );
     }
 
     return category;

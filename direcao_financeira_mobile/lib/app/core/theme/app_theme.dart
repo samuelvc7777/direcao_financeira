@@ -12,7 +12,6 @@ class AppTheme {
           secondary: AppColors.secondary,
           tertiary: AppColors.accent,
           surface: AppColors.surface,
-          background: AppColors.background,
           error: AppColors.error,
         ),
         textTheme: GoogleFonts.interTextTheme(),
@@ -26,6 +25,7 @@ class AppTheme {
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
+          iconTheme: IconThemeData(color: AppColors.textPrimary),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -35,7 +35,7 @@ class AppTheme {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            elevation: 0,
+            elevation: 2,
             textStyle: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -54,7 +54,6 @@ class AppTheme {
           secondary: AppColors.secondary,
           tertiary: AppColors.accent,
           surface: AppColors.surfaceDark,
-          background: AppColors.backgroundDark,
           error: AppColors.error,
         ),
         textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
@@ -68,6 +67,7 @@ class AppTheme {
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
+          iconTheme: IconThemeData(color: AppColors.textPrimaryDark),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -77,7 +77,8 @@ class AppTheme {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            elevation: 0,
+            elevation: 4,
+            shadowColor: AppColors.primary.withOpacity(0.3),
             textStyle: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

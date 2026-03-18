@@ -1,3 +1,6 @@
+import 'package:dartz/dartz.dart';
+
+import '../../core/errors/failures.dart';
 import '../entities/user_entity.dart';
 import '../repositories/i_auth_repository.dart';
 
@@ -6,13 +9,12 @@ class LoginUseCase {
 
   LoginUseCase(this.repository);
 
-  Future<UserEntity> execute(String email, String password) async {
-    // Aqui podemos adicionar validações de regra de negócio antes do login
+  Future<Either<Failure, UserEntity>> execute(String email, String password) async {
     if (email.isEmpty || !email.contains('@')) {
-      throw Exception('Por favor, informe um e-mail válido.');
+      return Left(ValidationFailure('Por favor, informe um e-mail válido.'));
     }
     if (password.length < 6) {
-      throw Exception('A senha deve ter pelo menos 6 caracteres.');
+      return Left(ValidationFailure('A senha deve ter pelo menos 6 caracteres.'));
     }
 
     return await repository.login(email, password);

@@ -33,44 +33,57 @@ class SubscriptionController extends GetxController {
   }
 
   Future<void> loadData() async {
-    try {
-      isLoading.value = true;
-      errorMessage.value = null;
-      debugPrint('[SubscriptionController] loadData() iniciado');
+    isLoading.value = true;
+    errorMessage.value = null;
+    debugPrint('[SubscriptionController] loadData() iniciado');
 
-      final results = await Future.wait<dynamic>([
-        subscriptionRepository.getMySubscription(),
-        subscriptionRepository.getSubscriptionHistory(),
-        subscriptionRepository.getAvailablePlans(),
-      ]);
+    final results = await Future.wait<dynamic>([
+      subscriptionRepository.getMySubscription(),
+      subscriptionRepository.getSubscriptionHistory(),
+      subscriptionRepository.getAvailablePlans(),
+    ]);
 
-      final subscription = results[0] as SubscriptionEntity?;
-      final subscriptionHistory = results[1] as List<SubscriptionEntity>;
-      final availablePlans = results[2] as List<PlanEntity>;
+    // Processar resultado da assinatura ativa
+    results[0].fold(
+      (failure) {
+        debugPrint('[SubscriptionController] getMySubscription() erro -> ${failure.message}');
+        errorMessage.value = failure.message;
+      },
+      (subscription) => activeSubscription.value = subscription,
+    );
 
-      activeSubscription.value = subscription;
-      history.assignAll(subscriptionHistory);
-      plans.assignAll(availablePlans);
-      hasPlanCatalog.value = availablePlans.isNotEmpty;
-      _syncSelectedPlan();
-      debugPrint(
-        '[SubscriptionController] ativo=${subscription?.id}/${subscription?.status} '
-        'planoAtual=${subscription?.plan?.name} '
-        'historico=${subscriptionHistory.length} '
-        'planosDisponiveis=${availablePlans.length}',
-      );
+    // Processar resultado do histórico
+    results[1].fold(
+      (failure) {
+        debugPrint('[SubscriptionController] getSubscriptionHistory() erro -> ${failure.message}');
+        if (errorMessage.value == null) {
+          errorMessage.value = failure.message;
+        }
+      },
+      (subscriptionHistory) => history.assignAll(subscriptionHistory),
+    );
 
-      await subscriptionRepository.syncStoredUser(
-        activeSubscription: subscription,
-        subscriptions: subscriptionHistory,
-      );
-    } catch (e) {
-      debugPrint('[SubscriptionController] loadData() erro -> $e');
-      errorMessage.value = e.toString().replaceAll('Exception: ', '');
-    } finally {
-      isLoading.value = false;
-      debugPrint('[SubscriptionController] loadData() finalizado');
-    }
+    // Processar resultado dos planos
+    results[2].fold(
+      (failure) {
+        debugPrint('[SubscriptionController] getAvailablePlans() erro -> ${failure.message}');
+      },
+      (availablePlans) {
+        plans.assignAll(availablePlans);
+        hasPlanCatalog.value = availablePlans.isNotEmpty;
+      },
+    );
+
+    _syncSelectedPlan();
+
+    // Sincronizar com storage local
+    await subscriptionRepository.syncStoredUser(
+      activeSubscription: activeSubscription.value,
+      subscriptions: history,
+    );
+
+    isLoading.value = false;
+    debugPrint('[SubscriptionController] loadData() finalizado');
   }
 
   Future<void> changePlan() async {
@@ -147,23 +160,25 @@ class SubscriptionController extends GetxController {
   }
 
   Future<void> _runAction({
-    required Future<SubscriptionEntity?> Function() action,
+    required Future<dynamic> Function() action,
     required String successMessage,
   }) async {
-    try {
-      isActionLoading.value = true;
-      await action();
-      await loadData();
-      _showFeedback(title: 'Sucesso', message: successMessage);
-    } catch (e) {
-      _showFeedback(
+    isActionLoading.value = true;
+
+    final result = await action();
+    result.fold(
+      (failure) => _showFeedback(
         title: 'Erro',
-        message: e.toString().replaceAll('Exception: ', ''),
+        message: failure.message,
         isError: true,
-      );
-    } finally {
-      isActionLoading.value = false;
-    }
+      ),
+      (_) async {
+        await loadData();
+        _showFeedback(title: 'Sucesso', message: successMessage);
+      },
+    );
+
+    isActionLoading.value = false;
   }
 
   void _syncSelectedPlan() {
@@ -188,8 +203,8 @@ class SubscriptionController extends GetxController {
       message,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: isError
-          ? Colors.red.withOpacity(0.12)
-          : Colors.green.withOpacity(0.12),
+          ? const Color(0xFFBF4124).withOpacity(0.12)
+          : const Color(0xFF03A696).withOpacity(0.12),
       colorText: Colors.white,
       margin: const EdgeInsets.all(16),
     );

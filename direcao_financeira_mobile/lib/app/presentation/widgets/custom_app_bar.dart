@@ -47,13 +47,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.teal.withValues(alpha: 0.95),
-                    AppColors.aqua.withValues(alpha: 0.75),
+                    AppColors.royalBlue.withValues(alpha: 0.95),
+                    AppColors.royalBlue.withValues(alpha: 0.75),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.teal.withValues(alpha: 0.18),
+                    color: AppColors.royalBlue.withValues(alpha: 0.18),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -70,8 +70,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface,
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                   ),
@@ -80,7 +80,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   Text(
                     subtitle!,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.66),
+                      color: context.theme.colorScheme.onSurface.withValues(alpha: 0.66),
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),

@@ -1,13 +1,13 @@
-import 'package:direcao_financeira_mobile/app/domain/usecases/login_use_case.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+
+import '../../../domain/usecases/login_use_case.dart';
 
 class LoginController extends GetxController {
   final LoginUseCase loginUseCase;
 
   LoginController({required this.loginUseCase});
 
-  // Observáveis reativos
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final isLoading = false.obs;
@@ -26,52 +26,42 @@ class LoginController extends GetxController {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    // Validação local básica
     if (email.isEmpty || password.isEmpty) {
-      Get.snackbar(
-        'Campos Vazios',
-        'Por favor, preencha e-mail e senha.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.1),
-        colorText: Colors.orange[900],
-      );
+      _showError('Campos Vazios', 'Por favor, preencha e-mail e senha.');
       return;
     }
 
     if (!GetUtils.isEmail(email)) {
-      Get.snackbar(
-        'E-mail Inválido',
-        'O formato do e-mail não é válido.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[800],
-      );
+      _showError('E-mail Inválido', 'O formato do e-mail não é válido.');
       return;
     }
 
-    try {
-      isLoading.value = true;
-      final user = await loginUseCase.execute(email, password);
+    isLoading.value = true;
+    final result = await loginUseCase.execute(email, password);
+    isLoading.value = false;
 
-      // Redireciona para o dashboard em caso de sucesso
-      Get.offAllNamed('/dashboard');
-      Get.snackbar(
-        'Sucesso',
-        'Bem-vindo(a), ${user.name}!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green[800],
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Erro no Login',
-        e.toString().replaceAll('Exception: ', ''),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[800],
-      );
-    } finally {
-      isLoading.value = false;
-    }
+    result.fold(
+      (failure) => _showError('Erro no Login', failure.message),
+      (user) {
+        Get.offAllNamed('/initial');
+        Get.snackbar(
+          'Sucesso',
+          'Bem-vindo(a), ${user.name}!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF03A696).withOpacity(0.12),
+          colorText: Colors.white,
+        );
+      },
+    );
+  }
+
+  void _showError(String title, String message) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFBF4124).withOpacity(0.12),
+      colorText: Colors.white,
+    );
   }
 }
