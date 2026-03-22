@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
 import '../../widgets/custom_app_bar.dart';
 import 'home_controller.dart';
 import 'widgets/accounts_section.dart';
@@ -31,8 +30,8 @@ class HomeView extends GetView<HomeController> {
           final horizontalPadding = width < 360
               ? 12.0
               : width < 430
-                  ? 16.0
-                  : 20.0;
+              ? 16.0
+              : 20.0;
 
           return Container(
             width: double.infinity,
@@ -50,15 +49,17 @@ class HomeView extends GetView<HomeController> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      MonthSelector(),
-                      BalanceCard(),
-                      AccountsSection(),
-                      CreditCardsSection(),
-                      ExpensesChartSection(),
-                      RecentTransactionsSection(),
-                      GoalsSection(),
+                      const MonthSelector(),
+                      const BalanceCard(),
+                      const AccountsSection(),
+                      CreditCardsSection(controller: controller),
+                      const ExpensesChartSection(),
+                      RecentTransactionsSection(
+                        onViewAllTransactions: controller.openTransactionsTab,
+                      ),
+                      const GoalsSection(),
                     ],
                   ),
                 ),

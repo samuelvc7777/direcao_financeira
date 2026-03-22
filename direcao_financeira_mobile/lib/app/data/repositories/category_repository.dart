@@ -2,23 +2,49 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/repositories/i_category_repository.dart';
 import '../datasources/category_datasource.dart';
 
 class CategoryRepository implements ICategoryRepository {
-  CategoryRepository({required this.dataSource});
+  CategoryRepository({
+    required this.dataSource,
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
+  });
 
   final ICategoryDataSource dataSource;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
 
   @override
   Future<Either<Failure, List<CategoryEntity>>> getCategories() async {
     try {
       return Right(await dataSource.getCategories());
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao carregar categorias.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.getCategories',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar categorias.',
+        ),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar categorias.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.getCategories',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar categorias.',
+        ),
+      );
     }
   }
 
@@ -39,9 +65,24 @@ class CategoryRepository implements ICategoryRepository {
         ),
       );
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao criar categoria.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.createCategory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao criar categoria.'),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao criar categoria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.createCategory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao criar categoria.',
+        ),
+      );
     }
   }
 
@@ -64,9 +105,27 @@ class CategoryRepository implements ICategoryRepository {
         ),
       );
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao atualizar categoria.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.updateCategory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao atualizar categoria.',
+        ),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao atualizar categoria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.updateCategory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao atualizar categoria.',
+        ),
+      );
     }
   }
 
@@ -76,11 +135,27 @@ class CategoryRepository implements ICategoryRepository {
       await dataSource.deactivateCategory(id);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.deactivateCategory',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao desativar categoria.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao desativar categoria.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao desativar categoria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.deactivateCategory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao desativar categoria.',
+        ),
+      );
     }
   }
 
@@ -90,25 +165,24 @@ class CategoryRepository implements ICategoryRepository {
       await dataSource.reactivateCategory(id);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.reactivateCategory',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao reativar categoria.')),
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao reativar categoria.'),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao reativar categoria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CategoryRepository.reactivateCategory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao reativar categoria.',
+        ),
+      );
     }
-  }
-
-  String _extractMessage(DioException error, String fallback) {
-    final data = error.response?.data;
-    if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is List && message.isNotEmpty) {
-        return message.first.toString();
-      }
-      if (message != null) {
-        return message.toString();
-      }
-    }
-    return fallback;
   }
 }

@@ -35,7 +35,11 @@ class SettingsSectionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: context.theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
+            border: Border.all(
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.08,
+              ),
+            ),
           ),
           child: Column(
             children: List.generate(
@@ -99,7 +103,9 @@ class _SettingsItemTile extends StatelessWidget {
                       Text(
                         item.subtitle,
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.62),
+                          color: context.theme.colorScheme.onSurface.withValues(
+                            alpha: 0.62,
+                          ),
                           fontSize: 13,
                           height: 1.35,
                         ),
@@ -121,13 +127,20 @@ class _SettingsItemTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.56),
+                  color: context.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.56,
+                  ),
                 ),
               ],
             ),
             if (!isLast) ...[
               const SizedBox(height: 16),
-              Divider(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08), height: 1),
+              Divider(
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.08,
+                ),
+                height: 1,
+              ),
             ],
           ],
         ),
@@ -153,19 +166,21 @@ class _IconBadge extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            accentColor.withValues(alpha: 0.95),
-            accentColor.withValues(alpha: 0.72),
+            accentColor.withValues(alpha: 0.98),
+            accentColor,
+            Color.lerp(accentColor, Colors.black, 0.16) ?? accentColor,
           ],
         ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withValues(alpha: 0.22),
-            blurRadius: 14,
+            color: accentColor.withValues(alpha: 0.26),
+            blurRadius: 16,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Icon(icon, color: Colors.white, size: 24),
+      child: Center(child: Icon(icon, color: Colors.white, size: 24)),
     );
   }
 }

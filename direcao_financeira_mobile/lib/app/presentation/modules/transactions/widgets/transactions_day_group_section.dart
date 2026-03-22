@@ -94,7 +94,7 @@ class TransactionsDayGroupSection extends StatelessWidget {
                 onDelete: () => onDelete(group.transactions[index]),
               ),
               if (index != group.transactions.length - 1)
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
             ],
           ],
         ),
@@ -123,17 +123,21 @@ class _TransactionFinanceCard extends StatelessWidget {
     final title = _resolveTitle();
     final subtitle = _resolveSubtitle(title);
     final secondaryChipLabel = _resolveSecondaryChipLabel();
-    final dateLabel = DateFormat('dd/MMM', 'pt_BR').format(transaction.transactionDate);
-    final timeLabel = DateFormat('HH:mm', 'pt_BR').format(transaction.transactionDate);
+    final dateLabel = DateFormat(
+      'dd/MMM',
+      'pt_BR',
+    ).format(transaction.transactionDate);
+    final timeLabel = DateFormat(
+      'HH:mm',
+      'pt_BR',
+    ).format(transaction.transactionDate);
     final amountLabel = amountFormat.format(transaction.amount);
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.midnight,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: accentColor.withValues(alpha: 0.38),
-        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withValues(alpha: 0.38)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.22),
@@ -147,7 +151,7 @@ class _TransactionFinanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 10),
               child: Container(
                 width: 6,
                 decoration: BoxDecoration(
@@ -161,7 +165,7 @@ class _TransactionFinanceCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,19 +174,19 @@ class _TransactionFinanceCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 46,
-                          height: 46,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: accentColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
                             _resolveIcon(),
                             color: accentColor,
-                            size: 24,
+                            size: 21,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,8 +200,9 @@ class _TransactionFinanceCard extends StatelessWidget {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface,
-                                        fontSize: 16,
+                                        color:
+                                            context.theme.colorScheme.onSurface,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: -0.3,
                                       ),
@@ -211,8 +216,10 @@ class _TransactionFinanceCard extends StatelessWidget {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: isExpense ? AppColors.rose : AppColors.emerald,
-                                        fontSize: 20,
+                                        color: isExpense
+                                            ? AppColors.rose
+                                            : AppColors.emerald,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.w800,
                                       ),
                                     ),
@@ -220,11 +227,11 @@ class _TransactionFinanceCard extends StatelessWidget {
                                 ],
                               ),
                               if (subtitle != null) ...[
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 4),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
+                                    horizontal: 9,
+                                    vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.07),
@@ -235,8 +242,9 @@ class _TransactionFinanceCard extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                      fontSize: 13,
+                                      color: context.theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -247,53 +255,64 @@ class _TransactionFinanceCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Icon(
                           Icons.calendar_today_outlined,
-                          size: 14,
-                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          size: 13,
+                          color: context.theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'Venc: ${_capitalizeMonthLabel(dateLabel)}',
                             style: TextStyle(
-                              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.66),
-                              fontSize: 13,
+                              color: context.theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.66),
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
+                      spacing: 6,
+                      runSpacing: 5,
                       children: [
                         _InfoChip(
                           label: isExpense ? 'Pendente' : 'Recebido',
-                          icon: isExpense ? Icons.more_horiz_rounded : Icons.check_circle_rounded,
-                          backgroundColor: (isExpense ? AppColors.rose : AppColors.emerald)
-                              .withValues(alpha: 0.14),
-                          borderColor: (isExpense ? AppColors.rose : AppColors.emerald)
-                              .withValues(alpha: 0.35),
-                          textColor: isExpense ? AppColors.rose : AppColors.emerald,
+                          icon: isExpense
+                              ? Icons.more_horiz_rounded
+                              : Icons.check_circle_rounded,
+                          backgroundColor:
+                              (isExpense ? AppColors.rose : AppColors.emerald)
+                                  .withValues(alpha: 0.14),
+                          borderColor:
+                              (isExpense ? AppColors.rose : AppColors.emerald)
+                                  .withValues(alpha: 0.35),
+                          textColor: isExpense
+                              ? AppColors.rose
+                              : AppColors.emerald,
                         ),
                         _InfoChip(
                           label: secondaryChipLabel,
                           icon: transaction.assetType == AssetType.creditCard
                               ? Icons.layers_rounded
                               : Icons.account_balance_wallet_rounded,
-                          backgroundColor: AppColors.violet.withValues(alpha: 0.13),
+                          backgroundColor: AppColors.violet.withValues(
+                            alpha: 0.13,
+                          ),
                           borderColor: AppColors.violet.withValues(alpha: 0.25),
                           textColor: AppColors.violet,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -303,14 +322,17 @@ class _TransactionFinanceCard extends StatelessWidget {
                           label: 'Editar',
                           icon: Icons.edit_rounded,
                           backgroundColor: Colors.white.withValues(alpha: 0.08),
-                          textColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          textColor: context.theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7),
                           onTap: onEdit,
                         ),
                         const SizedBox(width: 8),
                         _ActionButton(
                           label: 'Excluir',
                           icon: Icons.delete_rounded,
-                          backgroundColor: AppColors.rose.withValues(alpha: 0.18),
+                          backgroundColor: AppColors.rose.withValues(
+                            alpha: 0.18,
+                          ),
                           textColor: AppColors.rose,
                           onTap: onDelete,
                         ),
@@ -350,7 +372,8 @@ class _TransactionFinanceCard extends StatelessWidget {
 
   String _resolveSecondaryChipLabel() {
     if (transaction.assetType == AssetType.creditCard) {
-      if (transaction.installmentNumber != null && transaction.installmentCount != null) {
+      if (transaction.installmentNumber != null &&
+          transaction.installmentCount != null) {
         return '${transaction.installmentNumber}/${transaction.installmentCount}';
       }
       return 'À vista';
@@ -390,12 +413,16 @@ class _TransactionFinanceCard extends StatelessWidget {
   Color _resolveAccentColor() {
     final colorHex = transaction.categoryColor;
     if (colorHex == null || colorHex.isEmpty) {
-      return transaction.type == TransactionType.expense ? AppColors.rose : AppColors.emerald;
+      return transaction.type == TransactionType.expense
+          ? AppColors.rose
+          : AppColors.emerald;
     }
 
     final normalized = colorHex.replaceFirst('#', '');
     if (normalized.length != 6) {
-      return transaction.type == TransactionType.expense ? AppColors.rose : AppColors.emerald;
+      return transaction.type == TransactionType.expense
+          ? AppColors.rose
+          : AppColors.emerald;
     }
 
     return Color(int.parse('FF$normalized', radix: 16));
@@ -428,7 +455,7 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(14),
@@ -437,13 +464,13 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: textColor),
+          Icon(icon, size: 13, color: textColor),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               color: textColor,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -465,15 +492,15 @@ class _TimeLabel extends StatelessWidget {
       children: [
         Icon(
           Icons.access_time_rounded,
-          size: 16,
+          size: 14,
           color: context.theme.colorScheme.onSurface.withValues(alpha: 0.36),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 5),
         Text(
           timeLabel,
           style: TextStyle(
             color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -502,7 +529,7 @@ class _ActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(14),
@@ -511,8 +538,8 @@ class _ActionButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: textColor),
-            const SizedBox(width: 6),
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 5),
             Flexible(
               child: Text(
                 label,
@@ -520,7 +547,7 @@ class _ActionButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),

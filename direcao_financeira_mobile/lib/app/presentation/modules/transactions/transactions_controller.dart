@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/dashboard/dashboard_refresh_notifier.dart';
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/entities/category_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
-import '../home/home_controller.dart';
 
 enum TransactionsFilter {
   all,
@@ -30,19 +31,16 @@ enum TransactionsFilter {
 }
 
 class TransactionsDayGroup {
-  TransactionsDayGroup({
-    required this.date,
-    required this.transactions,
-  });
+  TransactionsDayGroup({required this.date, required this.transactions});
 
   final DateTime date;
   final List<TransactionEntity> transactions;
 
   int get totalCents => transactions.fold<int>(
-        0,
-        (total, transaction) =>
-            total + transaction.amountCents * _signalFor(transaction.type),
-      );
+    0,
+    (total, transaction) =>
+        total + transaction.amountCents * _signalFor(transaction.type),
+  );
 
   static int _signalFor(TransactionType type) {
     return type == TransactionType.expense ? -1 : 1;
@@ -57,6 +55,7 @@ class TransactionsController extends GetxController {
   final GetCategoriesUseCase getCategoriesUseCase;
   final GetBankAccountsUseCase getBankAccountsUseCase;
   final GetCreditCardsUseCase getCreditCardsUseCase;
+  final DashboardRefreshNotifier dashboardRefreshNotifier;
 
   TransactionsController({
     required this.createTransactionUseCase,
@@ -66,6 +65,7 @@ class TransactionsController extends GetxController {
     required this.getCategoriesUseCase,
     required this.getBankAccountsUseCase,
     required this.getCreditCardsUseCase,
+    required this.dashboardRefreshNotifier,
   });
 
   final isSubmitting = false.obs;
@@ -77,10 +77,7 @@ class TransactionsController extends GetxController {
   final activeAccounts = <BankAccountEntity>[].obs;
   final activeCards = <CreditCardEntity>[].obs;
   final selectedFilter = TransactionsFilter.all.obs;
-  final selectedMonth = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  ).obs;
+  final selectedMonth = DateTime(DateTime.now().year, DateTime.now().month).obs;
 
   @override
   void onInit() {
@@ -105,23 +102,19 @@ class TransactionsController extends GetxController {
 
     categoriesResult.fold(
       (failure) => debugPrint('Erro categorias: ${failure.message}'),
-      (data) => categories.assignAll(
-        data.where((category) => category.isActive),
-      ),
+      (data) =>
+          categories.assignAll(data.where((category) => category.isActive)),
     );
 
     bankAccountsResult.fold(
       (failure) => debugPrint('Erro contas: ${failure.message}'),
-      (data) => activeAccounts.assignAll(
-        data.where((account) => account.isActive),
-      ),
+      (data) =>
+          activeAccounts.assignAll(data.where((account) => account.isActive)),
     );
 
     creditCardsResult.fold(
       (failure) => debugPrint('Erro cartoes: ${failure.message}'),
-      (data) => activeCards.assignAll(
-        data.where((card) => card.isActive),
-      ),
+      (data) => activeCards.assignAll(data.where((card) => card.isActive)),
     );
 
     transactionsResult.fold(
@@ -173,8 +166,7 @@ class TransactionsController extends GetxController {
             .toList();
       case TransactionsFilter.expense:
         return monthTransactions
-            .where((transaction) =>
-                transaction.type == TransactionType.expense)
+            .where((transaction) => transaction.type == TransactionType.expense)
             .toList();
     }
   }
@@ -190,13 +182,17 @@ class TransactionsController extends GetxController {
   int get balanceCents => totalIncomeCents - totalExpenseCents;
 
   String get selectedMonthSubtitle {
-    final formatted =
-        DateFormat("MMMM 'de' yyyy", 'pt_BR').format(selectedMonth.value);
+    final formatted = DateFormat(
+      "MMMM 'de' yyyy",
+      'pt_BR',
+    ).format(selectedMonth.value);
     return _capitalize(formatted);
   }
 
-  String get selectedMonthLabelUppercase =>
-      DateFormat('MMMM yyyy', 'pt_BR').format(selectedMonth.value).toUpperCase();
+  String get selectedMonthLabelUppercase => DateFormat(
+    'MMMM yyyy',
+    'pt_BR',
+  ).format(selectedMonth.value).toUpperCase();
 
   List<TransactionsDayGroup> get groupedVisibleTransactions {
     final buckets = <DateTime, List<TransactionEntity>>{};
@@ -211,16 +207,19 @@ class TransactionsController extends GetxController {
       buckets.putIfAbsent(day, () => <TransactionEntity>[]).add(transaction);
     }
 
-    final groups = buckets.entries
-        .map(
-          (entry) => TransactionsDayGroup(
-            date: entry.key,
-            transactions: entry.value
-              ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate)),
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final groups =
+        buckets.entries
+            .map(
+              (entry) => TransactionsDayGroup(
+                date: entry.key,
+                transactions: entry.value
+                  ..sort(
+                    (a, b) => b.transactionDate.compareTo(a.transactionDate),
+                  ),
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
 
     return groups;
   }
@@ -272,7 +271,7 @@ class TransactionsController extends GetxController {
 
     return result.fold(
       (failure) {
-        Get.snackbar(
+        AppSnackbar.show(
           'Erro',
           failure.message,
           snackPosition: SnackPosition.BOTTOM,
@@ -291,19 +290,19 @@ class TransactionsController extends GetxController {
         }
 
         transactions.insert(0, transaction);
-        transactions.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+        transactions.sort(
+          (a, b) => b.transactionDate.compareTo(a.transactionDate),
+        );
         selectedMonth.value = DateTime(
           transaction.transactionDate.year,
           transaction.transactionDate.month,
         );
 
-        if (Get.isRegistered<HomeController>()) {
-          Get.find<HomeController>().loadDashboardData(silent: true);
-        }
+        dashboardRefreshNotifier.requestRefresh();
 
         Get.back();
 
-        Get.snackbar(
+        AppSnackbar.show(
           'Sucesso',
           'Transacao registrada com sucesso.',
           snackPosition: SnackPosition.BOTTOM,
@@ -338,26 +337,23 @@ class TransactionsController extends GetxController {
 
     isSubmitting.value = false;
 
-    result.fold(
-      (failure) => Get.snackbar('Erro', failure.message),
-      (transaction) {
-        if (scope == TransactionMutationScope.all) {
-          loadData(silent: true);
-        } else {
-          final index = transactions.indexWhere((t) => t.id == id);
-          if (index != -1) {
-            transactions[index] = transaction;
-          }
+    result.fold((failure) => AppSnackbar.show('Erro', failure.message), (
+      transaction,
+    ) {
+      if (scope == TransactionMutationScope.all) {
+        loadData(silent: true);
+      } else {
+        final index = transactions.indexWhere((t) => t.id == id);
+        if (index != -1) {
+          transactions[index] = transaction;
         }
+      }
 
-        if (Get.isRegistered<HomeController>()) {
-          Get.find<HomeController>().loadDashboardData(silent: true);
-        }
+      dashboardRefreshNotifier.requestRefresh();
 
-        Get.back();
-        Get.snackbar('Sucesso', 'Transacao atualizada.');
-      },
-    );
+      Get.back();
+      AppSnackbar.show('Sucesso', 'Transacao atualizada.');
+    });
   }
 
   Future<void> deleteTransaction(
@@ -379,7 +375,7 @@ class TransactionsController extends GetxController {
         deletingTransactionIds.remove(id);
         isLoading.value = false;
         Get.closeAllSnackbars();
-        Get.snackbar('Erro', failure.message);
+        AppSnackbar.show('Erro', failure.message);
       },
       (_) {
         if (scope == TransactionMutationScope.all) {
@@ -389,13 +385,11 @@ class TransactionsController extends GetxController {
           isLoading.value = false;
         }
 
-        if (Get.isRegistered<HomeController>()) {
-          Get.find<HomeController>().loadDashboardData(silent: true);
-        }
+        dashboardRefreshNotifier.requestRefresh();
 
         deletingTransactionIds.remove(id);
         Get.closeAllSnackbars();
-        Get.snackbar('Sucesso', 'Transacao excluida.');
+        AppSnackbar.show('Sucesso', 'Transacao excluida.');
       },
     );
   }

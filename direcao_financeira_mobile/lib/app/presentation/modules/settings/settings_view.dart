@@ -43,7 +43,7 @@ class SettingsView extends GetView<SettingsController> {
                   horizontalPadding,
                   8,
                   horizontalPadding,
-                  100,
+                  32,
                 ),
                 child: Center(
                   child: ConstrainedBox(
@@ -113,7 +113,11 @@ class _LogoutCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08)),
+              border: Border.all(
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.08,
+                ),
+              ),
             ),
             child: Row(
               children: [
@@ -121,13 +125,33 @@ class _LogoutCard extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: AppColors.rose.withValues(alpha: 0.14),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.rose.withValues(alpha: 0.96),
+                        Color.lerp(AppColors.rose, AppColors.amber, 0.20) ??
+                            AppColors.rose,
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.22),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.rose.withValues(alpha: 0.20),
+                        blurRadius: 14,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.logout_rounded,
-                    color: AppColors.rose,
-                    size: 22,
+                  child: const Center(
+                    child: Icon(
+                      Icons.logout_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),

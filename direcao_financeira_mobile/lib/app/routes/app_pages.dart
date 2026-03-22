@@ -29,6 +29,10 @@ import '../presentation/modules/journey/shift_route_binding.dart';
 import '../presentation/modules/journey/shift_route_view.dart';
 import '../presentation/modules/traffic_light_settings/traffic_light_settings_view.dart';
 import '../presentation/modules/traffic_light_settings/traffic_light_settings_binding.dart';
+import '../presentation/modules/costs_gains_settings/costs_gains_settings_binding.dart';
+import '../presentation/modules/costs_gains_settings/costs_gains_settings_view.dart';
+import '../presentation/modules/costs_gains_wizard/costs_gains_wizard_binding.dart';
+import '../presentation/modules/costs_gains_wizard/costs_gains_wizard_view.dart';
 import '../domain/entities/transaction_entity.dart';
 
 class AppRoutes {
@@ -49,6 +53,8 @@ class AppRoutes {
   static const String shiftMetrics = '/journey/shift-metrics';
   static const String shiftRoute = '/journey/shift-route';
   static const String trafficLightSettings = '/traffic-light-settings';
+  static const String costsGainsSettings = '/costs-gains-settings';
+  static const String costsGainsWizard = '/costs-gains-wizard';
 }
 
 class AppPages {
@@ -171,6 +177,20 @@ class AppPages {
       name: AppRoutes.trafficLightSettings,
       page: () => const TrafficLightSettingsView(),
       binding: TrafficLightSettingsBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.costsGainsSettings,
+      page: () => const CostsGainsSettingsView(),
+      binding: CostsGainsSettingsBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.costsGainsWizard,
+      page: () => const CostsGainsWizardView(),
+      binding: CostsGainsWizardBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

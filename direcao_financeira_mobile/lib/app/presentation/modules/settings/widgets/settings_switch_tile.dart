@@ -44,12 +44,47 @@ class SettingsSwitchTile extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    color: AppColors.teal.withValues(alpha: 0.16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.royalBlue.withValues(alpha: 0.96),
+                        AppColors.electricCyan.withValues(alpha: 0.88),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.royalBlue.withValues(alpha: 0.20),
+                        blurRadius: 14,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.dark_mode_rounded,
-                    color: AppColors.aqua,
-                    size: 22,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 7,
+                        right: 7,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const Center(
+                        child: Icon(
+                          Icons.dark_mode_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 14),

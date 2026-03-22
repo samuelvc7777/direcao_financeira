@@ -2,25 +2,49 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/credit_card_entity.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
 import '../datasources/credit_card_datasource.dart';
 
 class CreditCardRepository implements ICreditCardRepository {
-  CreditCardRepository({required this.dataSource});
+  CreditCardRepository({
+    required this.dataSource,
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
+  });
 
   final ICreditCardDataSource dataSource;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
 
   @override
   Future<Either<Failure, List<CreditCardEntity>>> getCreditCards() async {
     try {
       return Right(await dataSource.getCreditCards());
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.getCreditCards',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao carregar cartoes de credito.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar cartoes de credito.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar cartoes de credito.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.getCreditCards',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar cartoes de credito.',
+        ),
+      );
     }
   }
 
@@ -47,11 +71,27 @@ class CreditCardRepository implements ICreditCardRepository {
         ),
       );
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.createCreditCard',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao criar cartao de credito.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao criar cartao de credito.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao criar cartao de credito.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.createCreditCard',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao criar cartao de credito.',
+        ),
+      );
     }
   }
 
@@ -82,11 +122,27 @@ class CreditCardRepository implements ICreditCardRepository {
         ),
       );
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.updateCreditCard',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao atualizar cartao de credito.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao atualizar cartao de credito.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao atualizar cartao de credito.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.updateCreditCard',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao atualizar cartao de credito.',
+        ),
+      );
     }
   }
 
@@ -96,11 +152,27 @@ class CreditCardRepository implements ICreditCardRepository {
       await dataSource.deactivateCreditCard(id);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.deactivateCreditCard',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao desativar cartao de credito.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao desativar cartao de credito.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao desativar cartao de credito.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.deactivateCreditCard',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao desativar cartao de credito.',
+        ),
+      );
     }
   }
 
@@ -110,25 +182,27 @@ class CreditCardRepository implements ICreditCardRepository {
       await dataSource.reactivateCreditCard(id);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.reactivateCreditCard',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao reativar cartao de credito.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao reativar cartao de credito.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao reativar cartao de credito.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'CreditCardRepository.reactivateCreditCard',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao reativar cartao de credito.',
+        ),
+      );
     }
-  }
-
-  String _extractMessage(DioException error, String fallback) {
-    final data = error.response?.data;
-    if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is List && message.isNotEmpty) {
-        return message.first.toString();
-      }
-      if (message != null) {
-        return message.toString();
-      }
-    }
-    return fallback;
   }
 }

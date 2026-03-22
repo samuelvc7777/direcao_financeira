@@ -2,25 +2,49 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/bank_account_entity.dart';
 import '../../domain/repositories/i_bank_account_repository.dart';
 import '../datasources/bank_account_datasource.dart';
 
 class BankAccountRepository implements IBankAccountRepository {
-  BankAccountRepository({required this.dataSource});
+  BankAccountRepository({
+    required this.dataSource,
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
+  });
 
   final IBankAccountDataSource dataSource;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
 
   @override
   Future<Either<Failure, List<BankAccountEntity>>> getBankAccounts() async {
     try {
       return Right(await dataSource.getBankAccounts());
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.getBankAccounts',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao carregar contas bancarias.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar contas bancarias.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar contas bancarias.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.getBankAccounts',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar contas bancarias.',
+        ),
+      );
     }
   }
 
@@ -43,11 +67,27 @@ class BankAccountRepository implements IBankAccountRepository {
         ),
       );
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.createBankAccount',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao criar conta bancaria.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao criar conta bancaria.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao criar conta bancaria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.createBankAccount',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao criar conta bancaria.',
+        ),
+      );
     }
   }
 
@@ -74,11 +114,27 @@ class BankAccountRepository implements IBankAccountRepository {
         ),
       );
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.updateBankAccount',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao atualizar conta bancaria.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao atualizar conta bancaria.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao atualizar conta bancaria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.updateBankAccount',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao atualizar conta bancaria.',
+        ),
+      );
     }
   }
 
@@ -88,11 +144,27 @@ class BankAccountRepository implements IBankAccountRepository {
       await dataSource.deactivateBankAccount(id);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.deactivateBankAccount',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao desativar conta bancaria.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao desativar conta bancaria.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao desativar conta bancaria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.deactivateBankAccount',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao desativar conta bancaria.',
+        ),
+      );
     }
   }
 
@@ -102,25 +174,27 @@ class BankAccountRepository implements IBankAccountRepository {
       await dataSource.reactivateBankAccount(id);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.reactivateBankAccount',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao reativar conta bancaria.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao reativar conta bancaria.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao reativar conta bancaria.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'BankAccountRepository.reactivateBankAccount',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao reativar conta bancaria.',
+        ),
+      );
     }
-  }
-
-  String _extractMessage(DioException error, String fallback) {
-    final data = error.response?.data;
-    if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is List && message.isNotEmpty) {
-        return message.first.toString();
-      }
-      if (message != null) {
-        return message.toString();
-      }
-    }
-    return fallback;
   }
 }

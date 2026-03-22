@@ -96,6 +96,15 @@ class SyncPendingJourneyUseCase {
   }
 }
 
+class EnsureReadyForShiftStartUseCase {
+  final IJourneyRepository repository;
+  EnsureReadyForShiftStartUseCase(this.repository);
+
+  Future<Either<Failure, LocationTrackingStatusEntity>> call() async {
+    return await repository.ensureReadyForShiftStart();
+  }
+}
+
 class GetLocationTrackingStatusUseCase {
   final IJourneyRepository repository;
   GetLocationTrackingStatusUseCase(this.repository);

@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/entities/plan_entity.dart';
 import '../../../domain/entities/store_product_entity.dart';
 import '../../../domain/entities/store_purchase_event_entity.dart';
 import '../../../domain/entities/subscription_entity.dart';
-import '../../../domain/repositories/i_subscription_repository.dart';
 import '../../../domain/usecases/subscription_use_cases.dart';
 
 class SubscriptionController extends GetxController {
@@ -25,7 +25,7 @@ class SubscriptionController extends GetxController {
     required this.buyStoreProductUseCase,
     required this.restorePurchasesUseCase,
     required this.completePurchaseUseCase,
-    required this.subscriptionRepository,
+    required this.watchStorePurchaseUpdatesUseCase,
   });
 
   final GetMySubscriptionUseCase getMySubscriptionUseCase;
@@ -40,7 +40,7 @@ class SubscriptionController extends GetxController {
   final BuyStoreProductUseCase buyStoreProductUseCase;
   final RestorePurchasesUseCase restorePurchasesUseCase;
   final CompletePurchaseUseCase completePurchaseUseCase;
-  final ISubscriptionRepository subscriptionRepository;
+  final WatchStorePurchaseUpdatesUseCase watchStorePurchaseUpdatesUseCase;
 
   final isLoading = true.obs;
   final isActionLoading = false.obs;
@@ -345,7 +345,7 @@ class SubscriptionController extends GetxController {
   }
 
   void _listenToPurchaseUpdates() {
-    _purchaseSubscription = subscriptionRepository.purchaseUpdates.listen((
+    _purchaseSubscription = watchStorePurchaseUpdatesUseCase().listen((
       event,
     ) async {
       switch (event.status) {
@@ -476,7 +476,7 @@ class SubscriptionController extends GetxController {
     required String message,
     bool isError = false,
   }) {
-    Get.snackbar(
+    AppSnackbar.show(
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,

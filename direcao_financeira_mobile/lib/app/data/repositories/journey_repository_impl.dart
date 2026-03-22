@@ -1,8 +1,9 @@
 import 'package:dartz/dartz.dart';
-import 'package:dio/dio.dart';
 
 import '../../core/errors/failures.dart';
-import '../../core/network/connection_controller.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
+import '../../core/network/realtime_client.dart';
 import '../../domain/entities/active_shift_entity.dart';
 import '../../domain/entities/finish_shift_result_entity.dart';
 import '../../domain/entities/journey_statistics_entity.dart';
@@ -14,7 +15,8 @@ import '../datasources/i_journey_datasource.dart';
 import '../datasources/journey_local_datasource.dart';
 import '../datasources/journey_route_local_datasource.dart';
 import '../datasources/location_tracking_datasource.dart';
-import '../models/active_shift_model.dart';
+import '../services/journey_shift_lifecycle_service.dart';
+import '../services/journey_sync_service.dart';
 
 class JourneyRepositoryImpl implements IJourneyRepository {
   JourneyRepositoryImpl({
@@ -22,43 +24,40 @@ class JourneyRepositoryImpl implements IJourneyRepository {
     required this.localDataSource,
     required this.routeLocalDataSource,
     required this.locationTrackingDataSource,
-    required this.connectionController,
-  });
+    required this.realtimeClient,
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
+  }) : syncService = JourneySyncService(
+         remoteDataSource: remoteDataSource,
+         localDataSource: localDataSource,
+         routeLocalDataSource: routeLocalDataSource,
+         realtimeClient: realtimeClient,
+       ),
+       shiftLifecycleService = JourneyShiftLifecycleService(
+         localDataSource: localDataSource,
+         routeLocalDataSource: routeLocalDataSource,
+         locationTrackingDataSource: locationTrackingDataSource,
+       );
 
   final IJourneyDataSource remoteDataSource;
   final IJourneyLocalDataSource localDataSource;
   final IJourneyRouteLocalDataSource routeLocalDataSource;
   final ILocationTrackingDataSource locationTrackingDataSource;
-  final ConnectionController connectionController;
-  Future<int>? _syncPendingShiftsFuture;
-
-  String _handleDioError(dynamic error) {
-    if (error is DioException) {
-      final responseData = error.response?.data;
-      if (responseData is Map && responseData['message'] != null) {
-        final message = responseData['message'];
-        if (message is List) {
-          return message.join(', ');
-        }
-        return message.toString();
-      }
-      return error.message ?? 'Erro de conexao com o servidor.';
-    }
-
-    return error.toString();
-  }
+  final RealtimeClient realtimeClient;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
+  final JourneySyncService syncService;
+  final JourneyShiftLifecycleService shiftLifecycleService;
 
   @override
   Future<Either<Failure, ActiveShiftEntity?>> getActiveShift() async {
     try {
       final localShift = await localDataSource.getActiveShift();
       if (localShift != null) {
-        return Right(await _enrichLocalActiveShift(localShift));
+        return Right(await syncService.enrichLocalActiveShift(localShift));
       }
 
-      if (connectionController.isOnline.value) {
-        await _syncPendingShiftsInternal();
-      }
+      await syncService.syncPendingShiftsIfOnline();
 
       final activeShift = await remoteDataSource.getActiveShift();
       if (activeShift != null) {
@@ -67,7 +66,16 @@ class JourneyRepositoryImpl implements IJourneyRepository {
 
       return Right(activeShift);
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.getActiveShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar o turno ativo.',
+        ),
+      );
     }
   }
 
@@ -85,7 +93,16 @@ class JourneyRepositoryImpl implements IJourneyRepository {
       );
       return Right(statistics);
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.getDailyStatistics',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar as metricas da jornada.',
+        ),
+      );
     }
   }
 
@@ -96,138 +113,92 @@ class JourneyRepositoryImpl implements IJourneyRepository {
     String? endDate,
   }) async {
     try {
-      if (connectionController.isOnline.value) {
-        await _syncPendingShiftsInternal();
-      }
+      await syncService.syncPendingShiftsIfOnline();
 
       final shifts = await remoteDataSource.getShiftHistory(
         filter: filter,
         date: date,
         endDate: endDate,
       );
-      final merged = await _mergePendingShiftHistory(shifts);
-      return Right(merged);
+      return Right(await syncService.mergePendingShiftHistory(shifts));
     } catch (e) {
       final pendingShifts = await localDataSource.getPendingFinishedShifts();
       if (pendingShifts.isNotEmpty) {
-        return Right(await _mergePendingShiftHistory(const []));
+        return Right(await syncService.mergePendingShiftHistory(const []));
       }
-      return Left(ServerFailure(_handleDioError(e)));
+
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.getShiftHistory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar o historico da jornada.',
+        ),
+      );
     }
   }
 
   @override
   Future<Either<Failure, void>> startShift() async {
     try {
-      final trackingStatus =
-          await locationTrackingDataSource.ensureReadyForShiftStart();
-      if (trackingStatus.issueMessage != null) {
-        return Left(ValidationFailure(trackingStatus.issueMessage!));
-      }
-
-      final shift = await localDataSource.startShift();
-      await routeLocalDataSource.ensureRoute(
-        localShiftId: shift.id,
-        startedAt: shift.startTime,
-      );
-
-      try {
-        await locationTrackingDataSource.startTracking(
-          localShiftId: shift.id,
-          startedAt: shift.startTime,
-        );
-      } catch (e) {
-        await localDataSource.clearActiveShift();
-        await routeLocalDataSource.deleteRoute(shift.id);
-        return Left(ServerFailure(_handleDioError(e)));
-      }
-
+      await shiftLifecycleService.startShift();
       return const Right(null);
+    } on ValidationFailure catch (e) {
+      return Left(e);
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.startShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao iniciar o turno.'),
+      );
     }
   }
 
   @override
   Future<Either<Failure, void>> pauseShift() async {
     try {
-      final pausedShift = await localDataSource.pauseShift();
-
-      try {
-        await locationTrackingDataSource.pauseTracking();
-      } catch (e) {
-        await localDataSource.resumeShift();
-        return Left(ServerFailure(_handleDioError(e)));
-      }
-
-      await routeLocalDataSource.ensureRoute(
-        localShiftId: pausedShift.id,
-        startedAt: pausedShift.startTime,
-      );
-
+      await shiftLifecycleService.pauseShift();
       return const Right(null);
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.pauseShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao pausar o turno.'),
+      );
     }
   }
 
   @override
   Future<Either<Failure, void>> resumeShift() async {
     try {
-      final trackingStatus =
-          await locationTrackingDataSource.ensureReadyForShiftStart();
-      if (trackingStatus.issueMessage != null) {
-        return Left(ValidationFailure(trackingStatus.issueMessage!));
-      }
-
-      final resumedShift = await localDataSource.resumeShift();
-
-      try {
-        await locationTrackingDataSource.resumeTracking(
-          localShiftId: resumedShift.id,
-          startedAt: resumedShift.startTime,
-        );
-      } catch (e) {
-        await localDataSource.pauseShift();
-        return Left(ServerFailure(_handleDioError(e)));
-      }
-
+      await shiftLifecycleService.resumeShift();
       return const Right(null);
+    } on ValidationFailure catch (e) {
+      return Left(e);
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.resumeShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao retomar o turno.'),
+      );
     }
   }
 
   @override
   Future<Either<Failure, FinishShiftResultEntity>> finishShift() async {
     try {
-      final activeShift = await localDataSource.getActiveShift();
-      if (activeShift == null) {
-        return Left(ServerFailure('Nao ha turno ativo para finalizar.'));
-      }
+      await shiftLifecycleService.finishShift();
 
-      final endTime = DateTime.now();
-
-      if (!activeShift.isPaused) {
-        await locationTrackingDataSource.stopTracking(endedAt: endTime);
-      }
-
-      final route = await routeLocalDataSource.getRouteByLocalShiftId(
-        activeShift.id,
-        includePoints: false,
-      );
-      final totalDrivenKm = route?.totalDistanceKm ?? 0;
-
-      final pendingShift = await localDataSource.finishShift(
-        totalDrivenKm: totalDrivenKm,
-      );
-      await routeLocalDataSource.markRouteFinished(
-        localShiftId: activeShift.id,
-        endedAt: pendingShift.endTime,
-      );
-
-      final syncedCount = connectionController.isOnline.value
-          ? await _syncPendingShiftsInternal()
+      final syncedCount = realtimeClient.isOnline.value
+          ? await syncService.syncPendingShifts()
           : 0;
       final pendingCount =
           (await localDataSource.getPendingFinishedShifts()).length;
@@ -239,17 +210,54 @@ class JourneyRepositoryImpl implements IJourneyRepository {
         ),
       );
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.finishShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao finalizar o turno.'),
+      );
     }
   }
 
   @override
   Future<Either<Failure, int>> syncPendingShifts() async {
     try {
-      final syncedCount = await _syncPendingShiftsInternal();
-      return Right(syncedCount);
+      return Right(await syncService.syncPendingShifts());
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.syncPendingShifts',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao sincronizar turnos pendentes.',
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, LocationTrackingStatusEntity>>
+  ensureReadyForShiftStart() async {
+    try {
+      final status = await locationTrackingDataSource
+          .ensureReadyForShiftStart();
+      return Right(status);
+    } on ValidationFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.ensureReadyForShiftStart',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao validar a localizacao para iniciar o turno.',
+        ),
+      );
     }
   }
 
@@ -264,7 +272,16 @@ class JourneyRepositoryImpl implements IJourneyRepository {
       );
       return Right(status);
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.getLocationTrackingStatus',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar o status de rastreamento.',
+        ),
+      );
     }
   }
 
@@ -296,7 +313,7 @@ class JourneyRepositoryImpl implements IJourneyRepository {
           return Right(cachedRoute);
         }
 
-        if (!connectionController.isOnline.value) {
+        if (!realtimeClient.isOnline.value) {
           return Left(
             NetworkFailure(
               'Sem internet para carregar a rota sincronizada deste turno.',
@@ -304,122 +321,25 @@ class JourneyRepositoryImpl implements IJourneyRepository {
           );
         }
 
-        final remoteRoute = await remoteDataSource.getShiftRoute(remoteShiftId);
-        return Right(remoteRoute);
+        return Right(await remoteDataSource.getShiftRoute(remoteShiftId));
       }
 
       return Left(
-        ValidationFailure('O turno informado nao possui identificador de rota.'),
+        ValidationFailure(
+          'O turno informado nao possui identificador de rota.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure(_handleDioError(e)));
-    }
-  }
-
-  Future<int> _syncPendingShiftsInternal() async {
-    final currentSync = _syncPendingShiftsFuture;
-    if (currentSync != null) {
-      return currentSync;
-    }
-
-    final syncFuture = _performPendingShiftSync();
-    _syncPendingShiftsFuture = syncFuture;
-
-    try {
-      return await syncFuture;
-    } finally {
-      if (identical(_syncPendingShiftsFuture, syncFuture)) {
-        _syncPendingShiftsFuture = null;
-      }
-    }
-  }
-
-  Future<int> _performPendingShiftSync() async {
-    if (!connectionController.isOnline.value) {
-      return 0;
-    }
-
-    final pendingShifts = await localDataSource.getPendingFinishedShifts();
-    var syncedCount = 0;
-
-    final orderedShifts = [...pendingShifts]
-      ..sort((a, b) => a.endTime.compareTo(b.endTime));
-
-    for (final shift in orderedShifts) {
-      final route = await routeLocalDataSource.getRouteByLocalShiftId(
-        shift.localId,
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.getShiftRoute',
+        error: e,
       );
-      final remoteShiftId = await remoteDataSource.syncFinishedShift(
-        shift,
-        route,
-      );
-      await routeLocalDataSource.assignRemoteShiftId(
-        localShiftId: shift.localId,
-        remoteShiftId: remoteShiftId,
-      );
-      await localDataSource.removePendingFinishedShift(shift.localId);
-      syncedCount++;
-    }
-
-    return syncedCount;
-  }
-
-  Future<List<ShiftEntity>> _mergePendingShiftHistory(
-    List<ShiftEntity> remoteShifts,
-  ) async {
-    final pendingShifts = await localDataSource.getPendingFinishedShifts();
-    final pendingEntities = <ShiftEntity>[];
-
-    for (final entry in pendingShifts.asMap().entries) {
-      final route = await routeLocalDataSource.getRouteByLocalShiftId(
-        entry.value.localId,
-        includePoints: false,
-      );
-      pendingEntities.add(
-        entry.value.toShiftEntity(
-          index: entry.key + 1,
-          route: route,
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar a rota do turno.',
         ),
       );
     }
-
-    final merged = <ShiftEntity>[
-      ...pendingEntities,
-      ...remoteShifts,
-    ];
-
-    return merged
-        .asMap()
-        .entries
-        .map(
-          (entry) => ShiftEntity(
-            index: entry.key + 1,
-            localId: entry.value.localId,
-            remoteShiftId: entry.value.remoteShiftId,
-            date: entry.value.date,
-            startTime: entry.value.startTime,
-            endTime: entry.value.endTime,
-            duration: entry.value.duration,
-            drivenKm: entry.value.drivenKm,
-            isPendingSync: entry.value.isPendingSync,
-            hasRoute: entry.value.hasRoute,
-            trackedDistanceKm: entry.value.trackedDistanceKm,
-            routePointCount: entry.value.routePointCount,
-          ),
-        )
-        .toList();
-  }
-
-  Future<ActiveShiftEntity> _enrichLocalActiveShift(
-    ActiveShiftModel localShift,
-  ) async {
-    final route = await routeLocalDataSource.getRouteByLocalShiftId(
-      localShift.id,
-      includePoints: false,
-    );
-
-    return localShift.copyWith(
-      currentDrivenKm: route?.totalDistanceKm ?? 0,
-    );
   }
 }

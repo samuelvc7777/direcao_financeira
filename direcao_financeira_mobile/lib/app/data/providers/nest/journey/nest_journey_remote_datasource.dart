@@ -1,20 +1,24 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import '../models/active_shift_model.dart';
-import '../models/journey_statistics_model.dart';
-import '../models/pending_finished_shift_model.dart';
-import '../models/shift_route_model.dart';
-import '../models/shift_model.dart';
-import 'i_journey_datasource.dart';
 
-class JourneyRemoteDataSource implements IJourneyDataSource {
+import '../../../datasources/i_journey_datasource.dart';
+import '../../../models/active_shift_model.dart';
+import '../../../models/journey_statistics_model.dart';
+import '../../../models/pending_finished_shift_model.dart';
+import '../../../models/shift_model.dart';
+import '../../../models/shift_route_model.dart';
+
+class NestJourneyRemoteDataSource implements IJourneyDataSource {
+  NestJourneyRemoteDataSource({required this.dio});
+
   final Dio dio;
 
-  JourneyRemoteDataSource({required this.dio});
-
   String _formatDuration(int totalSeconds) {
-    if (totalSeconds < 0) return '00:00:00';
+    if (totalSeconds < 0) {
+      return '00:00:00';
+    }
+
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
     final seconds = totalSeconds % 60;
@@ -50,35 +54,23 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
 
     if (rawData is String) {
       final normalized = rawData.trim();
-
       if (normalized.isEmpty || normalized == 'null') {
         return null;
       }
 
       final decoded = jsonDecode(normalized);
-      if (decoded is Map<String, dynamic>) {
-        return ActiveShiftModel.fromJson(decoded);
-      }
       if (decoded is Map) {
         return ActiveShiftModel.fromJson(Map<String, dynamic>.from(decoded));
       }
 
-      throw const FormatException(
-        'Resposta invalida ao carregar turno ativo.',
-      );
-    }
-
-    if (rawData is Map<String, dynamic>) {
-      return ActiveShiftModel.fromJson(rawData);
+      throw const FormatException('Resposta invalida ao carregar turno ativo.');
     }
 
     if (rawData is Map) {
       return ActiveShiftModel.fromJson(Map<String, dynamic>.from(rawData));
     }
 
-    throw const FormatException(
-      'Resposta invalida ao carregar turno ativo.',
-    );
+    throw const FormatException('Resposta invalida ao carregar turno ativo.');
   }
 
   @override
@@ -89,11 +81,7 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
   }) async {
     final response = await dio.get(
       '/journey/stats',
-      queryParameters: {
-        'filter': filter,
-        'date': date,
-        'endDate': endDate,
-      },
+      queryParameters: {'filter': filter, 'date': date, 'endDate': endDate},
     );
     final data = response.data;
 
@@ -105,7 +93,9 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
       drivenKm: '${(data['totalKm'] ?? 0.0).toStringAsFixed(1)} km',
       averageKmh: '${(data['avgKmh'] ?? 0.0).toStringAsFixed(1)} km/h',
       rideStats: data['rideStats'] != null
-          ? RideStatisticsModel.fromJson(data['rideStats'])
+          ? RideStatisticsModel.fromJson(
+              Map<String, dynamic>.from(data['rideStats'] as Map),
+            )
           : const RideStatisticsModel(
               totalRides: 0,
               grossEarningsCents: 0,
@@ -125,32 +115,31 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
   }) async {
     final response = await dio.get(
       '/journey/history',
-      queryParameters: {
-        'filter': filter,
-        'date': date,
-        'endDate': endDate,
-      },
+      queryParameters: {'filter': filter, 'date': date, 'endDate': endDate},
     );
     final data = response.data;
 
-    if (data is! List) return [];
+    if (data is! List) {
+      return [];
+    }
 
-    final List<ShiftModel> shifts = [];
-    int index = 1;
+    final shifts = <ShiftModel>[];
+    var index = 1;
 
-    for (var item in data) {
-      final startTimeStr = item['startTime'] as String?;
-      final endTimeStr = item['endTime'] as String?;
-      final totalTime = item['totalTime'] as int? ?? 0;
-      final totalDrivenKm = item['totalDrivenKm'] as num? ?? 0.0;
+    for (final item in data.whereType<Map>()) {
+      final json = Map<String, dynamic>.from(item);
+      final startTimeStr = json['startTime'] as String?;
+      final endTimeStr = json['endTime'] as String?;
+      final totalTime = json['totalTime'] as int? ?? 0;
+      final totalDrivenKm = json['totalDrivenKm'] as num? ?? 0.0;
       final trackedDistanceKm =
-          (item['trackedDistanceKm'] as num?)?.toDouble() ?? 0.0;
-      final hasRoute = item['hasRoute'] == true;
+          (json['trackedDistanceKm'] as num?)?.toDouble() ?? 0.0;
+      final hasRoute = json['hasRoute'] == true;
 
       shifts.add(
         ShiftModel(
           index: index++,
-          remoteShiftId: item['remoteShiftId'] as int? ?? item['id'] as int?,
+          remoteShiftId: json['remoteShiftId'] as int? ?? json['id'] as int?,
           date: startTimeStr != null
               ? _formatDateOnly(startTimeStr)
               : '--/--/----',
@@ -166,7 +155,7 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
               : null,
           hasRoute: hasRoute,
           trackedDistanceKm: trackedDistanceKm,
-          routePointCount: item['routePointCount'] as int? ?? 0,
+          routePointCount: json['routePointCount'] as int? ?? 0,
         ),
       );
     }
@@ -184,18 +173,18 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
       'endTime': shift.endTime.toUtc().toIso8601String(),
       'idleTime': shift.idleTimeSeconds,
       'totalDrivenKm': shift.totalDrivenKm,
-      if (shift.remoteShiftId != null)
-        'remoteShiftId': shift.remoteShiftId,
+      if (shift.remoteShiftId != null) 'remoteShiftId': shift.remoteShiftId,
       if (trackedRoute != null)
         'trackedRoute': {
           'points': trackedRoute.points
-              .map((point) => {
-                    'latitude': point.latitude,
-                    'longitude': point.longitude,
-                    'accuracyMeters': point.accuracyMeters,
-                    'recordedAt':
-                        point.recordedAt.toUtc().toIso8601String(),
-                  })
+              .map(
+                (point) => {
+                  'latitude': point.latitude,
+                  'longitude': point.longitude,
+                  'accuracyMeters': point.accuracyMeters,
+                  'recordedAt': point.recordedAt.toUtc().toIso8601String(),
+                },
+              )
               .toList(),
           'totalDistanceMeters': trackedRoute.totalDistanceMeters,
           'startedAt': trackedRoute.startedAt.toUtc().toIso8601String(),
@@ -203,16 +192,9 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
         },
     };
 
-    final response = await dio.post(
-      '/journey/sync-finished',
-      data: payload,
-    );
+    final response = await dio.post('/journey/sync-finished', data: payload);
 
     final data = response.data;
-    if (data is Map<String, dynamic>) {
-      return data['id'] as int;
-    }
-
     if (data is Map) {
       return data['id'] as int;
     }
@@ -224,10 +206,6 @@ class JourneyRemoteDataSource implements IJourneyDataSource {
   Future<ShiftRouteModel> getShiftRoute(int shiftId) async {
     final response = await dio.get('/journey/$shiftId/route');
     final data = response.data;
-
-    if (data is Map<String, dynamic>) {
-      return ShiftRouteModel.fromRemoteJson(data);
-    }
 
     if (data is Map) {
       return ShiftRouteModel.fromRemoteJson(Map<String, dynamic>.from(data));

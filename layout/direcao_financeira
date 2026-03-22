@@ -1,0 +1,736 @@
+{
+  "version": "2.9",
+  "children": [
+    {
+      "type": "frame",
+      "id": "KkXki",
+      "x": 840,
+      "y": 40,
+      "name": "Login Screen",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#F5F6F2",
+      "cornerRadius": 32,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "squqd",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "padding": [
+            18,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "QlkLY",
+              "name": "statusLoginTime",
+              "fill": "#1B1D1A",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "h8J1w",
+              "name": "statusLoginMeta",
+              "fill": "#1B1D1A",
+              "content": "5G   100%",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NrtXk",
+          "name": "Login Wrapper",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": [
+            20,
+            24,
+            26,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Psk4N",
+              "name": "loginTop",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "TnnrH",
+                  "name": "loginLogoFrame",
+                  "width": "fill_container",
+                  "height": 176,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 26,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#DCE2DA"
+                  },
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "cRl61",
+                      "name": "loginLogoArt",
+                      "width": 269,
+                      "height": 207,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "C:/Users/Samuel Vitor/Documents/aplicativos/direcao_financeira/layout/logo_direcao_financeira2.png",
+                        "mode": "fit"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "VUfIb",
+              "name": "loginFormCard",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 22,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#DCE2DA"
+              },
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "CaxiD",
+                  "name": "loginFormTitle",
+                  "fill": "#1B1D1A",
+                  "content": "Entre com seu e-mail",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "SYiTI",
+                  "name": "loginFormHelp",
+                  "fill": "#6C7368",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Use seu acesso principal para continuar de onde parou.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "Inter",
+                  "fontSize": 13
+                },
+                {
+                  "id": "MO8Nr",
+                  "type": "ref",
+                  "ref": "umQNG",
+                  "width": "fill_container",
+                  "name": "loginEmail",
+                  "x": 20,
+                  "y": 108,
+                  "descendants": {
+                    "LpLol": {
+                      "content": "E-mail"
+                    },
+                    "JCxcq": {
+                      "content": "nome@empresa.com"
+                    }
+                  }
+                },
+                {
+                  "id": "irv6Y",
+                  "type": "ref",
+                  "ref": "umQNG",
+                  "width": "fill_container",
+                  "name": "loginPassword",
+                  "x": 20,
+                  "y": 192,
+                  "descendants": {
+                    "LpLol": {
+                      "content": "Senha"
+                    },
+                    "JCxcq": {
+                      "content": "••••••••"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "XGXNY",
+                  "name": "loginForgotRow",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ui7H7",
+                      "name": "loginForgotText",
+                      "fill": "#0E5C44",
+                      "content": "Esqueci minha senha",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ghrT0",
+                      "name": "loginBiometry",
+                      "fill": "#6C7368",
+                      "content": "Face ID disponivel",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "id": "DN7Q5",
+                  "type": "ref",
+                  "ref": "mezNF",
+                  "width": "fill_container",
+                  "name": "loginPrimary",
+                  "x": 20,
+                  "y": 306,
+                  "descendants": {
+                    "UfAkW": {
+                      "content": "ENTRAR",
+                      "x": 125
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UE4Sg",
+              "name": "loginFooter",
+              "width": "fill_container",
+              "gap": 6,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rhfTO",
+                  "name": "loginFooterText",
+                  "fill": "#6C7368",
+                  "content": "Ainda nao tem conta?",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "1bzdk",
+                  "name": "loginFooterLink",
+                  "fill": "#1B1D1A",
+                  "content": "Criar conta",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "65cn0",
+      "x": 1282,
+      "y": 40,
+      "name": "Create Account Screen",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#F5F6F2",
+      "cornerRadius": 32,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "S4VXG",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "padding": [
+            18,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "18BOG",
+              "name": "statusSignupTime",
+              "fill": "#1B1D1A",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "qRhSq",
+              "name": "statusSignupMeta",
+              "fill": "#1B1D1A",
+              "content": "5G   100%",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "o3GoG",
+          "name": "Signup Wrapper",
+          "width": 402,
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            18,
+            22,
+            20,
+            22
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "uskz2",
+              "name": "signupTop",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "52sGT",
+                  "name": "loginTop",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "mSVRS",
+                      "name": "loginLogoFrame",
+                      "width": "fill_container",
+                      "height": 176,
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 26,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#DCE2DA"
+                      },
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NCjJ8",
+                          "name": "loginLogoArt",
+                          "width": 269,
+                          "height": 207,
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "C:/Users/Samuel Vitor/Documents/aplicativos/direcao_financeira/layout/logo_direcao_financeira2.png",
+                            "mode": "fit"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "MsMSc",
+              "name": "stepsRow",
+              "width": "fill_container",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "F4jvC",
+                  "name": "step1",
+                  "width": "fill_container",
+                  "fill": "#0E5C44",
+                  "cornerRadius": 100,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uSsNa",
+                      "name": "step1Text",
+                      "fill": "#F7F8F5",
+                      "content": "1. Dados",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JLJuY",
+                  "name": "step2",
+                  "width": "fill_container",
+                  "fill": "#EDEFE9",
+                  "cornerRadius": 100,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "J3I5N",
+                      "name": "step2Text",
+                      "fill": "#6C7368",
+                      "content": "2. Seguranca",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n6Amf",
+                  "name": "step3",
+                  "width": "fill_container",
+                  "fill": "#EDEFE9",
+                  "cornerRadius": 100,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wKjNs",
+                      "name": "step3Text",
+                      "fill": "#6C7368",
+                      "content": "3. Inicio",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CShUF",
+              "name": "signupFormCard",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 22,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#DCE2DA"
+              },
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "F4X7D",
+                  "name": "signupFormTitle",
+                  "fill": "#1B1D1A",
+                  "content": "Comece pelo essencial",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "lYWc3",
+                  "name": "signupFormHelp",
+                  "fill": "#6C7368",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Voce pode complementar perfil e categorias depois do primeiro acesso.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "Inter",
+                  "fontSize": 12
+                },
+                {
+                  "id": "3Y7ON",
+                  "type": "ref",
+                  "ref": "umQNG",
+                  "width": "fill_container",
+                  "name": "signupName",
+                  "x": 18,
+                  "y": 98,
+                  "descendants": {
+                    "LpLol": {
+                      "content": "Nome completo"
+                    },
+                    "JCxcq": {
+                      "content": "Seu nome"
+                    }
+                  }
+                },
+                {
+                  "id": "4k0rP",
+                  "type": "ref",
+                  "ref": "umQNG",
+                  "width": "fill_container",
+                  "name": "signupEmail",
+                  "x": 18,
+                  "y": 180,
+                  "descendants": {
+                    "LpLol": {
+                      "content": "E-mail profissional"
+                    },
+                    "JCxcq": {
+                      "content": "nome@empresa.com"
+                    }
+                  }
+                },
+                {
+                  "id": "zcyPi",
+                  "type": "ref",
+                  "ref": "umQNG",
+                  "width": "fill_container",
+                  "name": "signupPassword",
+                  "x": 18,
+                  "y": 262,
+                  "descendants": {
+                    "LpLol": {
+                      "content": "Senha"
+                    },
+                    "JCxcq": {
+                      "content": "Minimo de 8 caracteres"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "kWFnb",
+                  "name": "signupLegal",
+                  "width": "fill_container",
+                  "fill": "#F6F8F4",
+                  "cornerRadius": 16,
+                  "gap": 10,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "fLkxe",
+                      "name": "signupLegalIcon",
+                      "width": 16,
+                      "height": 16,
+                      "iconFontName": "check",
+                      "iconFontFamily": "lucide",
+                      "fill": "#1B7A59"
+                    },
+                    {
+                      "type": "text",
+                      "id": "nyaVd",
+                      "name": "signupLegalText",
+                      "fill": "#6C7368",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Ao criar a conta, voce concorda com os termos e a politica de privacidade.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "id": "OyzXi",
+                  "type": "ref",
+                  "ref": "mezNF",
+                  "width": "fill_container",
+                  "name": "signupPrimary",
+                  "x": 18,
+                  "y": 408,
+                  "descendants": {
+                    "UfAkW": {
+                      "content": "CRIAR CONTA",
+                      "x": 106.5
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iFMAH",
+              "name": "signupFooter",
+              "width": "fill_container",
+              "gap": 6,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "QGLWj",
+                  "name": "signupFooterText",
+                  "fill": "#6C7368",
+                  "content": "Ja possui acesso?",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "JRqE2",
+                  "name": "signupFooterLink",
+                  "fill": "#1B1D1A",
+                  "content": "Entrar",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "umQNG",
+      "x": 40,
+      "y": 660,
+      "name": "Component/Input Field",
+      "reusable": true,
+      "width": 354,
+      "fill": "#FFFFFF",
+      "cornerRadius": 18,
+      "stroke": {
+        "thickness": 1,
+        "fill": "#D8DDD4"
+      },
+      "layout": "vertical",
+      "gap": 8,
+      "padding": [
+        14,
+        16
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "LpLol",
+          "name": "inputLabel",
+          "fill": "#6C7368",
+          "content": "E-mail",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "JCxcq",
+          "name": "inputValue",
+          "fill": "#1B1D1A",
+          "content": "voce@exemplo.com",
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": "500"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "mezNF",
+      "x": 40,
+      "y": 780,
+      "name": "Component/Primary Button",
+      "reusable": true,
+      "width": 354,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "#1B7A59",
+            "position": 0
+          },
+          {
+            "color": "#0E5C44",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 18,
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#0E5C441F",
+        "offset": {
+          "x": 0,
+          "y": 10
+        },
+        "blur": 24
+      },
+      "padding": [
+        18,
+        20
+      ],
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "text",
+          "id": "UfAkW",
+          "name": "buttonLabel",
+          "fill": "#F7F8F5",
+          "content": "ENTRAR",
+          "fontFamily": "Inter",
+          "fontSize": 15,
+          "fontWeight": "700",
+          "letterSpacing": 0.4
+        }
+      ]
+    }
+  ]
+}

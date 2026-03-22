@@ -30,11 +30,12 @@ class AccountsSection extends GetView<HomeController> {
           final contentGap = Responsive.vp(context, 1).clamp(6.0, 8.0);
           final listGap = Responsive.hp(context, 2.8).clamp(10.0, 12.0);
           final visibleCards = constraints.maxWidth >= 680 ? 3 : 2;
-          final cardWidth = ((constraints.maxWidth -
-                      (sectionPadding * 2) -
-                      (listGap * (visibleCards - 1))) /
-                  visibleCards)
-              .clamp(140.0, 160.0);
+          final cardWidth =
+              ((constraints.maxWidth -
+                          (sectionPadding * 2) -
+                          (listGap * (visibleCards - 1))) /
+                      visibleCards)
+                  .clamp(140.0, 160.0);
           final cardHeight = Responsive.vp(context, 17).clamp(132.0, 144.0);
           final totalLabelSize = Responsive.sp(context, 13).clamp(12.0, 13.0);
           final totalValueSize = Responsive.sp(context, 14).clamp(13.0, 14.0);
@@ -60,7 +61,10 @@ class AccountsSection extends GetView<HomeController> {
                   onTap: () => Get.toNamed('/bank-accounts'),
                   borderRadius: BorderRadius.circular(14),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 1,
+                      vertical: 1,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -127,7 +131,8 @@ class AccountsSection extends GetView<HomeController> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: contas.length,
-                      separatorBuilder: (_, __) => SizedBox(width: listGap),
+                      separatorBuilder: (context, index) =>
+                          SizedBox(width: listGap),
                       itemBuilder: (context, index) {
                         final conta = contas[index];
                         return SizedBox(
@@ -144,7 +149,10 @@ class AccountsSection extends GetView<HomeController> {
                     ),
                   ),
                 SizedBox(height: contentGap),
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
                 SizedBox(height: contentGap),
                 Row(
                   children: [
@@ -161,7 +169,9 @@ class AccountsSection extends GetView<HomeController> {
                       ),
                     ),
                     Text(
-                      isVisible ? currencyFormat.format(saldoTotal) : 'R\$ ....',
+                      isVisible
+                          ? currencyFormat.format(saldoTotal)
+                          : 'R\$ ....',
                       style: TextStyle(
                         color: const Color(0xFF6AAEFF),
                         fontSize: totalValueSize,

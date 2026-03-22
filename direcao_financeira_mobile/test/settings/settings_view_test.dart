@@ -34,7 +34,11 @@ class _FakeAuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> register(String name, String email, String password) {
+  Future<Either<Failure, UserEntity>> register(
+    String name,
+    String email,
+    String password,
+  ) {
     throw UnimplementedError();
   }
 
@@ -90,14 +94,14 @@ void main() {
     Get.put<SettingsController>(controller);
 
     await tester.pumpWidget(
-      GetMaterialApp(
-        theme: AppTheme.dark,
-        home: const SettingsView(),
-      ),
+      GetMaterialApp(theme: AppTheme.dark, home: const SettingsView()),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Ajustes'), findsOneWidget); // O CustomAppBar tem apenas 1 titulo 'Ajustes' renderizado visivelmente.
+    expect(
+      find.text('Ajustes'),
+      findsOneWidget,
+    ); // O CustomAppBar tem apenas 1 titulo 'Ajustes' renderizado visivelmente.
     expect(find.text('Sem plano ativo'), findsOneWidget);
     expect(find.text('FINANCAS'), findsOneWidget);
     expect(find.text('CATEGORIAS'), findsOneWidget);
@@ -121,10 +125,7 @@ void main() {
         theme: AppTheme.dark,
         initialRoute: AppRoutes.settings,
         getPages: [
-          GetPage(
-            name: AppRoutes.settings,
-            page: () => const SettingsView(),
-          ),
+          GetPage(name: AppRoutes.settings, page: () => const SettingsView()),
           GetPage(
             name: AppRoutes.subscription,
             page: () => const Scaffold(body: Text('Subscription Screen')),

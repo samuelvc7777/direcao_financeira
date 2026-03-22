@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/network/connection_controller.dart';
+import '../../../core/dashboard/dashboard_refresh_notifier.dart';
+import '../../../core/network/realtime_client.dart';
 import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
@@ -10,6 +11,7 @@ import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import '../../../routes/app_pages.dart';
+import 'home_tab_navigation.dart';
 
 class HomeController extends GetxController {
   HomeController({
@@ -18,6 +20,9 @@ class HomeController extends GetxController {
     required this.loadBankAccountsUseCase,
     required this.loadCreditCardsUseCase,
     required this.getTransactionsUseCase,
+    required this.dashboardRefreshNotifier,
+    required this.homeTabNavigation,
+    required this.realtimeClient,
   });
 
   final GetStoredUserUseCase getStoredUserUseCase;
@@ -25,6 +30,9 @@ class HomeController extends GetxController {
   final LoadBankAccountsUseCase loadBankAccountsUseCase;
   final LoadCreditCardsUseCase loadCreditCardsUseCase;
   final GetTransactionsUseCase getTransactionsUseCase;
+  final DashboardRefreshNotifier dashboardRefreshNotifier;
+  final HomeTabNavigation homeTabNavigation;
+  final RealtimeClient realtimeClient;
 
   final isLoading = true.obs;
   final userName = ''.obs;
@@ -35,7 +43,12 @@ class HomeController extends GetxController {
   final ultimasTransacoes = <TransactionEntity>[].obs;
 
   final gastosPorCategoria = <Map<String, dynamic>>[
-    {'categoria': 'Manutencao', 'valor': 250.00, 'percentual': 100.0, 'cor': const Color(0xFF3B82F6)},
+    {
+      'categoria': 'Manutencao',
+      'valor': 250.00,
+      'percentual': 100.0,
+      'cor': const Color(0xFF3B82F6),
+    },
   ].obs;
 
   final metas = <Map<String, dynamic>>[
@@ -48,6 +61,7 @@ class HomeController extends GetxController {
   ].obs;
 
   final currentTabIndex = 0.obs;
+  Worker? _dashboardRefreshWorker;
 
   @override
   void onInit() {
@@ -55,23 +69,23 @@ class HomeController extends GetxController {
     _loadUserData();
     loadDashboardData();
     _setupSocketListeners();
+    _dashboardRefreshWorker = ever<int>(dashboardRefreshNotifier.refreshTick, (
+      _,
+    ) {
+      loadDashboardData(silent: true);
+    });
   }
 
   void _setupSocketListeners() {
-    try {
-      final connection = Get.find<ConnectionController>();
-      connection.socket?.on('transaction.created', (_) {
-        loadDashboardData(silent: true);
-      });
-    } catch (_) {}
+    realtimeClient.on('transaction.created', (_) {
+      loadDashboardData(silent: true);
+    });
   }
 
   @override
   void onClose() {
-    try {
-      final connection = Get.find<ConnectionController>();
-      connection.socket?.off('transaction.created');
-    } catch (_) {}
+    _dashboardRefreshWorker?.dispose();
+    realtimeClient.off('transaction.created');
     super.onClose();
   }
 
@@ -89,17 +103,23 @@ class HomeController extends GetxController {
     final transactionResult = await transactionsFuture;
 
     bankResult.fold(
-      (failure) => debugPrint('[HomeController] Erro ao carregar contas: ${failure.message}'),
+      (failure) => debugPrint(
+        '[HomeController] Erro ao carregar contas: ${failure.message}',
+      ),
       (data) => contas.assignAll(data.where((a) => a.isActive).toList()),
     );
 
     cardResult.fold(
-      (failure) => debugPrint('[HomeController] Erro ao carregar cartoes: ${failure.message}'),
+      (failure) => debugPrint(
+        '[HomeController] Erro ao carregar cartoes: ${failure.message}',
+      ),
       (data) => cartoes.assignAll(data.where((c) => c.isActive).toList()),
     );
 
     transactionResult.fold(
-      (failure) => debugPrint('[HomeController] Erro ao carregar transacoes: ${failure.message}'),
+      (failure) => debugPrint(
+        '[HomeController] Erro ao carregar transacoes: ${failure.message}',
+      ),
       (data) {
         final sortedData = List<TransactionEntity>.from(data)
           ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
@@ -115,7 +135,9 @@ class HomeController extends GetxController {
   void _loadUserData() {
     final result = getStoredUserUseCase();
     result.fold(
-      (failure) => debugPrint('[HomeController] Erro ao carregar usuario: ${failure.message}'),
+      (failure) => debugPrint(
+        '[HomeController] Erro ao carregar usuario: ${failure.message}',
+      ),
       (user) {
         if (user != null) {
           userName.value = user.name;
@@ -124,7 +146,8 @@ class HomeController extends GetxController {
     );
   }
 
-  double get saldoTotal => contas.fold(0.0, (total, c) => total + c.currentBalance);
+  double get saldoTotal =>
+      contas.fold(0.0, (total, c) => total + c.currentBalance);
   bool get isSaldoPositivo => saldoTotal >= 0;
 
   double get entradas => ultimasTransacoes
@@ -135,26 +158,34 @@ class HomeController extends GetxController {
       .where((t) => t.type == TransactionType.expense)
       .fold(0.0, (total, t) => total + t.amount);
 
-  double get totalSaidas => gastosPorCategoria.fold(0.0, (total, g) => total + (g['valor'] as double));
+  double get totalSaidas => gastosPorCategoria.fold(
+    0.0,
+    (total, g) => total + (g['valor'] as double),
+  );
 
   void toggleBalanceVisibility() => isBalanceVisible.toggle();
 
   void previousMonth() {
-    selectedMonth.value = DateTime(selectedMonth.value.year, selectedMonth.value.month - 1);
+    selectedMonth.value = DateTime(
+      selectedMonth.value.year,
+      selectedMonth.value.month - 1,
+    );
   }
 
   void nextMonth() {
-    selectedMonth.value = DateTime(selectedMonth.value.year, selectedMonth.value.month + 1);
+    selectedMonth.value = DateTime(
+      selectedMonth.value.year,
+      selectedMonth.value.month + 1,
+    );
   }
 
   void changeTab(int index) => currentTabIndex.value = index;
 
+  void openTransactionsTab() => homeTabNavigation.openTransactionsTab();
+
   void openSubscription() => Get.toNamed(AppRoutes.subscription);
 
   Future<void> logout() async {
-    try {
-      Get.find<ConnectionController>().disconnect();
-    } catch (_) {}
     await logoutUseCase();
     Get.offAllNamed(AppRoutes.login);
   }

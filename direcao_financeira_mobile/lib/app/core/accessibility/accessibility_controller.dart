@@ -5,15 +5,22 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'accessibility_service.dart';
+
 class AccessibilityController extends GetxController
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver
+    implements AccessibilityService {
+  AccessibilityController({required this.storage});
+
   static const _platform = MethodChannel(
     'com.direcao_financeira/accessibility',
   );
   static const _trafficLightActiveKey = 'traffic_light_active';
   static const _journeyActiveShiftKey = 'journey_local_active_shift';
 
+  final GetStorage storage;
   final lastRaceData = <String, dynamic>{}.obs;
+  @override
   final isServiceEnabled = false.obs;
 
   @override
@@ -51,9 +58,9 @@ class AccessibilityController extends GetxController
     });
   }
 
+  @override
   Future<void> syncSettingsWithNative() async {
     try {
-      final storage = Get.find<GetStorage>();
       final storedSettings = storage.read('traffic_light_settings');
       final settingsMap = storedSettings is Map
           ? Map<String, dynamic>.from(storedSettings)
@@ -82,9 +89,9 @@ class AccessibilityController extends GetxController
     }
   }
 
+  @override
   bool get persistedTrafficLightActive {
     try {
-      final storage = Get.find<GetStorage>();
       return storage.read(_trafficLightActiveKey) == true;
     } catch (_) {
       return false;
@@ -93,7 +100,6 @@ class AccessibilityController extends GetxController
 
   bool get persistedJourneyActive {
     try {
-      final storage = Get.find<GetStorage>();
       final raw = storage.read(_journeyActiveShiftKey);
       return raw is Map;
     } catch (_) {
@@ -108,9 +114,9 @@ class AccessibilityController extends GetxController
     );
   }
 
+  @override
   Future<void> setTrafficLightActive(bool isActive) async {
     try {
-      final storage = Get.find<GetStorage>();
       await storage.write(_trafficLightActiveKey, isActive);
       await updateRuntimeState(trafficLightActive: isActive);
     } catch (e) {
@@ -118,6 +124,7 @@ class AccessibilityController extends GetxController
     }
   }
 
+  @override
   Future<void> setJourneyActive(bool isActive) async {
     await updateRuntimeState(journeyActive: isActive);
   }
@@ -181,6 +188,7 @@ class AccessibilityController extends GetxController
     }
   }
 
+  @override
   Future<void> requestAccessibilityPermission() async {
     try {
       await _platform.invokeMethod('openAccessibilitySettings');

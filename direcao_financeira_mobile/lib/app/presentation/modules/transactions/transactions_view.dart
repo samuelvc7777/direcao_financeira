@@ -69,7 +69,7 @@ class TransactionsView extends GetView<TransactionsController> {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
-                    Responsive.vp(context, 2.2).clamp(16.0, 18.0),
+                    0,
                     horizontalPadding,
                     Responsive.vp(context, 18).clamp(132.0, 148.0),
                   ),
@@ -85,13 +85,15 @@ class TransactionsView extends GetView<TransactionsController> {
                         height: Responsive.vp(context, 1.2).clamp(8.0, 10.0),
                       ),
                       TransactionsSummaryCards(
-                        incomeAmount:
-                            currencyFormat.format(controller.totalIncomeCents / 100),
+                        incomeAmount: currencyFormat.format(
+                          controller.totalIncomeCents / 100,
+                        ),
                         expenseAmount: currencyFormat.format(
                           controller.totalExpenseCents / 100,
                         ),
-                        balanceAmount:
-                            currencyFormat.format(controller.balanceCents / 100),
+                        balanceAmount: currencyFormat.format(
+                          controller.balanceCents / 100,
+                        ),
                       ),
                       SizedBox(
                         height: Responsive.vp(context, 2.2).clamp(16.0, 18.0),
@@ -112,7 +114,11 @@ class TransactionsView extends GetView<TransactionsController> {
                       else
                         Column(
                           children: [
-                            for (var index = 0; index < groups.length; index++) ...[
+                            for (
+                              var index = 0;
+                              index < groups.length;
+                              index++
+                            ) ...[
                               TransactionsDayGroupSection(
                                 group: groups[index],
                                 amountFormat: currencyFormat,
@@ -122,8 +128,10 @@ class TransactionsView extends GetView<TransactionsController> {
                               ),
                               if (index != groups.length - 1)
                                 SizedBox(
-                                  height:
-                                      Responsive.vp(context, 2.2).clamp(16.0, 18.0),
+                                  height: Responsive.vp(
+                                    context,
+                                    2.2,
+                                  ).clamp(16.0, 18.0),
                                 ),
                             ],
                           ],
@@ -139,7 +147,8 @@ class TransactionsView extends GetView<TransactionsController> {
     );
   }
 
-  void _openCreateTransactionFlow() {
+  Future<void> _openCreateTransactionFlow() async {
+    await controller.loadData(silent: true);
     Get.bottomSheet(
       const TransactionTypeSelectorSheet(),
       isScrollControlled: true,

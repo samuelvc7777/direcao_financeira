@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../../core/accessibility/accessibility_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../journey_controller.dart';
@@ -12,10 +11,14 @@ class ShiftHistorySection extends GetView<JourneyController> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0)),
+      margin: EdgeInsets.symmetric(
+        vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+      ),
       decoration: BoxDecoration(
         color: AppColors.midnight,
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 24).clamp(20.0, 28.0)),
+        borderRadius: BorderRadius.circular(
+          Responsive.sp(context, 24).clamp(20.0, 28.0),
+        ),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.05),
           width: 1,
@@ -26,7 +29,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
         children: [
           // Header
           Padding(
-            padding: EdgeInsets.all(Responsive.sp(context, 20).clamp(16.0, 24.0)),
+            padding: EdgeInsets.all(
+              Responsive.sp(context, 20).clamp(16.0, 24.0),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -34,10 +39,14 @@ class ShiftHistorySection extends GetView<JourneyController> {
                   child: Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(Responsive.sp(context, 10).clamp(8.0, 12.0)),
+                        padding: EdgeInsets.all(
+                          Responsive.sp(context, 10).clamp(8.0, 12.0),
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.royalBlue,
-                          borderRadius: BorderRadius.circular(Responsive.sp(context, 16).clamp(12.0, 20.0)),
+                          borderRadius: BorderRadius.circular(
+                            Responsive.sp(context, 16).clamp(12.0, 20.0),
+                          ),
                         ),
                         child: Icon(
                           Icons.work_history,
@@ -45,7 +54,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
                           size: Responsive.sp(context, 24).clamp(20.0, 28.0),
                         ),
                       ),
-                      SizedBox(width: Responsive.hp(context, 4.0).clamp(12.0, 20.0)),
+                      SizedBox(
+                        width: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
+                      ),
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,7 +66,10 @@ class ShiftHistorySection extends GetView<JourneyController> {
                               style: context.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
-                                fontSize: Responsive.sp(context, 20).clamp(18.0, 22.0),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  20,
+                                ).clamp(18.0, 22.0),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -64,7 +78,10 @@ class ShiftHistorySection extends GetView<JourneyController> {
                               'Gestão de jornada',
                               style: context.textTheme.bodyMedium?.copyWith(
                                 color: AppColors.textSecondaryDark,
-                                fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  14,
+                                ).clamp(12.0, 16.0),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -79,7 +96,11 @@ class ShiftHistorySection extends GetView<JourneyController> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.bar_chart, color: Colors.white54, size: Responsive.sp(context, 24).clamp(20.0, 28.0)),
+                      icon: Icon(
+                        Icons.bar_chart,
+                        color: Colors.white54,
+                        size: Responsive.sp(context, 24).clamp(20.0, 28.0),
+                      ),
                       onPressed: () {
                         Get.toNamed('/journey/shift-metrics');
                       },
@@ -113,9 +134,14 @@ class ShiftHistorySection extends GetView<JourneyController> {
                       ),
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal:
-                              Responsive.hp(context, 3.0).clamp(10.0, 14.0),
-                          vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+                          horizontal: Responsive.hp(
+                            context,
+                            3.0,
+                          ).clamp(10.0, 14.0),
+                          vertical: Responsive.vp(
+                            context,
+                            1.0,
+                          ).clamp(6.0, 10.0),
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.1),
@@ -127,22 +153,26 @@ class ShiftHistorySection extends GetView<JourneyController> {
                           children: [
                             Icon(
                               Icons.calendar_today,
-                              size:
-                                  Responsive.sp(context, 16).clamp(14.0, 18.0),
+                              size: Responsive.sp(
+                                context,
+                                16,
+                              ).clamp(14.0, 18.0),
                               color: Colors.white54,
                             ),
                             SizedBox(
-                              width:
-                                  Responsive.hp(context, 2.0).clamp(6.0, 10.0),
+                              width: Responsive.hp(
+                                context,
+                                2.0,
+                              ).clamp(6.0, 10.0),
                             ),
                             Text(
                               'Filtrar',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: Responsive.sp(context, 14).clamp(
-                                  12.0,
-                                  16.0,
-                                ),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  14,
+                                ).clamp(12.0, 16.0),
                               ),
                             ),
                           ],
@@ -157,7 +187,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
 
           // Active Shift / Start Shift Section
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0)),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
+            ),
             child: Obx(() {
               if (!controller.hasActiveShift) {
                 return _buildStartShiftButton(context);
@@ -167,12 +199,18 @@ class ShiftHistorySection extends GetView<JourneyController> {
           ),
 
           SizedBox(height: Responsive.vp(context, 3.0).clamp(20.0, 28.0)),
-          Divider(color: Colors.white10, indent: Responsive.hp(context, 5.0).clamp(16.0, 24.0), endIndent: Responsive.hp(context, 5.0).clamp(16.0, 24.0)),
+          Divider(
+            color: Colors.white10,
+            indent: Responsive.hp(context, 5.0).clamp(16.0, 24.0),
+            endIndent: Responsive.hp(context, 5.0).clamp(16.0, 24.0),
+          ),
           SizedBox(height: Responsive.vp(context, 2.0).clamp(12.0, 20.0)),
 
           // List Count
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 5.0).clamp(16.0, 24.0)),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.hp(context, 5.0).clamp(16.0, 24.0),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -192,7 +230,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.royalBlue.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(8.0, 16.0)),
+                      borderRadius: BorderRadius.circular(
+                        Responsive.sp(context, 12).clamp(8.0, 16.0),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -202,12 +242,17 @@ class ShiftHistorySection extends GetView<JourneyController> {
                           size: Responsive.sp(context, 14).clamp(12.0, 16.0),
                           color: AppColors.royalBlue,
                         ),
-                        SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
+                        SizedBox(
+                          width: Responsive.hp(context, 2.0).clamp(6.0, 10.0),
+                        ),
                         Text(
                           '${controller.shiftsCount.value} turnos',
                           style: TextStyle(
                             color: AppColors.royalBlue,
-                            fontSize: Responsive.sp(context, 12).clamp(10.0, 14.0),
+                            fontSize: Responsive.sp(
+                              context,
+                              12,
+                            ).clamp(10.0, 14.0),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -226,12 +271,15 @@ class ShiftHistorySection extends GetView<JourneyController> {
             final list = controller.shiftsList;
             if (list.isEmpty) {
               return Padding(
-                padding: EdgeInsets.all(Responsive.sp(context, 32.0).clamp(24.0, 40.0)),
+                padding: EdgeInsets.all(
+                  Responsive.sp(context, 32.0).clamp(24.0, 40.0),
+                ),
                 child: Center(
                   child: Column(
                     children: [
                       Text(
-                        controller.historyError.value ?? 'Nenhum turno encontrado',
+                        controller.historyError.value ??
+                            'Nenhum turno encontrado',
                         style: const TextStyle(color: Colors.white54),
                         textAlign: TextAlign.center,
                       ),
@@ -254,7 +302,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
               itemBuilder: (context, index) {
                 final shift = list[index];
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
+                  ),
                   child: ShiftCard(shift: shift),
                 );
               },
@@ -272,7 +322,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
       padding: EdgeInsets.all(Responsive.sp(context, 12).clamp(10.0, 14.0)),
       decoration: BoxDecoration(
         color: AppColors.deepNavy.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 20).clamp(16.0, 24.0)),
+        borderRadius: BorderRadius.circular(
+          Responsive.sp(context, 20).clamp(16.0, 24.0),
+        ),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
@@ -282,17 +334,25 @@ class ShiftHistorySection extends GetView<JourneyController> {
             height: Responsive.vp(context, 6.0).clamp(48.0, 56.0),
             child: Obx(
               () => ElevatedButton.icon(
-                onPressed: controller.canStartShift ? controller.startShift : null,
+                onPressed: controller.canStartShift
+                    ? controller.startShift
+                    : null,
                 icon: controller.isStartingShift.value
                     ? SizedBox(
                         width: Responsive.sp(context, 22).clamp(18.0, 24.0),
                         height: Responsive.sp(context, 22).clamp(18.0, 24.0),
                         child: const CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
-                    : Icon(Icons.play_arrow_rounded, color: Colors.white, size: Responsive.sp(context, 24).clamp(20.0, 28.0)),
+                    : Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: Responsive.sp(context, 24).clamp(20.0, 28.0),
+                      ),
                 label: Text(
                   'INICIAR TURNO',
                   style: TextStyle(
@@ -303,10 +363,14 @@ class ShiftHistorySection extends GetView<JourneyController> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1B873F),
-                  disabledBackgroundColor: const Color(0xFF1B873F).withValues(alpha: 0.45),
+                  disabledBackgroundColor: const Color(
+                    0xFF1B873F,
+                  ).withValues(alpha: 0.45),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(Responsive.sp(context, 14).clamp(10.0, 18.0)),
+                    borderRadius: BorderRadius.circular(
+                      Responsive.sp(context, 14).clamp(10.0, 18.0),
+                    ),
                   ),
                   elevation: 0,
                 ),
@@ -326,12 +390,14 @@ class ShiftHistorySection extends GetView<JourneyController> {
         // Timer Card (Green) - More Compact
         Container(
           padding: EdgeInsets.symmetric(
-            vertical: Responsive.vp(context, 2.0).clamp(12.0, 20.0), 
+            vertical: Responsive.vp(context, 2.0).clamp(12.0, 20.0),
             horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
           ),
           decoration: BoxDecoration(
             color: const Color(0xFF1B873F),
-            borderRadius: BorderRadius.circular(Responsive.sp(context, 20).clamp(16.0, 24.0)),
+            borderRadius: BorderRadius.circular(
+              Responsive.sp(context, 20).clamp(16.0, 24.0),
+            ),
           ),
           child: Column(
             children: [
@@ -359,25 +425,35 @@ class ShiftHistorySection extends GetView<JourneyController> {
                     ),
                   ),
                   SizedBox(width: Responsive.hp(context, 1.0).clamp(4.0, 8.0)),
-                  Obx(() => Text(
-                        controller.startTimeStr.value,
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontWeight: FontWeight.bold, 
-                          fontSize: Responsive.sp(context, 12).clamp(10.0, 14.0),
-                        ),
-                      )),
-                  SizedBox(width: Responsive.hp(context, 5.0).clamp(16.0, 24.0)),
-                  Icon(Icons.route_outlined, color: Colors.white70, size: Responsive.sp(context, 14).clamp(12.0, 16.0)),
+                  Obx(
+                    () => Text(
+                      controller.startTimeStr.value,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: Responsive.sp(context, 12).clamp(10.0, 14.0),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: Responsive.hp(context, 5.0).clamp(16.0, 24.0),
+                  ),
+                  Icon(
+                    Icons.route_outlined,
+                    color: Colors.white70,
+                    size: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                  ),
                   SizedBox(width: Responsive.hp(context, 1.0).clamp(4.0, 8.0)),
-                  Obx(() => Text(
-                        '${controller.currentKm.value.toStringAsFixed(1)} Km',
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontWeight: FontWeight.bold, 
-                          fontSize: Responsive.sp(context, 12).clamp(10.0, 14.0),
-                        ),
-                      )),
+                  Obx(
+                    () => Text(
+                      '${controller.currentKm.value.toStringAsFixed(1)} Km',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: Responsive.sp(context, 12).clamp(10.0, 14.0),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               SizedBox(height: Responsive.vp(context, 0.8).clamp(4.0, 8.0)),
@@ -399,7 +475,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
                       ),
                     ),
                     child: Text(
-                      controller.isShiftPaused ? 'Turno pausado' : 'Turno em andamento',
+                      controller.isShiftPaused
+                          ? 'Turno pausado'
+                          : 'Turno em andamento',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -423,13 +501,14 @@ class ShiftHistorySection extends GetView<JourneyController> {
             final pauseButton = Obx(
               () => _buildSmallActionButton(
                 context,
-                onPressed:
-                    controller.canPauseOrResumeShift ? controller.pauseShift : null,
+                onPressed: controller.canPauseOrResumeShift
+                    ? controller.pauseShift
+                    : null,
                 icon: controller.isPauseShiftLoading.value
                     ? Icons.hourglass_top_rounded
                     : controller.isShiftPaused
-                        ? Icons.play_arrow_rounded
-                        : Icons.pause_circle_outline,
+                    ? Icons.play_arrow_rounded
+                    : Icons.pause_circle_outline,
                 label: controller.isShiftPaused ? 'Retomar' : 'Pausar',
                 color: const Color(0xFFF2994A),
               ),
@@ -438,7 +517,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
             final finishButton = Obx(
               () => _buildSmallActionButton(
                 context,
-                onPressed: controller.canFinishShift ? controller.finishShift : null,
+                onPressed: controller.canFinishShift
+                    ? controller.finishShift
+                    : null,
                 icon: controller.isFinishingShift.value
                     ? Icons.hourglass_top_rounded
                     : Icons.stop,
@@ -451,7 +532,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
               return Column(
                 children: [
                   pauseButton,
-                  SizedBox(height: Responsive.vp(context, 1.0).clamp(8.0, 12.0)),
+                  SizedBox(
+                    height: Responsive.vp(context, 1.0).clamp(8.0, 12.0),
+                  ),
                   finishButton,
                 ],
               );
@@ -484,7 +567,11 @@ class ShiftHistorySection extends GetView<JourneyController> {
       height: Responsive.vp(context, 6.2).clamp(46.0, 54.0),
       child: ElevatedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white, size: Responsive.sp(context, 18).clamp(16.0, 20.0)),
+        icon: Icon(
+          icon,
+          color: Colors.white,
+          size: Responsive.sp(context, 18).clamp(16.0, 20.0),
+        ),
         label: Text(
           label,
           maxLines: 1,
@@ -497,13 +584,17 @@ class ShiftHistorySection extends GetView<JourneyController> {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: onPressed == null ? color.withValues(alpha: 0.5) : color,
+          backgroundColor: onPressed == null
+              ? color.withValues(alpha: 0.5)
+              : color,
           padding: EdgeInsets.symmetric(
             horizontal: Responsive.hp(context, 2.5).clamp(10.0, 14.0),
             vertical: Responsive.vp(context, 0.9).clamp(6.0, 10.0),
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(10.0, 14.0)),
+            borderRadius: BorderRadius.circular(
+              Responsive.sp(context, 12).clamp(10.0, 14.0),
+            ),
           ),
           elevation: 0,
         ),
@@ -511,20 +602,25 @@ class ShiftHistorySection extends GetView<JourneyController> {
     );
   }
 
-  Widget _buildTrafficLightButton(BuildContext context, {bool compact = false}) {
-    final accessibilityController = Get.find<AccessibilityController>();
-
+  Widget _buildTrafficLightButton(
+    BuildContext context, {
+    bool compact = false,
+  }) {
     return Obx(() {
       // O botão reflete se o usuário ATIVOU no app, mas só funciona se o serviço estiver ON
-      final isServiceOn = accessibilityController.isServiceEnabled.value;
+      final isServiceOn = controller.isAccessibilityServiceEnabled;
       final isAppActive = controller.isTrafficLightActive.value;
       final showAsActive = isServiceOn && isAppActive;
 
       return InkWell(
         onTap: controller.toggleTrafficLight,
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(8.0, 16.0)),
+        borderRadius: BorderRadius.circular(
+          Responsive.sp(context, 12).clamp(8.0, 16.0),
+        ),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0)),
+          padding: EdgeInsets.symmetric(
+            vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -580,13 +676,15 @@ class _PulseIconState extends State<_PulseIcon>
       vsync: this,
     )..repeat();
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.6).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.6,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    _opacityAnimation = Tween<double>(begin: 0.6, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 0.6,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
@@ -624,5 +722,3 @@ class _PulseIconState extends State<_PulseIcon>
     );
   }
 }
-
-

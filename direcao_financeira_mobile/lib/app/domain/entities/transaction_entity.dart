@@ -10,15 +10,6 @@ enum TransactionType {
         return 'Despesa';
     }
   }
-
-  String toApiValue() => name.toUpperCase();
-
-  static TransactionType fromApiValue(String value) {
-    return TransactionType.values.firstWhere(
-      (e) => e.name.toUpperCase() == value.toUpperCase(),
-      orElse: () => TransactionType.expense,
-    );
-  }
 }
 
 enum AssetType {
@@ -33,40 +24,16 @@ enum AssetType {
         return 'Cartao de Credito';
     }
   }
-
-  String toApiValue() {
-    switch (this) {
-      case AssetType.bankAccount:
-        return 'BANK_ACCOUNT';
-      case AssetType.creditCard:
-        return 'CREDIT_CARD';
-    }
-  }
-
-  static AssetType fromApiValue(String value) {
-    if (value.toUpperCase() == 'BANK_ACCOUNT') return AssetType.bankAccount;
-    if (value.toUpperCase() == 'CREDIT_CARD') return AssetType.creditCard;
-    return AssetType.bankAccount; // default fallback
-  }
 }
 
 enum TransactionMutationScope {
   current,
   all;
-
-  String toApiValue() => name.toUpperCase();
 }
 
 enum TransactionStatus {
   cleared,
   pending;
-
-  String toApiValue() => name.toUpperCase();
-
-  static TransactionStatus fromApiValue(String value) {
-    if (value.toUpperCase() == 'CLEARED') return TransactionStatus.cleared;
-    return TransactionStatus.pending;
-  }
 }
 
 class TransactionEntity {

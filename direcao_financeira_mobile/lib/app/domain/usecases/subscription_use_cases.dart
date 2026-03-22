@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
 import '../entities/plan_entity.dart';
 import '../entities/store_product_entity.dart';
+import '../entities/store_purchase_event_entity.dart';
 import '../entities/subscription_entity.dart';
 import '../repositories/i_subscription_repository.dart';
 
@@ -139,5 +140,15 @@ class CompletePurchaseUseCase {
 
   Future<Either<Failure, void>> call(String productId) {
     return _repository.completePurchase(productId);
+  }
+}
+
+class WatchStorePurchaseUpdatesUseCase {
+  WatchStorePurchaseUpdatesUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Stream<StorePurchaseEventEntity> call() {
+    return _repository.purchaseUpdates;
   }
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/network/connection_controller.dart';
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/preferences/app_preferences.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/subscription_entity.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
+import '../costs_gains_settings/costs_gains_flow_coordinator.dart';
 import '../../../routes/app_pages.dart';
 
 class SettingsController extends GetxController {
@@ -35,13 +37,13 @@ class SettingsController extends GetxController {
           title: 'Contas Bancarias e Carteira',
           subtitle: 'Saldos, contas correntes e carteira',
           icon: Icons.account_balance_wallet_outlined,
-          accentColor: Color(0xFF03A696),
+          accentColor: AppColors.electricCyan,
         ),
         SettingsItemData(
           title: 'Cartoes de Credito',
           subtitle: 'Gestao de cartoes e faturas',
           icon: Icons.credit_card_rounded,
-          accentColor: Color(0xFF3B82F6),
+          accentColor: AppColors.violet,
         ),
       ],
     ),
@@ -52,7 +54,7 @@ class SettingsController extends GetxController {
           title: 'Categorias',
           subtitle: 'Gerencie categorias de entrada e saida',
           icon: Icons.category_rounded,
-          accentColor: Color(0xFF03A696),
+          accentColor: AppColors.emerald,
           footnote: 'Financeiro',
         ),
       ],
@@ -64,13 +66,13 @@ class SettingsController extends GetxController {
           title: 'Configurar custo e ganhos',
           subtitle: 'Combustivel, consumo, taxas e ganhos do app',
           icon: Icons.local_gas_station_rounded,
-          accentColor: Color(0xFFF2B366),
+          accentColor: AppColors.amber,
         ),
         SettingsItemData(
           title: 'Configurar semaforo',
           subtitle: 'Posicao, cores, tamanhos e comportamento',
           icon: Icons.grid_view_rounded,
-          accentColor: Color(0xFF038C8C),
+          accentColor: AppColors.royalBlue,
         ),
       ],
     ),
@@ -81,13 +83,13 @@ class SettingsController extends GetxController {
           title: 'Horarios de Trabalho',
           subtitle: 'Defina sua jornada semanal',
           icon: Icons.schedule_rounded,
-          accentColor: Color(0xFF03A696),
+          accentColor: AppColors.lime,
         ),
         SettingsItemData(
           title: 'Configurar Metas',
           subtitle: 'Metas pessoais e de faturamento',
           icon: Icons.emoji_events_outlined,
-          accentColor: Color(0xFFF2B366),
+          accentColor: AppColors.rose,
           footnote: '1 ativa',
         ),
       ],
@@ -103,7 +105,9 @@ class SettingsController extends GetxController {
   void _loadUser() {
     final result = getStoredUserUseCase();
     result.fold(
-      (failure) => debugPrint('[SettingsController] Erro ao carregar usuario: ${failure.message}'),
+      (failure) => debugPrint(
+        '[SettingsController] Erro ao carregar usuario: ${failure.message}',
+      ),
       (user) {
         if (user == null) return;
         userName.value = user.name;
@@ -190,6 +194,11 @@ class SettingsController extends GetxController {
       return;
     }
 
+    if (item.title == 'Configurar custo e ganhos') {
+      CostsGainsFlowCoordinator.openEntry();
+      return;
+    }
+
     openPlaceholder(item.title);
   }
 
@@ -201,20 +210,16 @@ class SettingsController extends GetxController {
   }
 
   Future<void> logout() async {
-    try {
-      Get.find<ConnectionController>().disconnect();
-    } catch (_) {}
     await logoutUseCase();
     Get.offAllNamed(AppRoutes.login);
   }
 
   void _showInfo(String title, String message) {
-    Get.snackbar(
+    AppSnackbar.show(
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.all(16),
-      duration: const Duration(seconds: 2),
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/feedback/app_snackbar.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/bank_account_entity.dart';
 import '../../../../domain/entities/category_entity.dart';
@@ -10,20 +11,29 @@ import '../../../../domain/entities/transaction_entity.dart';
 import '../transactions_controller.dart';
 
 class TransactionFormView extends GetView<TransactionsController> {
-  TransactionFormView({super.key}) : editingTransaction = Get.arguments is TransactionEntity ? Get.arguments as TransactionEntity : null {
+  TransactionFormView({super.key})
+    : editingTransaction = Get.arguments is TransactionEntity
+          ? Get.arguments as TransactionEntity
+          : null {
     final arg = Get.arguments;
     if (editingTransaction != null) {
       final trans = editingTransaction!;
       selectedType.value = trans.type;
-      amountController.text = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
-          .format(trans.amountCents / 100);
+      amountController.text = NumberFormat.currency(
+        locale: 'pt_BR',
+        symbol: 'R\$',
+      ).format(trans.amountCents / 100);
       descriptionController.text = trans.description;
       isPaid.value = trans.status == TransactionStatus.cleared;
       selectedDate.value = trans.transactionDate;
-      
+
       // Tenta encontrar conta e categoria nos observables do controller
-      selectedAccount.value = controller.activeAccounts.firstWhereOrNull((a) => a.id == trans.bankAccountId);
-      selectedCategory.value = controller.categories.firstWhereOrNull((c) => c.id == trans.categoryId);
+      selectedAccount.value = controller.activeAccounts.firstWhereOrNull(
+        (a) => a.id == trans.bankAccountId,
+      );
+      selectedCategory.value = controller.categories.firstWhereOrNull(
+        (c) => c.id == trans.categoryId,
+      );
     } else if (arg is TransactionType) {
       selectedType.value = arg;
     }
@@ -37,7 +47,7 @@ class TransactionFormView extends GetView<TransactionsController> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final FocusNode amountFocusNode = FocusNode();
-  
+
   final TransactionEntity? editingTransaction;
 
   final Rx<TransactionType> selectedType = TransactionType.expense.obs;
@@ -155,7 +165,8 @@ class TransactionFormView extends GetView<TransactionsController> {
                   ],
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Informe o valor.';
-                    final numValue = int.tryParse(v!.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                    final numValue =
+                        int.tryParse(v!.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
                     if (numValue <= 0) return 'Maior que zero.';
                     return null;
                   },
@@ -173,7 +184,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        isAmountFocused.value ? 'Toque para sair' : 'Toque para digitar',
+                        isAmountFocused.value
+                            ? 'Toque para sair'
+                            : 'Toque para digitar',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.4),
                           fontSize: 14,
@@ -182,7 +195,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                       ),
                       const SizedBox(width: 8),
                       Icon(
-                        isAmountFocused.value ? Icons.keyboard_hide_outlined : Icons.keyboard_alt_outlined,
+                        isAmountFocused.value
+                            ? Icons.keyboard_hide_outlined
+                            : Icons.keyboard_alt_outlined,
                         size: 16,
                         color: Colors.white.withValues(alpha: 0.4),
                       ),
@@ -208,18 +223,25 @@ class TransactionFormView extends GetView<TransactionsController> {
 
                 // Status Switch
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: isPaid.value ? activeColor : Colors.white.withValues(alpha: 0.1),
+                          color: isPaid.value
+                              ? activeColor
+                              : Colors.white.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -234,7 +256,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isExpense ? 'Status do Pagamento' : 'Status do Recebimento',
+                              isExpense
+                                  ? 'Status do Pagamento'
+                                  : 'Status do Recebimento',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.5),
                                 fontSize: 13,
@@ -244,7 +268,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                             Text(
                               isPaid.value ? statusLabel : 'Pendente',
                               style: TextStyle(
-                                color: isPaid.value ? activeColor : Colors.white.withValues(alpha: 0.7),
+                                color: isPaid.value
+                                    ? activeColor
+                                    : Colors.white.withValues(alpha: 0.7),
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -255,7 +281,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                       Switch(
                         value: isPaid.value,
                         onChanged: (val) => isPaid.value = val,
-                        activeColor: Colors.white,
+                        activeThumbColor: Colors.white,
                         activeTrackColor: activeColor,
                         inactiveThumbColor: Colors.white.withValues(alpha: 0.4),
                         inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
@@ -271,7 +297,10 @@ class TransactionFormView extends GetView<TransactionsController> {
                     Expanded(
                       child: _DateChip(
                         label: 'Hoje',
-                        isSelected: _isSameDay(selectedDate.value, DateTime.now()),
+                        isSelected: _isSameDay(
+                          selectedDate.value,
+                          DateTime.now(),
+                        ),
                         activeColor: activeColor,
                         onTap: () => selectedDate.value = DateTime.now(),
                       ),
@@ -280,9 +309,13 @@ class TransactionFormView extends GetView<TransactionsController> {
                     Expanded(
                       child: _DateChip(
                         label: 'Ontem',
-                        isSelected: _isSameDay(selectedDate.value, DateTime.now().subtract(const Duration(days: 1))),
+                        isSelected: _isSameDay(
+                          selectedDate.value,
+                          DateTime.now().subtract(const Duration(days: 1)),
+                        ),
                         activeColor: activeColor,
-                        onTap: () => selectedDate.value = DateTime.now().subtract(const Duration(days: 1)),
+                        onTap: () => selectedDate.value = DateTime.now()
+                            .subtract(const Duration(days: 1)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -290,8 +323,12 @@ class TransactionFormView extends GetView<TransactionsController> {
                       child: _DateChip(
                         label: 'Data',
                         icon: Icons.calendar_today_outlined,
-                        isSelected: !_isSameDay(selectedDate.value, DateTime.now()) && 
-                                    !_isSameDay(selectedDate.value, DateTime.now().subtract(const Duration(days: 1))),
+                        isSelected:
+                            !_isSameDay(selectedDate.value, DateTime.now()) &&
+                            !_isSameDay(
+                              selectedDate.value,
+                              DateTime.now().subtract(const Duration(days: 1)),
+                            ),
                         activeColor: activeColor,
                         onTap: () => _pickDate(context, activeColor),
                       ),
@@ -318,7 +355,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                   hint: 'Toque para selecionar',
                   icon: Icons.category_outlined,
                   value: selectedCategory.value,
-                  items: isExpense ? controller.expenseCategories : controller.incomeCategories,
+                  items: isExpense
+                      ? controller.expenseCategories
+                      : controller.incomeCategories,
                   itemLabelBuilder: (c) => c.name,
                   onChanged: (v) => selectedCategory.value = v,
                 ),
@@ -330,7 +369,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -343,7 +384,10 @@ class TransactionFormView extends GetView<TransactionsController> {
                       Expanded(
                         child: TextFormField(
                           controller: descriptionController,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Descrição (opcional)',
                             hintStyle: TextStyle(
@@ -385,7 +429,9 @@ class TransactionFormView extends GetView<TransactionsController> {
                             ),
                           )
                         : Text(
-                            isEditing ? 'Salvar Alterações' : 'Salvar Transação',
+                            isEditing
+                                ? 'Salvar Alterações'
+                                : 'Salvar Transação',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -434,11 +480,11 @@ class TransactionFormView extends GetView<TransactionsController> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedAccount.value == null) {
-      Get.snackbar('Atenção', 'Selecione a conta.');
+      AppSnackbar.show('Atenção', 'Selecione a conta.');
       return;
     }
     if (selectedCategory.value == null) {
-      Get.snackbar('Atenção', 'Selecione a categoria.');
+      AppSnackbar.show('Atenção', 'Selecione a categoria.');
       return;
     }
 
@@ -450,8 +496,8 @@ class TransactionFormView extends GetView<TransactionsController> {
       await controller.updateTransaction(
         editingTransaction!.id,
         categoryId: selectedCategory.value!.id,
-        description: descriptionController.text.trim().isEmpty 
-            ? selectedCategory.value!.name 
+        description: descriptionController.text.trim().isEmpty
+            ? selectedCategory.value!.name
             : descriptionController.text.trim(),
         amountCents: amountCents,
         transactionDate: selectedDate.value,
@@ -464,8 +510,8 @@ class TransactionFormView extends GetView<TransactionsController> {
         assetType: AssetType.bankAccount,
         amountCents: amountCents,
         categoryId: selectedCategory.value!.id,
-        description: descriptionController.text.trim().isEmpty 
-            ? selectedCategory.value!.name 
+        description: descriptionController.text.trim().isEmpty
+            ? selectedCategory.value!.name
             : descriptionController.text.trim(),
         transactionDate: selectedDate.value,
         bankAccountId: selectedAccount.value!.id,
@@ -496,10 +542,14 @@ class _TypeTab extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.1),
+            color: isSelected
+                ? activeColor
+                : Colors.white.withValues(alpha: 0.1),
             width: 1.5,
           ),
         ),
@@ -507,7 +557,9 @@ class _TypeTab extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5),
+              color: isSelected
+                  ? activeColor
+                  : Colors.white.withValues(alpha: 0.5),
               fontSize: 15,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
@@ -541,23 +593,35 @@ class _DateChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.1)
+              : Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? activeColor.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05),
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.3)
+                : Colors.white.withValues(alpha: 0.05),
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5)),
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? activeColor
+                    : Colors.white.withValues(alpha: 0.5),
+              ),
               const SizedBox(width: 6),
             ],
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5),
+                color: isSelected
+                    ? activeColor
+                    : Colors.white.withValues(alpha: 0.5),
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -601,7 +665,10 @@ class _SelectionField<T> extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
-          icon: Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.4)),
+          icon: Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white.withValues(alpha: 0.4),
+          ),
           dropdownColor: AppColors.midnight,
           hint: Row(
             children: [
@@ -635,7 +702,11 @@ class _SelectionField<T> extends StatelessWidget {
             return items.map((item) {
               return Row(
                 children: [
-                  Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 22),
+                  Icon(
+                    icon,
+                    color: Colors.white.withValues(alpha: 0.8),
+                    size: 22,
+                  ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

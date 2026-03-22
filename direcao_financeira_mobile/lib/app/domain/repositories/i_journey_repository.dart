@@ -24,7 +24,10 @@ abstract class IJourneyRepository {
   Future<Either<Failure, void>> resumeShift();
   Future<Either<Failure, FinishShiftResultEntity>> finishShift();
   Future<Either<Failure, int>> syncPendingShifts();
-  Future<Either<Failure, LocationTrackingStatusEntity>> getLocationTrackingStatus();
+  Future<Either<Failure, LocationTrackingStatusEntity>>
+  ensureReadyForShiftStart();
+  Future<Either<Failure, LocationTrackingStatusEntity>>
+  getLocationTrackingStatus();
   Stream<LocationTrackingStatusEntity> watchLocationTrackingStatus();
   Future<Either<Failure, ShiftRouteEntity>> getShiftRoute({
     int? localShiftId,

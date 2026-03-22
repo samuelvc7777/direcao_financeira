@@ -1,14 +1,6 @@
-enum CategoryType { income, expense }
-
-extension CategoryTypeMapper on CategoryType {
-  String toApiValue() {
-    switch (this) {
-      case CategoryType.income:
-        return 'INCOME';
-      case CategoryType.expense:
-        return 'EXPENSE';
-    }
-  }
+enum CategoryType {
+  income,
+  expense;
 
   String get label {
     switch (this) {
@@ -17,17 +9,6 @@ extension CategoryTypeMapper on CategoryType {
       case CategoryType.expense:
         return 'Saida';
     }
-  }
-}
-
-CategoryType categoryTypeFromApi(String value) {
-  switch (value.toUpperCase()) {
-    case 'INCOME':
-      return CategoryType.income;
-    case 'EXPENSE':
-      return CategoryType.expense;
-    default:
-      throw ArgumentError('Tipo de categoria invalido: $value');
   }
 }
 

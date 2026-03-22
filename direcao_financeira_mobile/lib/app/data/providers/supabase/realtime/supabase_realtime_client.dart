@@ -1,0 +1,127 @@
+import 'dart:async';
+
+import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide RealtimeClient;
+
+import '../../../../core/network/realtime_client.dart';
+import '../shared/supabase_table_names.dart';
+import '../shared/supabase_user_scope.dart';
+
+class SupabaseRealtimeClient implements RealtimeClient {
+  SupabaseRealtimeClient({required this.client, required this.enableRealtime})
+    : userScope = SupabaseUserScope(client: client) {
+    client.auth.onAuthStateChange.listen((data) {
+      final session = data.session;
+      _isOnline.value = session != null;
+      if (session == null) {
+        unawaited(_disposeStreams());
+      }
+    });
+  }
+
+  final SupabaseClient client;
+  final bool enableRealtime;
+  final SupabaseUserScope userScope;
+  final RxBool _isOnline = false.obs;
+  final Map<String, List<void Function(dynamic payload)>> _handlers = {};
+
+  StreamSubscription<List<Map<String, dynamic>>>? _transactionsSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _shiftsSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _ridesSubscription;
+  bool _isConnected = false;
+
+  @override
+  RxBool get isOnline => _isOnline;
+
+  @override
+  void connect({required String token}) {
+    if (!enableRealtime || _isConnected) {
+      _isOnline.value = client.auth.currentSession != null;
+      return;
+    }
+
+    final currentSession = client.auth.currentSession;
+    if (currentSession == null) {
+      _isOnline.value = false;
+      return;
+    }
+
+    _isConnected = true;
+    _isOnline.value = true;
+
+    unawaited(_startStreams());
+  }
+
+  @override
+  void disconnect() {
+    _isConnected = false;
+    _isOnline.value = false;
+    unawaited(_disposeStreams());
+  }
+
+  @override
+  void on(String event, void Function(dynamic payload) handler) {
+    _handlers.putIfAbsent(event, () => []).add(handler);
+  }
+
+  @override
+  void off(String event) {
+    _handlers.remove(event);
+  }
+
+  @override
+  Future<void> dispose() async {
+    _handlers.clear();
+    await _disposeStreams();
+  }
+
+  Future<void> _startStreams() async {
+    final userId = await userScope.getCurrentUserId();
+
+    _transactionsSubscription ??= client
+        .from(SupabaseTableNames.transactions)
+        .stream(primaryKey: ['id'])
+        .eq('userId', userId)
+        .listen((_) => _emit('transaction.created'));
+
+    _shiftsSubscription ??= client
+        .from(SupabaseTableNames.shifts)
+        .stream(primaryKey: ['id'])
+        .eq('userId', userId)
+        .listen((_) {
+          _emit('journey.shift.started');
+          _emit('journey.shift.finished');
+          _emit('journey.shift.paused');
+          _emit('journey.shift.resumed');
+        });
+
+    _ridesSubscription ??= client
+        .from(SupabaseTableNames.rides)
+        .stream(primaryKey: ['id'])
+        .eq('userId', userId)
+        .listen((_) {
+          _emit('journey.ride.created');
+          _emit('journey.ride.updated');
+        });
+  }
+
+  Future<void> _disposeStreams() async {
+    await _transactionsSubscription?.cancel();
+    await _shiftsSubscription?.cancel();
+    await _ridesSubscription?.cancel();
+    _transactionsSubscription = null;
+    _shiftsSubscription = null;
+    _ridesSubscription = null;
+  }
+
+  void _emit(String event, [dynamic payload]) {
+    final listeners = _handlers[event];
+    if (listeners == null) {
+      return;
+    }
+
+    for (final listener in listeners) {
+      listener(payload);
+    }
+  }
+}

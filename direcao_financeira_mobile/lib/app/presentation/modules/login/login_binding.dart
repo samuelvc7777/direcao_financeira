@@ -7,14 +7,13 @@ import 'login_controller.dart';
 class LoginBinding extends Bindings {
   @override
   void dependencies() {
-    // Agora o Repositório já vem do InitialBinding global
-    final authRepository = Get.find<IAuthRepository>();
-
-    // Injeta apenas o que é específico do Login
-    final loginUseCase = LoginUseCase(authRepository);
+    if (!Get.isRegistered<LoginUseCase>()) {
+      Get.lazyPut(() => LoginUseCase(Get.find<IAuthRepository>()), fenix: true);
+    }
 
     Get.lazyPut<LoginController>(
-      () => LoginController(loginUseCase: loginUseCase),
+      () => LoginController(loginUseCase: Get.find<LoginUseCase>()),
+      fenix: true,
     );
   }
 }

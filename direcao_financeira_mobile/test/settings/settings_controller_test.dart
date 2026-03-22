@@ -31,7 +31,11 @@ class _FakeAuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> register(String name, String email, String password) {
+  Future<Either<Failure, UserEntity>> register(
+    String name,
+    String email,
+    String password,
+  ) {
     throw UnimplementedError();
   }
 
@@ -83,7 +87,7 @@ void main() {
 
       expect(controller.isDarkModeEnabled.value, isFalse);
       expect(preferences.lastWrittenValue, isFalse);
-      
+
       Get.delete<SettingsController>();
     });
 
@@ -103,7 +107,7 @@ void main() {
       expect(result.isRight(), isTrue);
 
       expect(repository.logoutCalled, isTrue);
-      
+
       Get.delete<SettingsController>();
     });
   });

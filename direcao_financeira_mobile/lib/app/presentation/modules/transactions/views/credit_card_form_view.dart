@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/feedback/app_snackbar.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/credit_card_entity.dart';
 import '../../../../domain/entities/category_entity.dart';
@@ -519,11 +520,11 @@ class CreditCardFormView extends GetView<TransactionsController> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedCard.value == null) {
-      Get.snackbar('Atenção', 'Selecione o cartão.');
+      AppSnackbar.show('Atenção', 'Selecione o cartão.');
       return;
     }
     if (selectedCategory.value == null) {
-      Get.snackbar('Atenção', 'Selecione a categoria.');
+      AppSnackbar.show('Atenção', 'Selecione a categoria.');
       return;
     }
 

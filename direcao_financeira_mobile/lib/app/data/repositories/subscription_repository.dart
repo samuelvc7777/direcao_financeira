@@ -1,8 +1,9 @@
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/plan_entity.dart';
 import '../../domain/entities/store_product_entity.dart';
 import '../../domain/entities/store_purchase_event_entity.dart';
@@ -16,11 +17,15 @@ class SubscriptionRepository implements ISubscriptionRepository {
     required this.remoteDataSource,
     required this.localDataSource,
     required this.storeDataSource,
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
   });
 
   final ISubscriptionRemoteDataSource remoteDataSource;
   final ISubscriptionLocalDataSource localDataSource;
   final ISubscriptionStoreDataSource storeDataSource;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
 
   @override
   Stream<StorePurchaseEventEntity> get purchaseUpdates =>
@@ -31,14 +36,27 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await remoteDataSource.getMySubscription());
     } on DioException catch (e) {
-      debugPrint(
-        '[SubscriptionRepository] GET /subscriptions/me ERROR -> status=${e.response?.statusCode} data=${e.response?.data}',
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getMySubscription',
+        error: e,
       );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao carregar assinatura.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar assinatura.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar assinatura.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getMySubscription',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar assinatura.',
+        ),
+      );
     }
   }
 
@@ -48,14 +66,24 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await remoteDataSource.getSubscriptionHistory());
     } on DioException catch (e) {
-      debugPrint(
-        '[SubscriptionRepository] GET /subscriptions/me/history ERROR -> status=${e.response?.statusCode} data=${e.response?.data}',
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getSubscriptionHistory',
+        error: e,
       );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao carregar historico.')),
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao carregar historico.'),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar histórico.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getSubscriptionHistory',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar historico.',
+        ),
+      );
     }
   }
 
@@ -64,17 +92,27 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await remoteDataSource.getAvailablePlans());
     } on DioException catch (e) {
-      debugPrint(
-        '[SubscriptionRepository] GET /admin/plans ERROR -> status=${e.response?.statusCode} data=${e.response?.data}',
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getAvailablePlans',
+        error: e,
       );
       if (e.response?.statusCode == 404) {
         return const Right([]);
       }
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao carregar planos.')),
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao carregar planos.'),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar planos.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getAvailablePlans',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar planos.',
+        ),
+      );
     }
   }
 
@@ -83,9 +121,24 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await remoteDataSource.changePlan(planId));
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao trocar o plano.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.changePlan',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao trocar o plano.'),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao trocar o plano.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.changePlan',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao trocar o plano.',
+        ),
+      );
     }
   }
 
@@ -94,11 +147,27 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await remoteDataSource.cancelSubscription());
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.cancelSubscription',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao cancelar assinatura.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao cancelar assinatura.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao cancelar assinatura.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.cancelSubscription',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao cancelar assinatura.',
+        ),
+      );
     }
   }
 
@@ -111,11 +180,24 @@ class SubscriptionRepository implements ISubscriptionRepository {
         await remoteDataSource.renewSubscription(autoRenew: autoRenew),
       );
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.renewSubscription',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao renovar assinatura.')),
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao renovar assinatura.'),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao renovar assinatura.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.renewSubscription',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao renovar assinatura.',
+        ),
+      );
     }
   }
 
@@ -124,6 +206,10 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await storeDataSource.isAvailable());
     } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.isStoreAvailable',
+        error: e,
+      );
       return Left(
         ServerFailure('Erro ao verificar disponibilidade da Play Store.'),
       );
@@ -137,6 +223,10 @@ class SubscriptionRepository implements ISubscriptionRepository {
     try {
       return Right(await storeDataSource.getProductsByIds(productIds));
     } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.getStoreProducts',
+        error: e,
+      );
       return Left(ServerFailure('Erro ao carregar produtos da Play Store.'));
     }
   }
@@ -153,6 +243,10 @@ class SubscriptionRepository implements ISubscriptionRepository {
       );
       return const Right(null);
     } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.buyProduct',
+        error: e,
+      );
       return Left(ServerFailure(e.toString().replaceFirst('Bad state: ', '')));
     }
   }
@@ -167,6 +261,10 @@ class SubscriptionRepository implements ISubscriptionRepository {
       );
       return const Right(null);
     } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.restorePurchases',
+        error: e,
+      );
       return Left(ServerFailure('Erro ao restaurar compras da Play Store.'));
     }
   }
@@ -177,6 +275,10 @@ class SubscriptionRepository implements ISubscriptionRepository {
       await storeDataSource.completePurchase(productId);
       return const Right(null);
     } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.completePurchase',
+        error: e,
+      );
       return Left(ServerFailure('Erro ao finalizar a compra na Play Store.'));
     }
   }
@@ -193,21 +295,11 @@ class SubscriptionRepository implements ISubscriptionRepository {
       );
       return const Right(null);
     } catch (e) {
-      return Left(DatabaseFailure('Erro ao sincronizar dados do usuário.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.syncStoredUser',
+        error: e,
+      );
+      return Left(DatabaseFailure('Erro ao sincronizar dados do usuario.'));
     }
-  }
-
-  String _extractMessage(DioException error, String fallback) {
-    final data = error.response?.data;
-    if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is List && message.isNotEmpty) {
-        return message.first.toString();
-      }
-      if (message != null) {
-        return message.toString();
-      }
-    }
-    return fallback;
   }
 }

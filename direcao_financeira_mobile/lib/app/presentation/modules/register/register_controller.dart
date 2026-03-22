@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/usecases/register_use_case.dart';
+import '../../../routes/app_pages.dart';
 
 class RegisterController extends GetxController {
-  final RegisterUseCase registerUseCase;
-
   RegisterController({required this.registerUseCase});
 
+  final RegisterUseCase registerUseCase;
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
-  var isLoading = false.obs;
-  var isPasswordVisible = false.obs;
-  var isConfirmPasswordVisible = false.obs;
+  final isLoading = false.obs;
+  final isPasswordVisible = false.obs;
+  final isConfirmPasswordVisible = false.obs;
 
-  var hasMinLength = false.obs;
-  var hasUppercase = false.obs;
-  var hasLowercase = false.obs;
-  var hasSpecial = false.obs;
-  var passwordsMatch = false.obs;
+  final hasMinLength = false.obs;
+  final hasUppercase = false.obs;
+  final hasLowercase = false.obs;
+  final hasSpecial = false.obs;
+  final passwordsMatch = false.obs;
 
   @override
   void onInit() {
@@ -38,7 +39,6 @@ class RegisterController extends GetxController {
     hasUppercase.value = password.contains(RegExp(r'[A-Z]'));
     hasLowercase.value = password.contains(RegExp(r'[a-z]'));
     hasSpecial.value = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
-
     passwordsMatch.value = password.isNotEmpty && password == confirmPassword;
   }
 
@@ -51,13 +51,16 @@ class RegisterController extends GetxController {
     final password = passwordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+    if (name.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
       _showError('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
 
     if (!passwordsMatch.value) {
-      _showError('Erro', 'As senhas não coincidem.');
+      _showError('Erro', 'As senhas nao coincidem.');
       return;
     }
 
@@ -65,24 +68,21 @@ class RegisterController extends GetxController {
     final result = await registerUseCase.execute(name, email, password);
     isLoading.value = false;
 
-    result.fold(
-      (failure) => _showError('Erro no Cadastro', failure.message),
-      (data) {
-        final userData = data['user'];
-        Get.offAllNamed('/initial');
-        Get.snackbar(
-          'Bem-vindo(a)!',
-          'Cadastro realizado! Boas vindas, ${userData['name']}.',
-          backgroundColor: const Color(0xFF03A696).withValues(alpha: 0.12),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
-        );
-      },
-    );
+    result.fold((failure) => _showError('Erro no Cadastro', failure.message), (
+      user,
+    ) {
+      Get.offAllNamed(AppRoutes.initial);
+      AppSnackbar.show(
+        'Bem-vindo(a)!',
+        'Cadastro realizado! Boas vindas, ${user.name}.',
+        backgroundColor: const Color(0xFF03A696).withValues(alpha: 0.12),
+        colorText: Colors.white,
+      );
+    });
   }
 
   void _showError(String title, String message) {
-    Get.snackbar(
+    AppSnackbar.show(
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,

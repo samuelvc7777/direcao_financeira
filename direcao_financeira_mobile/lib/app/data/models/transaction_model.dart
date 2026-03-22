@@ -1,4 +1,5 @@
 import '../../domain/entities/transaction_entity.dart';
+import '../mappers/transaction_codecs.dart';
 
 class TransactionModel extends TransactionEntity {
   TransactionModel({
@@ -22,15 +23,24 @@ class TransactionModel extends TransactionEntity {
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    final category = json['category'] as Map<String, dynamic>?;
-    final bankAccount = json['bankAccount'] as Map<String, dynamic>?;
-    final creditCard = json['creditCard'] as Map<String, dynamic>?;
+    final category = json['category'];
+    final bankAccount = json['bankAccount'];
+    final creditCard = json['creditCard'];
+    final categoryJson = category is Map
+        ? Map<String, dynamic>.from(category)
+        : null;
+    final bankAccountJson = bankAccount is Map
+        ? Map<String, dynamic>.from(bankAccount)
+        : null;
+    final creditCardJson = creditCard is Map
+        ? Map<String, dynamic>.from(creditCard)
+        : null;
 
     return TransactionModel(
       id: json['id'] as int,
-      type: TransactionType.fromApiValue(json['type'] as String),
-      status: TransactionStatus.fromApiValue(json['status'] as String),
-      assetType: AssetType.fromApiValue(json['assetType'] as String),
+      type: TransactionTypeCodec.decode(json['type'] as String),
+      status: TransactionStatusCodec.decode(json['status'] as String),
+      assetType: AssetTypeCodec.decode(json['assetType'] as String),
       amountCents: json['amountCents'] as int,
       categoryId: json['categoryId'] as int,
       description: json['description'] as String,
@@ -40,19 +50,20 @@ class TransactionModel extends TransactionEntity {
       installmentGroupId: json['installmentGroupId'] as String?,
       installmentNumber: json['installmentNumber'] as int?,
       installmentCount: json['installmentCount'] as int?,
-      categoryName: category?['name'] as String?,
-      categoryColor: category?['color'] as String?,
-      categoryIcon: category?['icon'] as String?,
-      assetName: (bankAccount?['name'] ?? creditCard?['name']) as String?,
+      categoryName: categoryJson?['name'] as String?,
+      categoryColor: categoryJson?['color'] as String?,
+      categoryIcon: categoryJson?['icon'] as String?,
+      assetName:
+          (bankAccountJson?['name'] ?? creditCardJson?['name']) as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'type': type.toApiValue(),
-      'status': status.toApiValue(),
-      'assetType': assetType.toApiValue(),
+      'type': TransactionTypeCodec.encode(type),
+      'status': TransactionStatusCodec.encode(status),
+      'assetType': AssetTypeCodec.encode(assetType),
       'amountCents': amountCents,
       'categoryId': categoryId,
       'description': description,

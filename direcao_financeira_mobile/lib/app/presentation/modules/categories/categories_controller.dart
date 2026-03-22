@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/entities/category_entity.dart';
 import '../../../domain/usecases/category_use_cases.dart';
 
@@ -128,37 +129,37 @@ class CategoriesController extends GetxController {
     final actionNameCap = isDeactivating ? 'Desativar' : 'Reativar';
 
     final confirmed =
-            await Get.dialog<bool>(
-              AlertDialog(
-                backgroundColor: const Color(0xFF022C35),
-                title: Text(
-                  '$actionNameCap categoria',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                content: Text(
-                  'A categoria "${category.name}" sera ${actionName}ada.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    height: 1.4,
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Get.back(result: false),
-                    child: const Text('Cancelar'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Get.back(result: true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: isDeactivating
-                          ? const Color(0xFFBF4124)
-                          : const Color(0xFF03A696),
-                    ),
-                    child: Text(actionNameCap),
-                  ),
-                ],
+        await Get.dialog<bool>(
+          AlertDialog(
+            backgroundColor: const Color(0xFF022C35),
+            title: Text(
+              '$actionNameCap categoria',
+              style: const TextStyle(color: Colors.white),
+            ),
+            content: Text(
+              'A categoria "${category.name}" sera ${actionName}ada.',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.75),
+                height: 1.4,
               ),
-            ) ??
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Get.back(result: true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: isDeactivating
+                      ? const Color(0xFFBF4124)
+                      : const Color(0xFF03A696),
+                ),
+                child: Text(actionNameCap),
+              ),
+            ],
+          ),
+        ) ??
         false;
 
     if (!confirmed) {
@@ -235,7 +236,7 @@ class CategoriesController extends GetxController {
   }
 
   void _showFeedback(String title, String message, {bool isError = false}) {
-    Get.snackbar(
+    AppSnackbar.show(
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,

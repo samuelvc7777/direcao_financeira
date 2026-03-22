@@ -18,6 +18,7 @@ class CustomTextField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final TextInputAction? textInputAction;
   final void Function(String)? onChanged;
+  final bool compact;
 
   const CustomTextField({
     super.key,
@@ -36,12 +37,22 @@ class CustomTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.textInputAction,
     this.onChanged,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final labelFontSize = compact ? 13.0 : 14.0;
+    final labelSpacing = compact ? 6.0 : 8.0;
+    final contentPadding = compact
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
+        : const EdgeInsets.symmetric(horizontal: 14, vertical: 15);
+    final iconSize = compact ? 20.0 : 22.0;
+    final iconConstraints = compact
+        ? const BoxConstraints(minWidth: 42, minHeight: 42)
+        : const BoxConstraints(minWidth: 48, minHeight: 48);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,11 +61,11 @@ class CustomTextField extends StatelessWidget {
           label,
           style: TextStyle(
             color: colorScheme.onSurface.withValues(alpha: 0.7),
-            fontSize: 14,
+            fontSize: labelFontSize,
             fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: labelSpacing),
         TextFormField(
           controller: controller,
           obscureText: obscureText,
@@ -67,9 +78,18 @@ class CustomTextField extends StatelessWidget {
           onChanged: onChanged,
           style: TextStyle(color: colorScheme.onSurface),
           decoration: InputDecoration(
+            isDense: compact,
+            contentPadding: contentPadding,
             hintText: hint,
-            hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.3)),
-            prefixIcon: Icon(icon, color: AppColors.royalBlue.withValues(alpha: 0.7)),
+            hintStyle: TextStyle(
+              color: colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            prefixIcon: Icon(
+              icon,
+              color: AppColors.royalBlue.withValues(alpha: 0.7),
+              size: iconSize,
+            ),
+            prefixIconConstraints: iconConstraints,
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
@@ -89,7 +109,10 @@ class CustomTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.royalBlue, width: 2),
+              borderSide: const BorderSide(
+                color: AppColors.royalBlue,
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

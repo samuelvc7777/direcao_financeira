@@ -69,17 +69,17 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.92,
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
       child: Container(
         decoration: BoxDecoration(
           color: context.theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: SafeArea(
           top: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             child: Form(
               key: _formKey,
               child: Column(
@@ -87,33 +87,36 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                 children: [
                   Center(
                     child: Container(
-                      width: 54,
+                      width: 48,
                       height: 5,
                       decoration: BoxDecoration(
                         color: context.theme.colorScheme.onSurface.withValues(
                           alpha: 0.12,
                         ),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(99),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _CardPreviewHeader(
-                    title: widget.card == null
-                        ? 'Novo cartao'
-                        : 'Editar cartao',
-                    subtitle:
-                        'Uma experiencia mais forte, com preview imediato do plastico.',
-                    previewColor: previewColor,
-                    cardName: _nameController.text.isEmpty
-                        ? 'Cartao premium'
-                        : _nameController.text,
-                    brand: _brandController.text.isEmpty
-                        ? 'Bandeira'
-                        : _brandController.text,
-                    lastFourDigits: _lastFourController.text.isEmpty
-                        ? '0000'
-                        : _lastFourController.text,
+                  const SizedBox(height: 24),
+                  Text(
+                    widget.card == null ? 'Novo cartao' : 'Editar cartao',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Configure os detalhes do cartao para acompanhar limite, fechamento e vencimento.',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.54,
+                      ),
+                      fontSize: 15,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   CustomTextField(
@@ -126,7 +129,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                     onChanged: (_) => setState(() {}),
                     textCapitalization: TextCapitalization.words,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
                   Row(
                     children: [
                       Expanded(
@@ -157,7 +160,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
                   CustomTextField(
                     controller: _limitController,
                     label: 'Limite total',
@@ -174,7 +177,16 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                     validator: (value) =>
                         value?.isEmpty ?? true ? 'Informe o limite.' : null,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Fechamento da Fatura',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -210,11 +222,28 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  _SectionLabel(title: 'Assinatura visual'),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Identificacao Visual',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 12),
+                  Text(
+                    'Cor',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.7,
+                      ),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   SizedBox(
-                    height: 58,
+                    height: 54,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: widget.controller.colorOptions.length,
@@ -229,36 +258,17 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                               setState(() => _selectedColor = colorHex),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            width: 54,
-                            height: 54,
+                            width: 48,
+                            height: 48,
                             decoration: BoxDecoration(
+                              color: color,
                               shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color.alphaBlend(
-                                    Colors.white.withValues(alpha: 0.18),
-                                    color,
-                                  ),
-                                  color,
-                                ],
-                              ),
                               border: Border.all(
                                 color: isSelected
                                     ? context.theme.colorScheme.onSurface
                                     : Colors.transparent,
-                                width: isSelected ? 2.5 : 0,
+                                width: isSelected ? 3 : 0,
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: color.withValues(
-                                    alpha: isSelected ? 0.34 : 0.16,
-                                  ),
-                                  blurRadius: isSelected ? 16 : 10,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
                             ),
                             child: isSelected
                                 ? Icon(
@@ -279,7 +289,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                         text: 'SALVAR CARTAO',
                         icon: Icons.add_rounded,
                         isLoading: isLoading,
-                        backgroundColor: previewColor,
                         onPressed: _handleSave,
                       );
                     }
@@ -328,7 +337,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
                             text: 'ATUALIZAR',
                             icon: Icons.check_rounded,
                             isLoading: isLoading,
-                            backgroundColor: previewColor,
                             onPressed: _handleSave,
                           ),
                         ),
@@ -372,151 +380,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet> {
       closingDay: int.parse(_closingDayController.text),
       dueDay: int.parse(_dueDayController.text),
       lastFourDigits: _lastFourController.text.trim(),
-    );
-  }
-}
-
-class _CardPreviewHeader extends StatelessWidget {
-  const _CardPreviewHeader({
-    required this.title,
-    required this.subtitle,
-    required this.previewColor,
-    required this.cardName,
-    required this.brand,
-    required this.lastFourDigits,
-  });
-
-  final String title;
-  final String subtitle;
-  final Color previewColor;
-  final String cardName;
-  final String brand;
-  final String lastFourDigits;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.alphaBlend(
-              previewColor.withValues(alpha: 0.24),
-              Colors.white,
-            ),
-            Color.alphaBlend(
-              previewColor.withValues(alpha: 0.08),
-              context.theme.colorScheme.surface,
-            ),
-          ],
-        ),
-        border: Border.all(color: previewColor.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(
-                alpha: 0.58,
-              ),
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: previewColor,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: previewColor.withValues(alpha: 0.28),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.credit_card_rounded,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      brand.toUpperCase(),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.86),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                Text(
-                  cardName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Final $lastFourDigits',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.74)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: context.theme.colorScheme.onSurface,
-        fontWeight: FontWeight.w800,
-        fontSize: 15,
-      ),
     );
   }
 }

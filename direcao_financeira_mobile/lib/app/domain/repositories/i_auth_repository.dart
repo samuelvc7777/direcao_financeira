@@ -5,7 +5,11 @@ import '../entities/user_entity.dart';
 
 abstract class IAuthRepository {
   Future<Either<Failure, UserEntity>> login(String email, String password);
-  Future<Either<Failure, Map<String, dynamic>>> register(String name, String email, String password);
+  Future<Either<Failure, UserEntity>> register(
+    String name,
+    String email,
+    String password,
+  );
   Future<Either<Failure, void>> saveToken(String token);
   Future<Either<Failure, String?>> getToken();
   Future<Either<Failure, void>> saveUser(UserEntity user);

@@ -5,6 +5,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../domain/entities/traffic_light_settings_entity.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'traffic_light_settings_controller.dart';
+import 'widgets/traffic_light_monitored_apps_section.dart';
 
 class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
   const TrafficLightSettingsView({super.key});
@@ -28,7 +29,19 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
             _buildSectionHeader(context, 'PREVIEW AO VIVO', isLive: true),
             SizedBox(height: Responsive.vp(context, 2)),
             const _PreviewCard(),
-            SizedBox(height: Responsive.vp(context, 4)),
+            SizedBox(height: Responsive.vp(context, 2.6)),
+            Obx(
+              () => _buildSectionHeader(
+                context,
+                'Apps Monitorados',
+                icon: Icons.grid_view_rounded,
+                trailing:
+                    '${controller.selectedMonitoredAppsCount} selecionados',
+              ),
+            ),
+            SizedBox(height: Responsive.vp(context, 1.0)),
+            const TrafficLightMonitoredAppsSection(),
+            SizedBox(height: Responsive.vp(context, 2.4)),
             _buildSectionHeader(
               context,
               'Posicao na Tela',

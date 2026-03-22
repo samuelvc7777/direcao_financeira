@@ -91,9 +91,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: color.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +106,9 @@ class _SummaryCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.72,
+                    ),
                     fontSize: labelSize,
                     fontWeight: FontWeight.w700,
                   ),

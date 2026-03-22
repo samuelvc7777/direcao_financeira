@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 
@@ -107,7 +108,8 @@ class BankAccountsController extends GetxController {
     final actionName = isDeactivating ? 'desativar' : 'reativar';
     final actionNameCap = isDeactivating ? 'Desativar' : 'Reativar';
 
-    final confirmed = await Get.dialog<bool>(
+    final confirmed =
+        await Get.dialog<bool>(
           AlertDialog(
             backgroundColor: Get.theme.colorScheme.surface,
             title: Text(
@@ -183,7 +185,7 @@ class BankAccountsController extends GetxController {
   }
 
   void _showFeedback(String title, String message, {bool isError = false}) {
-    Get.snackbar(
+    AppSnackbar.show(
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,

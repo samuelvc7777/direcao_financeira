@@ -1,14 +1,22 @@
 import 'package:dartz/dartz.dart';
-import 'package:dio/dio.dart';
+
 import '../../core/errors/failures.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/ride_entity.dart';
 import '../../domain/repositories/i_ride_repository.dart';
 import '../datasources/i_ride_datasource.dart';
 
 class RideRepositoryImpl implements IRideRepository {
-  final IRideDataSource dataSource;
+  RideRepositoryImpl(
+    this.dataSource, {
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
+  });
 
-  RideRepositoryImpl(this.dataSource);
+  final IRideDataSource dataSource;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
 
   @override
   Future<Either<Failure, List<RideEntity>>> getRides({
@@ -24,10 +32,13 @@ class RideRepositoryImpl implements IRideRepository {
       );
       return Right(rides);
     } catch (e) {
-      if (e is DioException) {
-        return Left(ServerFailure(e.message ?? 'Erro ao buscar corridas'));
-      }
-      return Left(ServerFailure(e.toString()));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'RideRepositoryImpl.getRides',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao buscar corridas.'),
+      );
     }
   }
 }

@@ -1,4 +1,5 @@
 import '../../domain/entities/category_entity.dart';
+import '../mappers/category_type_codec.dart';
 
 class CategoryModel extends CategoryEntity {
   const CategoryModel({
@@ -18,7 +19,7 @@ class CategoryModel extends CategoryEntity {
       id: json['id'] ?? 0,
       userId: json['userId'] ?? 0,
       name: json['name'] ?? '',
-      type: categoryTypeFromApi(json['type'] ?? 'EXPENSE'),
+      type: CategoryTypeCodec.decode(json['type'] ?? 'EXPENSE'),
       color: json['color'] ?? '#038C8C',
       icon: json['icon'] ?? 'category',
       isActive: json['isActive'] ?? true,
@@ -36,7 +37,7 @@ class CategoryModel extends CategoryEntity {
       'id': id,
       'userId': userId,
       'name': name,
-      'type': type.toApiValue(),
+      'type': CategoryTypeCodec.encode(type),
       'color': color,
       'icon': icon,
       'isActive': isActive,

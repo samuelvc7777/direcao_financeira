@@ -15,6 +15,9 @@ class UserModel extends UserEntity {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final activeSubscription = json['activeSubscription'];
+    final subscriptions = json['subscriptions'] as List<dynamic>? ?? const [];
+
     return UserModel(
       id: json['id'],
       email: json['email'],
@@ -23,12 +26,18 @@ class UserModel extends UserEntity {
       isActive: json['isActive'] ?? true,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
-      activeSubscription: json['activeSubscription'] is Map<String, dynamic>
-          ? SubscriptionModel.fromJson(json['activeSubscription'])
+      activeSubscription: activeSubscription is Map
+          ? SubscriptionModel.fromJson(
+              Map<String, dynamic>.from(activeSubscription),
+            )
           : null,
-      subscriptions: (json['subscriptions'] as List<dynamic>? ?? [])
-          .whereType<Map<String, dynamic>>()
-          .map(SubscriptionModel.fromJson)
+      subscriptions: subscriptions
+          .whereType<Map>()
+          .map(
+            (subscription) => SubscriptionModel.fromJson(
+              Map<String, dynamic>.from(subscription),
+            ),
+          )
           .toList(),
     );
   }
@@ -45,18 +54,18 @@ class UserModel extends UserEntity {
       'activeSubscription': activeSubscription == null
           ? null
           : activeSubscription is SubscriptionModel
-              ? (activeSubscription as SubscriptionModel).toJson()
-              : SubscriptionModel(
-                  id: activeSubscription!.id,
-                  status: activeSubscription!.status,
-                  startDate: activeSubscription!.startDate,
-                  endDate: activeSubscription!.endDate,
-                  canceledAt: activeSubscription!.canceledAt,
-                  autoRenew: activeSubscription!.autoRenew,
-                  createdAt: activeSubscription!.createdAt,
-                  updatedAt: activeSubscription!.updatedAt,
-                  plan: activeSubscription!.plan,
-                ).toJson(),
+          ? (activeSubscription as SubscriptionModel).toJson()
+          : SubscriptionModel(
+              id: activeSubscription!.id,
+              status: activeSubscription!.status,
+              startDate: activeSubscription!.startDate,
+              endDate: activeSubscription!.endDate,
+              canceledAt: activeSubscription!.canceledAt,
+              autoRenew: activeSubscription!.autoRenew,
+              createdAt: activeSubscription!.createdAt,
+              updatedAt: activeSubscription!.updatedAt,
+              plan: activeSubscription!.plan,
+            ).toJson(),
       'subscriptions': subscriptions
           .map(
             (subscription) => subscription is SubscriptionModel

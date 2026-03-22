@@ -2,14 +2,22 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/network/api_error_mapper.dart';
+import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/transaction_entity.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
 import '../datasources/transaction_datasource.dart';
 
 class TransactionRepository implements ITransactionRepository {
-  final ITransactionDataSource dataSource;
+  TransactionRepository({
+    required this.dataSource,
+    required this.apiErrorMapper,
+    required this.apiRequestLogger,
+  });
 
-  TransactionRepository({required this.dataSource});
+  final ITransactionDataSource dataSource;
+  final ApiErrorMapper apiErrorMapper;
+  final ApiRequestLogger apiRequestLogger;
 
   @override
   Future<Either<Failure, List<TransactionEntity>>> getTransactions() async {
@@ -17,9 +25,27 @@ class TransactionRepository implements ITransactionRepository {
       final items = await dataSource.getTransactions();
       return Right(items);
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao carregar transacoes.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.getTransactions',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao carregar transacoes.',
+        ),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar transacoes.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.getTransactions',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar transacoes.',
+        ),
+      );
     }
   }
 
@@ -29,9 +55,24 @@ class TransactionRepository implements ITransactionRepository {
       final transaction = await dataSource.getTransaction(id);
       return Right(transaction);
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao carregar transacao.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.getTransaction',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao carregar transacao.'),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao carregar transacao.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.getTransaction',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao carregar transacao.',
+        ),
+      );
     }
   }
 
@@ -49,12 +90,12 @@ class TransactionRepository implements ITransactionRepository {
   }) async {
     try {
       final transaction = await dataSource.createTransaction(
-        type: type.toApiValue(),
-        assetType: assetType.toApiValue(),
+        type: type,
+        assetType: assetType,
         amountCents: amountCents,
         categoryId: categoryId,
         description: description,
-        transactionDate: transactionDate.toIso8601String(),
+        transactionDate: transactionDate,
         bankAccountId: bankAccountId,
         creditCardId: creditCardId,
         installmentCount: installmentCount,
@@ -62,9 +103,24 @@ class TransactionRepository implements ITransactionRepository {
 
       return Right(transaction);
     } on DioException catch (e) {
-      return Left(ServerFailure(_extractMessage(e, 'Erro ao criar transacao.')));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.createTransaction',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao criar transacao.'),
+      );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao criar transacao.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.createTransaction',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao criar transacao.',
+        ),
+      );
     }
   }
 
@@ -83,16 +139,32 @@ class TransactionRepository implements ITransactionRepository {
         categoryId: categoryId,
         description: description,
         amountCents: amountCents,
-        transactionDate: transactionDate?.toIso8601String(),
-        scope: scope?.toApiValue(),
+        transactionDate: transactionDate,
+        scope: scope,
       );
       return Right(transaction);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.updateTransaction',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao atualizar transacao.')),
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao atualizar transacao.',
+        ),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao atualizar transacao.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.updateTransaction',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao atualizar transacao.',
+        ),
+      );
     }
   }
 
@@ -102,28 +174,27 @@ class TransactionRepository implements ITransactionRepository {
     TransactionMutationScope? scope,
   }) async {
     try {
-      await dataSource.deleteTransaction(id, scope: scope?.toApiValue());
+      await dataSource.deleteTransaction(id, scope: scope);
       return const Right(null);
     } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.deleteTransaction',
+        error: e,
+      );
       return Left(
-        ServerFailure(_extractMessage(e, 'Erro ao excluir transacao.')),
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao excluir transacao.'),
       );
     } catch (e) {
-      return Left(ServerFailure('Erro inesperado ao excluir transacao.'));
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.deleteTransaction',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao excluir transacao.',
+        ),
+      );
     }
-  }
-
-  String _extractMessage(DioException error, String fallback) {
-    final data = error.response?.data;
-    if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is List && message.isNotEmpty) {
-        return message.first.toString();
-      }
-      if (message != null) {
-        return message.toString();
-      }
-    }
-    return fallback;
   }
 }

@@ -42,7 +42,7 @@ class BalanceCard extends GetView<HomeController> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.deepNavy.withOpacity(0.22),
+                    color: AppColors.deepNavy.withValues(alpha: 0.22),
                     blurRadius: Responsive.sp(context, 20),
                     offset: Offset(0, Responsive.sp(context, 8)),
                   ),
@@ -58,7 +58,7 @@ class BalanceCard extends GetView<HomeController> {
                       height: Responsive.sp(context, 126),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.04),
+                        color: Colors.white.withValues(alpha: 0.04),
                       ),
                     ),
                   ),
@@ -70,7 +70,7 @@ class BalanceCard extends GetView<HomeController> {
                       height: Responsive.sp(context, 12),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.04),
+                        color: Colors.white.withValues(alpha: 0.04),
                       ),
                     ),
                   ),
@@ -85,10 +85,12 @@ class BalanceCard extends GetView<HomeController> {
                               width: Responsive.sp(context, 30),
                               height: Responsive.sp(context, 30),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.09),
-                                borderRadius: BorderRadius.circular(Responsive.sp(context, 10)),
+                                color: Colors.white.withValues(alpha: 0.09),
+                                borderRadius: BorderRadius.circular(
+                                  Responsive.sp(context, 10),
+                                ),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.08),
+                                  color: Colors.white.withValues(alpha: 0.08),
                                 ),
                               ),
                               child: Icon(
@@ -102,7 +104,7 @@ class BalanceCard extends GetView<HomeController> {
                               child: Text(
                                 'Saldo Atual',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.82),
+                                  color: Colors.white.withValues(alpha: 0.82),
                                   fontSize: Responsive.sp(context, 14),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -117,12 +119,14 @@ class BalanceCard extends GetView<HomeController> {
                                   width: Responsive.sp(context, 32),
                                   height: Responsive.sp(context, 32),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.10),
+                                    color: Colors.white.withValues(alpha: 0.10),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    isVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                                    color: Colors.white.withOpacity(0.82),
+                                    isVisible
+                                        ? Icons.visibility_rounded
+                                        : Icons.visibility_off_rounded,
+                                    color: Colors.white.withValues(alpha: 0.82),
                                     size: Responsive.sp(context, 16),
                                   ),
                                 ),
@@ -135,7 +139,9 @@ class BalanceCard extends GetView<HomeController> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            isVisible ? currencyFormat.format(saldo) : 'R\$ ••••••',
+                            isVisible
+                                ? currencyFormat.format(saldo)
+                                : 'R\$ ••••••',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: amountFontSize,
@@ -153,28 +159,34 @@ class BalanceCard extends GetView<HomeController> {
                           ),
                           decoration: BoxDecoration(
                             color: isPositivo
-                                ? AppColors.emerald.withOpacity(0.20)
-                                : AppColors.rose.withOpacity(0.18),
+                                ? AppColors.emerald.withValues(alpha: 0.20)
+                                : AppColors.rose.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: isPositivo
-                                  ? AppColors.emerald.withOpacity(0.20)
-                                  : AppColors.rose.withOpacity(0.20),
+                                  ? AppColors.emerald.withValues(alpha: 0.20)
+                                  : AppColors.rose.withValues(alpha: 0.20),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isPositivo ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                                color: isPositivo ? AppColors.emerald : AppColors.rose,
+                                isPositivo
+                                    ? Icons.trending_up_rounded
+                                    : Icons.trending_down_rounded,
+                                color: isPositivo
+                                    ? AppColors.emerald
+                                    : AppColors.rose,
                                 size: Responsive.sp(context, 14),
                               ),
                               SizedBox(width: Responsive.hp(context, 1)),
                               Text(
                                 isPositivo ? 'Positivo' : 'Negativo',
                                 style: TextStyle(
-                                  color: isPositivo ? AppColors.emerald : AppColors.rose,
+                                  color: isPositivo
+                                      ? AppColors.emerald
+                                      : AppColors.rose,
                                   fontSize: Responsive.sp(context, 12),
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -185,7 +197,7 @@ class BalanceCard extends GetView<HomeController> {
                         SizedBox(height: Responsive.vp(context, 2.1)),
                         Container(
                           height: 1,
-                          color: Colors.white.withOpacity(0.10),
+                          color: Colors.white.withValues(alpha: 0.10),
                         ),
                         SizedBox(height: Responsive.vp(context, 1.8)),
                         Row(
@@ -203,8 +215,10 @@ class BalanceCard extends GetView<HomeController> {
                             Container(
                               width: 1,
                               height: Responsive.sp(context, 36),
-                              margin: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 4)),
-                              color: Colors.white.withOpacity(0.10),
+                              margin: EdgeInsets.symmetric(
+                                horizontal: Responsive.hp(context, 4),
+                              ),
+                              color: Colors.white.withValues(alpha: 0.10),
                             ),
                             Expanded(
                               child: _InfoItem(
@@ -256,14 +270,10 @@ class _InfoItem extends StatelessWidget {
           width: Responsive.sp(context, 26),
           height: Responsive.sp(context, 26),
           decoration: BoxDecoration(
-            color: accent.withOpacity(0.16),
+            color: accent.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(Responsive.sp(context, 8)),
           ),
-          child: Icon(
-            icon,
-            color: accent,
-            size: Responsive.sp(context, 14),
-          ),
+          child: Icon(icon, color: accent, size: Responsive.sp(context, 14)),
         ),
         SizedBox(width: Responsive.hp(context, 2)),
         Expanded(
@@ -274,7 +284,7 @@ class _InfoItem extends StatelessWidget {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.62),
+                  color: Colors.white.withValues(alpha: 0.62),
                   fontSize: Responsive.sp(context, 11.5),
                   fontWeight: FontWeight.w500,
                 ),

@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import '../../core/errors/failures.dart';
+import '../entities/user_entity.dart';
 import '../repositories/i_auth_repository.dart';
 
 class RegisterUseCase {
@@ -8,7 +9,7 @@ class RegisterUseCase {
 
   RegisterUseCase(this.repository);
 
-  Future<Either<Failure, Map<String, dynamic>>> execute(
+  Future<Either<Failure, UserEntity>> execute(
     String name,
     String email,
     String password,

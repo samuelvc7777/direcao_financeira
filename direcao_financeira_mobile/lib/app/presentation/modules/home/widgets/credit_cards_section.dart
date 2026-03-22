@@ -7,7 +7,9 @@ import '../../../../domain/entities/credit_card_entity.dart';
 import '../../../../core/utils/responsive.dart';
 
 class CreditCardsSection extends StatefulWidget {
-  const CreditCardsSection({super.key});
+  const CreditCardsSection({super.key, required this.controller});
+
+  final HomeController controller;
 
   @override
   State<CreditCardsSection> createState() => _CreditCardsSectionState();
@@ -24,12 +26,12 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.simpleCurrency(locale: 'pt_BR');
-    final controller = Get.find<HomeController>();
+    final controller = widget.controller;
 
     return Obx(() {
       final cartoes = controller.cartoes;
       final isVisible = controller.isBalanceVisible.value;
-      
+
       final cartoesFiltrados = cartoes.where((card) {
         final isClosed = _isInvoiceClosed(card);
         return _showOpenInvoices ? !isClosed : isClosed;
@@ -50,7 +52,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
           final sectionRadius = Responsive.hp(context, 4.8).clamp(16.0, 18.0);
           final contentGap = Responsive.vp(context, 1).clamp(6.0, 8.0);
           final listGap = Responsive.hp(context, 2.8).clamp(10.0, 12.0);
-          
+
           final cardWidth = constraints.maxWidth < 400
               ? constraints.maxWidth * 0.75
               : constraints.maxWidth < 720
@@ -78,14 +80,19 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                   onTap: () => Get.toNamed('/credit-cards'),
                   borderRadius: BorderRadius.circular(14),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 1,
+                      vertical: 1,
+                    ),
                     child: Row(
                       children: [
                         Container(
                           width: iconBoxSize,
                           height: iconBoxSize,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4C2A77), // Violet shade for Credit Cards
+                            color: const Color(
+                              0xFF4C2A77,
+                            ), // Violet shade for Credit Cards
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -135,7 +142,10 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () => setState(() => _showOpenInvoices = false),
-                        child: _buildTab('Faturas Fechadas', !_showOpenInvoices),
+                        child: _buildTab(
+                          'Faturas Fechadas',
+                          !_showOpenInvoices,
+                        ),
                       ),
                     ],
                   ),
@@ -147,9 +157,13 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                       vertical: Responsive.vp(context, 3).clamp(18.0, 24.0),
                     ),
                     child: Text(
-                      _showOpenInvoices ? 'Nenhuma fatura aberta' : 'Nenhuma fatura fechada',
+                      _showOpenInvoices
+                          ? 'Nenhuma fatura aberta'
+                          : 'Nenhuma fatura fechada',
                       style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: context.theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
                         fontSize: Responsive.sp(context, 14).clamp(13.0, 14.0),
                       ),
                     ),
@@ -160,26 +174,40 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: cartoesFiltrados.length,
-                      separatorBuilder: (_, itemIndex) => SizedBox(width: listGap),
+                      separatorBuilder: (_, itemIndex) =>
+                          SizedBox(width: listGap),
                       itemBuilder: (context, index) {
                         final cartao = cartoesFiltrados[index];
                         return SizedBox(
                           width: cardWidth.clamp(200.0, 280.0),
-                          child: _buildCreditCard(context, cartao, isVisible, currencyFormat, _showOpenInvoices),
+                          child: _buildCreditCard(
+                            context,
+                            cartao,
+                            isVisible,
+                            currencyFormat,
+                            _showOpenInvoices,
+                          ),
                         );
                       },
                     ),
                   ),
                 SizedBox(height: contentGap),
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
                 SizedBox(height: contentGap),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _showOpenInvoices ? 'Faturas Totais (Abertas)' : 'Faturas Totais (Fechadas)',
+                      _showOpenInvoices
+                          ? 'Faturas Totais (Abertas)'
+                          : 'Faturas Totais (Fechadas)',
                       style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                        color: context.theme.colorScheme.onSurface.withValues(
+                          alpha: 0.72,
+                        ),
                         fontSize: Responsive.sp(context, 13).clamp(12.0, 13.0),
                         fontWeight: FontWeight.w500,
                       ),
@@ -193,7 +221,10 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                               : 'R\$ ....',
                           style: TextStyle(
                             color: AppColors.rose,
-                            fontSize: Responsive.sp(context, 14).clamp(13.0, 14.0),
+                            fontSize: Responsive.sp(
+                              context,
+                              14,
+                            ).clamp(13.0, 14.0),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -213,9 +244,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isActive
-            ? const Color(0xFF24364E)
-            : Colors.transparent,
+        color: isActive ? const Color(0xFF24364E) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: isActive ? Border.all(color: const Color(0xFF2F4367)) : null,
       ),
@@ -233,8 +262,15 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     );
   }
 
-  Widget _buildCreditCard(BuildContext context, CreditCardEntity cartao, bool isVisible, NumberFormat currencyFormat, bool isOpenInvoice) {
-    final fatura = cartao.usedLimit; // Simulando a fatura com o limite usado. Ficará real no módulo de Transacoes.
+  Widget _buildCreditCard(
+    BuildContext context,
+    CreditCardEntity cartao,
+    bool isVisible,
+    NumberFormat currencyFormat,
+    bool isOpenInvoice,
+  ) {
+    final fatura = cartao
+        .usedLimit; // Simulando a fatura com o limite usado. Ficará real no módulo de Transacoes.
     final disponivel = cartao.availableLimit;
     final percentual = cartao.usedPercentage;
     final cardColor = _parseColor(cartao.color);
@@ -316,9 +352,13 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
             ),
           ),
           Text(
-            isOpenInvoice ? 'Fecha dia ${cartao.closingDay}' : 'Vence dia ${cartao.dueDay}',
+            isOpenInvoice
+                ? 'Fecha dia ${cartao.closingDay}'
+                : 'Vence dia ${cartao.dueDay}',
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.38,
+              ),
               fontSize: Responsive.sp(context, 10).clamp(9.0, 10.0),
             ),
           ),
@@ -327,9 +367,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              isVisible
-                  ? currencyFormat.format(fatura)
-                  : 'R\$ ....',
+              isVisible ? currencyFormat.format(fatura) : 'R\$ ....',
               style: TextStyle(
                 color: context.theme.colorScheme.onSurface,
                 fontSize: valueSize,
@@ -355,7 +393,9 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                 ? 'Lim: ${currencyFormat.format(disponivel)}'
                 : 'Lim: R\$ ....',
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.38,
+              ),
               fontSize: Responsive.sp(context, 9).clamp(8.0, 9.0),
             ),
           ),

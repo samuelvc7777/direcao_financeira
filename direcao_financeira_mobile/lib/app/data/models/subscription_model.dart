@@ -15,6 +15,8 @@ class SubscriptionModel extends SubscriptionEntity {
   });
 
   factory SubscriptionModel.fromJson(Map<String, dynamic> json) {
+    final plan = json['plan'];
+
     return SubscriptionModel(
       id: json['id'],
       status: json['status'] ?? 'UNKNOWN',
@@ -24,8 +26,8 @@ class SubscriptionModel extends SubscriptionEntity {
       autoRenew: json['autoRenew'] ?? false,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
-      plan: json['plan'] is Map<String, dynamic>
-          ? PlanModel.fromJson(json['plan'])
+      plan: plan is Map
+          ? PlanModel.fromJson(Map<String, dynamic>.from(plan))
           : null,
     );
   }
@@ -43,19 +45,19 @@ class SubscriptionModel extends SubscriptionEntity {
       'plan': plan == null
           ? null
           : plan is PlanModel
-              ? (plan as PlanModel).toJson()
-              : PlanModel(
-                  id: plan!.id,
-                  code: plan!.code,
-                  name: plan!.name,
-                  description: plan!.description,
-                  priceCents: plan!.priceCents,
-                  durationDays: plan!.durationDays,
-                  color: plan!.color,
-                  isActive: plan!.isActive,
-                  createdAt: plan!.createdAt,
-                  updatedAt: plan!.updatedAt,
-                ).toJson(),
+          ? (plan as PlanModel).toJson()
+          : PlanModel(
+              id: plan!.id,
+              code: plan!.code,
+              name: plan!.name,
+              description: plan!.description,
+              priceCents: plan!.priceCents,
+              durationDays: plan!.durationDays,
+              color: plan!.color,
+              isActive: plan!.isActive,
+              createdAt: plan!.createdAt,
+              updatedAt: plan!.updatedAt,
+            ).toJson(),
     };
   }
 

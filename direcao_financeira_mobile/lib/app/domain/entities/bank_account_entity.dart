@@ -19,26 +19,6 @@ enum AccountType {
         return 'Outro';
     }
   }
-
-  String toApiValue() {
-    switch (this) {
-      case AccountType.checking:
-        return 'CHECKING';
-      case AccountType.savings:
-        return 'SAVINGS';
-      case AccountType.wallet:
-      case AccountType.investment:
-      case AccountType.other:
-        return 'WALLET';
-    }
-  }
-
-  static AccountType fromApiValue(String value) {
-    return AccountType.values.firstWhere(
-      (e) => e.name.toUpperCase() == value.toUpperCase(),
-      orElse: () => AccountType.wallet,
-    );
-  }
 }
 
 class BankAccountEntity {

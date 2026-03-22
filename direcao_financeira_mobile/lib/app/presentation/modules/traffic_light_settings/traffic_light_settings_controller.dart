@@ -1,15 +1,19 @@
 import 'package:get/get.dart';
-import '../../../core/accessibility/accessibility_controller.dart';
+
+import '../../../core/accessibility/accessibility_service.dart';
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/entities/traffic_light_settings_entity.dart';
 import '../../../domain/usecases/traffic_light_settings_use_cases.dart';
 
 class TrafficLightSettingsController extends GetxController {
   final GetTrafficLightSettingsUseCase getSettingsUseCase;
   final SaveTrafficLightSettingsUseCase saveSettingsUseCase;
+  final AccessibilityService accessibilityService;
 
   TrafficLightSettingsController({
     required this.getSettingsUseCase,
     required this.saveSettingsUseCase,
+    required this.accessibilityService,
   });
 
   final selectedPosition = TrafficLightPosition.topo.obs;
@@ -20,6 +24,12 @@ class TrafficLightSettingsController extends GetxController {
     'R\$/Hora': true,
     'Lucro/H': true,
     'Nota': true,
+  }.obs;
+  final monitoredApps = <String, bool>{
+    'Uber': true,
+    '99': true,
+    'inDrive': true,
+    'MoveSj': false,
   }.obs;
 
   final fontSize = 15.0.obs;
@@ -38,7 +48,9 @@ class TrafficLightSettingsController extends GetxController {
   Future<void> _loadSettings() async {
     isLoading.value = true;
     final result = await getSettingsUseCase();
-    result.fold((failure) => Get.snackbar('Erro', failure.message), (settings) {
+    result.fold((failure) => AppSnackbar.show('Erro', failure.message), (
+      settings,
+    ) {
       selectedPosition.value = settings.position;
       selectedTheme.value = settings.theme;
       fontSize.value = settings.fontSize;
@@ -64,13 +76,12 @@ class TrafficLightSettingsController extends GetxController {
     );
 
     final result = await saveSettingsUseCase(settings);
-    result.fold((failure) => Get.snackbar('Erro', failure.message), (_) {
-      // Sincronizar com o lado nativo imediatamente
-      Get.find<AccessibilityController>().syncSettingsWithNative();
+    result.fold((failure) => AppSnackbar.show('Erro', failure.message), (_) {
+      accessibilityService.syncSettingsWithNative();
 
-      Get.snackbar(
+      AppSnackbar.show(
         'Sucesso',
-        'Configurações salvas com sucesso!',
+        'Configuracoes salvas com sucesso!',
         snackPosition: SnackPosition.BOTTOM,
       );
     });
@@ -81,7 +92,14 @@ class TrafficLightSettingsController extends GetxController {
     indicators[name] = !(indicators[name] ?? false);
   }
 
+  void toggleMonitoredApp(String name) {
+    monitoredApps[name] = !(monitoredApps[name] ?? false);
+  }
+
   int get selectedIndicatorsCount => indicators.values.where((v) => v).length;
+
+  int get selectedMonitoredAppsCount =>
+      monitoredApps.values.where((v) => v).length;
 
   List<String> get orderedActiveIndicators {
     const order = ['R\$/Km', 'R\$/Hora', 'Nota', 'Lucro/H'];

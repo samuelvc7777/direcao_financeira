@@ -1,4 +1,5 @@
 import '../../domain/entities/bank_account_entity.dart';
+import '../mappers/bank_account_codec.dart';
 
 class BankAccountModel extends BankAccountEntity {
   BankAccountModel({
@@ -18,7 +19,7 @@ class BankAccountModel extends BankAccountEntity {
       name: json['name'] as String,
       bankName: json['bankName'] as String,
       color: (json['color'] as String?) ?? '#06B6D4',
-      accountType: AccountType.fromApiValue(json['accountType'] as String),
+      accountType: AccountTypeCodec.decode(json['accountType'] as String),
       initialBalanceCents: json['initialBalanceCents'] as int,
       currentBalanceCents: json['currentBalanceCents'] as int,
       isActive: json['isActive'] as bool? ?? true,
@@ -31,7 +32,7 @@ class BankAccountModel extends BankAccountEntity {
       'name': name,
       'bankName': bankName,
       'color': color,
-      'accountType': accountType.toApiValue(),
+      'accountType': AccountTypeCodec.encode(accountType),
       'initialBalanceCents': initialBalanceCents,
       'currentBalanceCents': currentBalanceCents,
       'isActive': isActive,

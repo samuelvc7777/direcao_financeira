@@ -1,0 +1,301 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../../domain/entities/transaction_entity.dart';
+import '../../../datasources/transaction_datasource.dart';
+import '../../../mappers/transaction_codecs.dart';
+import '../../../models/transaction_model.dart';
+import '../shared/supabase_table_names.dart';
+import '../shared/supabase_user_scope.dart';
+
+class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
+  SupabaseTransactionRemoteDataSource({required this.client})
+    : userScope = SupabaseUserScope(client: client);
+
+  final SupabaseClient client;
+  final SupabaseUserScope userScope;
+
+  @override
+  Future<List<TransactionModel>> getTransactions() async {
+    final userId = await userScope.getCurrentUserId();
+    final rows = await client
+        .from(SupabaseTableNames.transactions)
+        .select()
+        .eq('userId', userId)
+        .order('transactionDate', ascending: false);
+
+    return _enrichTransactions(_toRowList(rows));
+  }
+
+  @override
+  Future<TransactionModel> getTransaction(int id) async {
+    final row = await client
+        .from(SupabaseTableNames.transactions)
+        .select()
+        .eq('id', id)
+        .single();
+
+    final enriched = await _enrichTransactions([
+      Map<String, dynamic>.from(row),
+    ]);
+    return enriched.first;
+  }
+
+  @override
+  Future<TransactionModel> createTransaction({
+    required TransactionType type,
+    required AssetType assetType,
+    required int amountCents,
+    required int categoryId,
+    required String description,
+    required DateTime transactionDate,
+    int? bankAccountId,
+    int? creditCardId,
+    int? installmentCount,
+  }) async {
+    final userId = await userScope.getCurrentUserId();
+    final normalizedInstallmentCount =
+        installmentCount != null && installmentCount > 1 ? installmentCount : 1;
+    final installmentGroupId = normalizedInstallmentCount > 1
+        ? '${DateTime.now().microsecondsSinceEpoch}'
+        : null;
+
+    final payload = <Map<String, dynamic>>[];
+    final now = DateTime.now().toUtc().toIso8601String();
+    for (var index = 0; index < normalizedInstallmentCount; index++) {
+      final installmentDate = DateTime(
+        transactionDate.year,
+        transactionDate.month + index,
+        transactionDate.day,
+        transactionDate.hour,
+        transactionDate.minute,
+        transactionDate.second,
+        transactionDate.millisecond,
+        transactionDate.microsecond,
+      );
+      final entry = <String, dynamic>{
+        'userId': userId,
+        'type': TransactionTypeCodec.encode(type),
+        'status': TransactionStatusCodec.encode(TransactionStatus.cleared),
+        'assetType': AssetTypeCodec.encode(assetType),
+        'amountCents': amountCents,
+        'categoryId': categoryId,
+        'description': description,
+        'transactionDate': installmentDate.toUtc().toIso8601String(),
+        'updatedAt': now,
+      };
+      if (bankAccountId != null) {
+        entry['bankAccountId'] = bankAccountId;
+      }
+      if (creditCardId != null) {
+        entry['creditCardId'] = creditCardId;
+      }
+      if (installmentGroupId != null) {
+        entry['installmentGroupId'] = installmentGroupId;
+        entry['installmentNumber'] = index + 1;
+        entry['installmentCount'] = normalizedInstallmentCount;
+      }
+      payload.add(entry);
+    }
+
+    final inserted = await client
+        .from(SupabaseTableNames.transactions)
+        .insert(payload)
+        .select();
+
+    final enriched = await _enrichTransactions(_toRowList(inserted));
+    return enriched.first;
+  }
+
+  @override
+  Future<TransactionModel> updateTransaction(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    DateTime? transactionDate,
+    TransactionMutationScope? scope,
+  }) async {
+    final baseRow = await _getTransactionRow(id);
+    final rowsToUpdate = await _resolveRowsForScope(baseRow, scope);
+
+    if (scope == TransactionMutationScope.all &&
+        baseRow['installmentGroupId'] != null &&
+        transactionDate != null) {
+      for (final row in rowsToUpdate) {
+        final installmentNumber = row['installmentNumber'] as int? ?? 1;
+        final recalculatedDate = DateTime(
+          transactionDate.year,
+          transactionDate.month + (installmentNumber - 1),
+          transactionDate.day,
+          transactionDate.hour,
+          transactionDate.minute,
+          transactionDate.second,
+          transactionDate.millisecond,
+          transactionDate.microsecond,
+        );
+        final recalculatedPayload = <String, dynamic>{
+          'transactionDate': recalculatedDate.toUtc().toIso8601String(),
+          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+        };
+        if (categoryId != null) {
+          recalculatedPayload['categoryId'] = categoryId;
+        }
+        if (description != null) {
+          recalculatedPayload['description'] = description;
+        }
+        if (amountCents != null) {
+          recalculatedPayload['amountCents'] = amountCents;
+        }
+        await client
+            .from(SupabaseTableNames.transactions)
+            .update(recalculatedPayload)
+            .eq('id', row['id']);
+      }
+    } else {
+      final payload = <String, dynamic>{};
+      if (categoryId != null) {
+        payload['categoryId'] = categoryId;
+      }
+      if (description != null) {
+        payload['description'] = description;
+      }
+      if (amountCents != null) {
+        payload['amountCents'] = amountCents;
+      }
+      if (transactionDate != null) {
+        payload['transactionDate'] = transactionDate.toUtc().toIso8601String();
+      }
+      payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+
+      for (final row in rowsToUpdate) {
+        await client
+            .from(SupabaseTableNames.transactions)
+            .update(payload)
+            .eq('id', row['id']);
+      }
+    }
+
+    return getTransaction(id);
+  }
+
+  @override
+  Future<void> deleteTransaction(
+    int id, {
+    TransactionMutationScope? scope,
+  }) async {
+    final baseRow = await _getTransactionRow(id);
+    final rowsToDelete = await _resolveRowsForScope(baseRow, scope);
+    final ids = rowsToDelete.map((row) => row['id'] as int).toList();
+
+    await client
+        .from(SupabaseTableNames.transactions)
+        .delete()
+        .inFilter('id', ids);
+  }
+
+  Future<Map<String, dynamic>> _getTransactionRow(int id) async {
+    final row = await client
+        .from(SupabaseTableNames.transactions)
+        .select()
+        .eq('id', id)
+        .single();
+
+    return Map<String, dynamic>.from(row);
+  }
+
+  Future<List<Map<String, dynamic>>> _resolveRowsForScope(
+    Map<String, dynamic> baseRow,
+    TransactionMutationScope? scope,
+  ) async {
+    if (scope != TransactionMutationScope.all ||
+        baseRow['installmentGroupId'] == null) {
+      return [baseRow];
+    }
+
+    final groupRows = await client
+        .from(SupabaseTableNames.transactions)
+        .select()
+        .eq('installmentGroupId', baseRow['installmentGroupId'])
+        .order('installmentNumber');
+
+    return _toRowList(groupRows);
+  }
+
+  Future<List<TransactionModel>> _enrichTransactions(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    if (rows.isEmpty) {
+      return const [];
+    }
+
+    final categoryIds = rows
+        .map((row) => row['categoryId'] as int?)
+        .whereType<int>()
+        .toSet()
+        .toList();
+    final bankAccountIds = rows
+        .map((row) => row['bankAccountId'] as int?)
+        .whereType<int>()
+        .toSet()
+        .toList();
+    final creditCardIds = rows
+        .map((row) => row['creditCardId'] as int?)
+        .whereType<int>()
+        .toSet()
+        .toList();
+
+    final categoriesById = <int, Map<String, dynamic>>{};
+    final bankAccountsById = <int, Map<String, dynamic>>{};
+    final creditCardsById = <int, Map<String, dynamic>>{};
+
+    if (categoryIds.isNotEmpty) {
+      final rawCategories = await client
+          .from(SupabaseTableNames.categories)
+          .select('id,name,color,icon')
+          .inFilter('id', categoryIds);
+      for (final category in rawCategories as List) {
+        final row = Map<String, dynamic>.from(category as Map);
+        categoriesById[row['id'] as int] = row;
+      }
+    }
+
+    if (bankAccountIds.isNotEmpty) {
+      final rawAccounts = await client
+          .from(SupabaseTableNames.bankAccounts)
+          .select('id,name')
+          .inFilter('id', bankAccountIds);
+      for (final account in rawAccounts as List) {
+        final row = Map<String, dynamic>.from(account as Map);
+        bankAccountsById[row['id'] as int] = row;
+      }
+    }
+
+    if (creditCardIds.isNotEmpty) {
+      final rawCards = await client
+          .from(SupabaseTableNames.creditCards)
+          .select('id,name')
+          .inFilter('id', creditCardIds);
+      for (final card in rawCards as List) {
+        final row = Map<String, dynamic>.from(card as Map);
+        creditCardsById[row['id'] as int] = row;
+      }
+    }
+
+    return rows.map((row) {
+      final normalized = Map<String, dynamic>.from(row);
+      normalized['category'] = categoriesById[row['categoryId'] as int?];
+      normalized['bankAccount'] =
+          bankAccountsById[row['bankAccountId'] as int?];
+      normalized['creditCard'] = creditCardsById[row['creditCardId'] as int?];
+      return TransactionModel.fromJson(normalized);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _toRowList(dynamic data) {
+    if (data is! List) {
+      return const [];
+    }
+
+    return data.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+}

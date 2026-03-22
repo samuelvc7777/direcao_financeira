@@ -82,6 +82,14 @@ class SubscriptionBinding extends Bindings {
         fenix: true,
       );
     }
+    if (!Get.isRegistered<WatchStorePurchaseUpdatesUseCase>()) {
+      Get.lazyPut(
+        () => WatchStorePurchaseUpdatesUseCase(
+          Get.find<ISubscriptionRepository>(),
+        ),
+        fenix: true,
+      );
+    }
 
     if (!Get.isRegistered<SubscriptionController>()) {
       Get.lazyPut<SubscriptionController>(
@@ -100,7 +108,8 @@ class SubscriptionBinding extends Bindings {
           buyStoreProductUseCase: Get.find<BuyStoreProductUseCase>(),
           restorePurchasesUseCase: Get.find<RestorePurchasesUseCase>(),
           completePurchaseUseCase: Get.find<CompletePurchaseUseCase>(),
-          subscriptionRepository: Get.find<ISubscriptionRepository>(),
+          watchStorePurchaseUpdatesUseCase:
+              Get.find<WatchStorePurchaseUpdatesUseCase>(),
         ),
       );
     }

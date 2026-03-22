@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
-import '../../../core/accessibility/accessibility_controller.dart';
-import '../../../core/network/connection_controller.dart';
+import '../../../core/accessibility/accessibility_service.dart';
+import '../../../core/feedback/app_snackbar.dart';
+import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/entities/active_shift_entity.dart';
 import '../../../domain/entities/location_tracking_status_entity.dart';
 import '../../../domain/entities/ride_entity.dart';
@@ -22,9 +23,12 @@ class JourneyController extends GetxController {
   final ResumeShiftUseCase resumeShiftUseCase;
   final FinishShiftUseCase finishShiftUseCase;
   final SyncPendingJourneyUseCase syncPendingJourneyUseCase;
+  final EnsureReadyForShiftStartUseCase ensureReadyForShiftStartUseCase;
   final GetLocationTrackingStatusUseCase getLocationTrackingStatusUseCase;
   final WatchLocationTrackingStatusUseCase watchLocationTrackingStatusUseCase;
   final GetRidesUseCase getRidesUseCase;
+  final JourneyRealtimeBridge journeyRealtimeBridge;
+  final AccessibilityService accessibilityService;
 
   JourneyController({
     required this.getActiveShift,
@@ -35,9 +39,12 @@ class JourneyController extends GetxController {
     required this.resumeShiftUseCase,
     required this.finishShiftUseCase,
     required this.syncPendingJourneyUseCase,
+    required this.ensureReadyForShiftStartUseCase,
     required this.getLocationTrackingStatusUseCase,
     required this.watchLocationTrackingStatusUseCase,
     required this.getRidesUseCase,
+    required this.journeyRealtimeBridge,
+    required this.accessibilityService,
   });
 
   final isLoading = false.obs;
@@ -111,8 +118,10 @@ class JourneyController extends GetxController {
   final isTrafficLightActive = false.obs;
 
   bool get hasActiveShift => activeShift.value != null;
+  bool get isAccessibilityServiceEnabled =>
+      accessibilityService.isServiceEnabled.value;
   String get status => hasActiveShift ? 'Ativo' : 'Inativo';
-  bool get isOnline => Get.find<ConnectionController>().isOnline.value;
+  bool get isOnline => journeyRealtimeBridge.isOnline.value;
   bool get canRetry =>
       activeShiftError.value != null ||
       metricsError.value != null ||
@@ -123,9 +132,7 @@ class JourneyController extends GetxController {
   bool get canFinishShift =>
       !isLoading.value && !isFinishingShift.value && hasActiveShift;
   bool get canPauseOrResumeShift =>
-      !isLoading.value &&
-      !isPauseShiftLoading.value &&
-      hasActiveShift;
+      !isLoading.value && !isPauseShiftLoading.value && hasActiveShift;
   bool get isShiftPaused => activeShift.value?.isPaused ?? false;
   bool get canOpenTrackingSettings {
     final status = trackingStatus.value;
@@ -177,28 +184,38 @@ class JourneyController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    final accessibilityController = Get.find<AccessibilityController>();
     isTrafficLightActive.value =
-        accessibilityController.persistedTrafficLightActive;
+        accessibilityService.persistedTrafficLightActive;
     _accessibilityWorker = ever<bool>(
-      accessibilityController.isServiceEnabled,
+      accessibilityService.isServiceEnabled,
       _handleAccessibilityStatusChanged,
     );
     _connectionWorker = ever<bool>(
-      Get.find<ConnectionController>().isOnline,
+      journeyRealtimeBridge.isOnline,
       _handleConnectionStatusChanged,
     );
     _trackingStatusSubscription = watchLocationTrackingStatusUseCase().listen(
       _handleTrackingStatusUpdated,
     );
-    _setupSocketListeners();
+    journeyRealtimeBridge.bind(
+      onShiftChanged: () {
+        refreshJourneyData(
+          silent: true,
+          includeRides: false,
+          showErrors: false,
+        );
+      },
+      onRideChanged: () {
+        refreshJourneyData(silent: true, showErrors: false);
+      },
+    );
     refreshJourneyData(showErrors: false);
     _loadTrackingStatus();
   }
 
   @override
   void onClose() {
-    _removeSocketListeners();
+    journeyRealtimeBridge.unbind();
     _timer?.cancel();
     _accessibilityWorker?.dispose();
     _connectionWorker?.dispose();
@@ -364,6 +381,13 @@ class JourneyController extends GetxController {
 
   Future<void> startShift() async {
     isStartingShift.value = true;
+
+    final isLocationReady = await _ensureLocationReadyForShiftStart();
+    if (!isLocationReady) {
+      isStartingShift.value = false;
+      return;
+    }
+
     final result = await startShiftUseCase();
     result.fold(
       (failure) => _showActionError('iniciar o turno', failure.message),
@@ -383,21 +407,20 @@ class JourneyController extends GetxController {
   Future<void> finishShift() async {
     isFinishingShift.value = true;
     final result = await finishShiftUseCase();
-    result.fold(
-      (failure) => _showActionError('parar o turno', failure.message),
-      (finishResult) async {
-        if (finishResult.synced) {
-          _showSuccess('Turno finalizado e sincronizado com sucesso.');
-        } else {
-          _showWarning(
-            'Turno salvo no aparelho',
-            'O turno foi finalizado localmente e sera sincronizado quando a internet voltar.',
-          );
-        }
-        await refreshJourneyData(silent: true);
-        await _loadTrackingStatus();
-      },
-    );
+    result.fold((failure) => _showActionError('parar o turno', failure.message), (
+      finishResult,
+    ) async {
+      if (finishResult.synced) {
+        _showSuccess('Turno finalizado e sincronizado com sucesso.');
+      } else {
+        _showWarning(
+          'Turno salvo no aparelho',
+          'O turno foi finalizado localmente e sera sincronizado quando a internet voltar.',
+        );
+      }
+      await refreshJourneyData(silent: true);
+      await _loadTrackingStatus();
+    });
     isFinishingShift.value = false;
   }
 
@@ -411,24 +434,7 @@ class JourneyController extends GetxController {
       return;
     }
 
-    final opened = !status.isLocationServiceEnabled
-        ? await Geolocator.openLocationSettings()
-        : await Geolocator.openAppSettings();
-
-    if (!opened) {
-      _showWarning(
-        'Nao foi possivel abrir os ajustes',
-        'Abra manualmente as configuracoes do app e revise permissao de localizacao, GPS e localizacao precisa.',
-      );
-      return;
-    }
-
-    _showWarning(
-      'Revise a localizacao',
-      !status.isLocationServiceEnabled
-          ? 'Ative o GPS do aparelho e volte para continuar o turno.'
-          : 'Marque "Permitir o tempo todo" e mantenha a localizacao precisa ativada.',
-    );
+    await _openTrackingSettings(status: status);
   }
 
   Future<void> _loadActiveShift({required bool showErrors}) async {
@@ -442,7 +448,7 @@ class JourneyController extends GetxController {
       (shift) {
         activeShiftError.value = null;
         activeShift.value = shift;
-        Get.find<AccessibilityController>().setJourneyActive(shift != null);
+        accessibilityService.setJourneyActive(shift != null);
         _syncActiveShiftPresentation(shift);
       },
     );
@@ -506,8 +512,9 @@ class JourneyController extends GetxController {
         historyError.value = null;
         shiftsList.assignAll(shifts);
         shiftsCount.value = shifts.length;
-        pendingShiftSyncCount.value =
-            shifts.where((shift) => shift.isPendingSync).length;
+        pendingShiftSyncCount.value = shifts
+            .where((shift) => shift.isPendingSync)
+            .length;
       },
     );
   }
@@ -630,42 +637,6 @@ class JourneyController extends GetxController {
     isPauseShiftLoading.value = false;
   }
 
-  void _setupSocketListeners() {
-    try {
-      final connection = Get.find<ConnectionController>();
-      connection.socket?.on('journey.shift.started', (_) {
-        refreshJourneyData(silent: true, includeRides: false, showErrors: false);
-      });
-      connection.socket?.on('journey.shift.finished', (_) {
-        refreshJourneyData(silent: true, showErrors: false);
-      });
-      connection.socket?.on('journey.shift.paused', (_) {
-        refreshJourneyData(silent: true, includeRides: false, showErrors: false);
-      });
-      connection.socket?.on('journey.shift.resumed', (_) {
-        refreshJourneyData(silent: true, includeRides: false, showErrors: false);
-      });
-      connection.socket?.on('journey.ride.created', (_) {
-        refreshJourneyData(silent: true, showErrors: false);
-      });
-      connection.socket?.on('journey.ride.updated', (_) {
-        refreshJourneyData(silent: true, showErrors: false);
-      });
-    } catch (_) {}
-  }
-
-  void _removeSocketListeners() {
-    try {
-      final connection = Get.find<ConnectionController>();
-      connection.socket?.off('journey.shift.started');
-      connection.socket?.off('journey.shift.finished');
-      connection.socket?.off('journey.shift.paused');
-      connection.socket?.off('journey.shift.resumed');
-      connection.socket?.off('journey.ride.created');
-      connection.socket?.off('journey.ride.updated');
-    } catch (_) {}
-  }
-
   Future<void> _handleConnectionStatusChanged(bool isOnlineNow) async {
     if (!isOnlineNow) {
       return;
@@ -680,6 +651,42 @@ class JourneyController extends GetxController {
   Future<void> _loadTrackingStatus() async {
     final result = await getLocationTrackingStatusUseCase();
     result.fold((_) {}, _handleTrackingStatusUpdated);
+  }
+
+  Future<bool> _ensureLocationReadyForShiftStart() async {
+    String? failureMessage;
+    LocationTrackingStatusEntity? status;
+
+    final result = await ensureReadyForShiftStartUseCase();
+    result.fold(
+      (failure) => failureMessage = failure.message,
+      (resolvedStatus) => status = resolvedStatus,
+    );
+
+    if (failureMessage != null) {
+      _showActionError('validar a localizacao', failureMessage!);
+      return false;
+    }
+
+    if (status == null) {
+      _showError(
+        'Erro',
+        'Nao foi possivel validar a localizacao para iniciar o turno.',
+      );
+      return false;
+    }
+
+    trackingStatus.value = status;
+    if (status!.canTrackFully) {
+      return true;
+    }
+
+    final shouldOpenSettings = await _showStartShiftLocationDialog(status!);
+    if (shouldOpenSettings == true) {
+      await _openTrackingSettings(status: status!, showFollowUpWarning: false);
+    }
+
+    return false;
   }
 
   Future<int> _syncPendingShifts({required bool showFeedback}) async {
@@ -781,9 +788,104 @@ class JourneyController extends GetxController {
   }
 
   void _showActionError(String action, String message) {
-    _showError(
-      'Nao foi possivel $action',
-      _normalizeErrorMessage(message),
+    _showError('Nao foi possivel $action', _normalizeErrorMessage(message));
+  }
+
+  Future<bool?> _showStartShiftLocationDialog(
+    LocationTrackingStatusEntity status,
+  ) {
+    return Get.dialog<bool>(
+      AlertDialog(
+        title: Text(_locationDialogTitle(status)),
+        content: Text(_locationDialogMessage(status)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Agora nao'),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(_locationDialogConfirmLabel(status)),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  String _locationDialogTitle(LocationTrackingStatusEntity status) {
+    if (!status.isLocationServiceEnabled) {
+      return 'Ativar localizacao';
+    }
+
+    if (!status.hasBackgroundPermission) {
+      return 'Permitir o tempo todo';
+    }
+
+    if (!status.hasForegroundPermission) {
+      return 'Liberar localizacao';
+    }
+
+    if (!status.isPreciseLocation) {
+      return 'Ativar localizacao precisa';
+    }
+
+    return 'Revisar localizacao';
+  }
+
+  String _locationDialogMessage(LocationTrackingStatusEntity status) {
+    if (!status.isLocationServiceEnabled) {
+      return 'Para iniciar o turno, ative o GPS do aparelho. O rastreamento da jornada depende da localizacao ligada durante todo o turno.';
+    }
+
+    if (!status.hasBackgroundPermission) {
+      return 'Para iniciar o turno, abra as configuracoes do app e marque a localizacao como "Permitir o tempo todo". Assim a jornada continua sendo rastreada mesmo com o app fechado.';
+    }
+
+    if (!status.hasForegroundPermission) {
+      return 'Para iniciar o turno, libere a localizacao do app nas configuracoes e volte para tentar novamente.';
+    }
+
+    if (!status.isPreciseLocation) {
+      return 'Para iniciar o turno, troque a localizacao aproximada para precisa nas configuracoes do app.';
+    }
+
+    return 'Revise as configuracoes de localizacao antes de iniciar o turno.';
+  }
+
+  String _locationDialogConfirmLabel(LocationTrackingStatusEntity status) {
+    if (!status.isLocationServiceEnabled) {
+      return 'Ir para GPS';
+    }
+
+    return 'Ir para config';
+  }
+
+  Future<void> _openTrackingSettings({
+    required LocationTrackingStatusEntity status,
+    bool showFollowUpWarning = true,
+  }) async {
+    final opened = !status.isLocationServiceEnabled
+        ? await Geolocator.openLocationSettings()
+        : await Geolocator.openAppSettings();
+
+    if (!opened) {
+      _showWarning(
+        'Nao foi possivel abrir os ajustes',
+        'Abra manualmente as configuracoes do app e revise permissao de localizacao, GPS e localizacao precisa.',
+      );
+      return;
+    }
+
+    if (!showFollowUpWarning) {
+      return;
+    }
+
+    _showWarning(
+      'Revise a localizacao',
+      !status.isLocationServiceEnabled
+          ? 'Ative o GPS do aparelho e volte para continuar o turno.'
+          : 'Marque "Permitir o tempo todo" e mantenha a localizacao precisa ativada.',
     );
   }
 
@@ -820,7 +922,7 @@ class JourneyController extends GetxController {
       Get.closeCurrentSnackbar();
     }
 
-    Get.snackbar(
+    AppSnackbar.show(
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,
@@ -828,16 +930,13 @@ class JourneyController extends GetxController {
       colorText: Colors.white,
       margin: const EdgeInsets.all(8),
       borderRadius: 8,
-      duration: const Duration(seconds: 4),
     );
   }
 
   Future<void> toggleTrafficLight() async {
-    final accessibilityController = Get.find<AccessibilityController>();
-
-    if (accessibilityController.isServiceEnabled.value) {
+    if (accessibilityService.isServiceEnabled.value) {
       isTrafficLightActive.value = !isTrafficLightActive.value;
-      await accessibilityController.setTrafficLightActive(
+      await accessibilityService.setTrafficLightActive(
         isTrafficLightActive.value,
       );
       if (!isTrafficLightActive.value) {
@@ -849,25 +948,23 @@ class JourneyController extends GetxController {
     if (isTrafficLightActive.value) {
       isTrafficLightActive.value = false;
       isWaitingAccessibilityActivation.value = false;
-      await accessibilityController.setTrafficLightActive(false);
+      await accessibilityService.setTrafficLightActive(false);
       return;
     }
 
     final shouldOpenSettings = await _showAccessibilityDialog();
     if (shouldOpenSettings == true) {
       isWaitingAccessibilityActivation.value = true;
-      await accessibilityController.requestAccessibilityPermission();
+      await accessibilityService.requestAccessibilityPermission();
     }
   }
 
   void _handleAccessibilityStatusChanged(bool isEnabled) {
-    final accessibilityController = Get.find<AccessibilityController>();
-
     if (isEnabled && isWaitingAccessibilityActivation.value) {
       isTrafficLightActive.value = true;
       isWaitingAccessibilityActivation.value = false;
-      accessibilityController.setTrafficLightActive(true);
-      Get.snackbar(
+      accessibilityService.setTrafficLightActive(true);
+      AppSnackbar.show(
         'Semaforo ativado',
         'A acessibilidade foi habilitada e o semaforo ja esta pronto para uso.',
         snackPosition: SnackPosition.BOTTOM,
@@ -875,7 +972,7 @@ class JourneyController extends GetxController {
       return;
     }
 
-    if (isEnabled && accessibilityController.persistedTrafficLightActive) {
+    if (isEnabled && accessibilityService.persistedTrafficLightActive) {
       isTrafficLightActive.value = true;
     }
   }

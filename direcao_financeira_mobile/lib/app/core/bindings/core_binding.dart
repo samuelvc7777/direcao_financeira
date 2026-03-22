@@ -1,155 +1,99 @@
-import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../network/connection_controller.dart';
-import '../preferences/app_preferences.dart';
-import '../../data/datasources/auth_datasource.dart';
-import '../../data/datasources/bank_account_datasource.dart';
-import '../../data/datasources/category_datasource.dart';
-import '../../data/datasources/credit_card_datasource.dart';
-import '../../data/datasources/subscription_datasource.dart';
-import '../../data/datasources/subscription_store_datasource.dart';
-import '../../data/datasources/transaction_datasource.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/bank_account_repository.dart';
-import '../../data/repositories/category_repository.dart';
-import '../../data/repositories/credit_card_repository.dart';
-import '../../data/repositories/subscription_repository.dart';
-import '../../data/repositories/transaction_repository.dart';
-import '../../domain/repositories/i_auth_repository.dart';
-import '../../domain/repositories/i_bank_account_repository.dart';
-import '../../domain/repositories/i_category_repository.dart';
-import '../../domain/repositories/i_credit_card_repository.dart';
-import '../../domain/repositories/i_subscription_repository.dart';
-import '../../domain/repositories/i_transaction_repository.dart';
+import '../accessibility/accessibility_service.dart';
+import '../../data/local/get_storage_session_store.dart';
+import '../../data/local/get_storage_user_cache.dart';
 import '../accessibility/accessibility_controller.dart';
-import '../../routes/app_pages.dart';
+import '../config/app_environment.dart';
+import '../dashboard/dashboard_refresh_notifier.dart';
+import '../network/api_error_mapper.dart';
+import '../network/api_request_logger.dart';
+import '../preferences/app_preferences.dart';
+import '../session/session_coordinator.dart';
+import '../session/session_store.dart';
+import '../session/user_cache.dart';
 
 class CoreBinding extends Bindings {
+  CoreBinding({required this.environment, required this.storage});
+
+  final AppEnvironment environment;
+  final GetStorage storage;
+
   @override
   void dependencies() {
-    final storage = GetStorage();
-    Get.put(storage, permanent: true);
-    Get.put<AppPreferences>(
-      GetStorageAppPreferences(storage: storage),
-      permanent: true,
-    );
-
-    Get.put<AccessibilityController>(
-      AccessibilityController(),
-      permanent: true,
-    );
-
-    // Use 10.0.2.2 para testar no emulador Android (redireciona para o localhost do seu PC).
-    // Caso esteja testando em um dispositivo físico, use o IP da sua máquina na rede local: 'http://192.168.3.114:3000'
-    const baseUrl = 'https://barbie-inseverable-audrianna.ngrok-free.dev';
-
-    Get.put<ConnectionController>(
-      ConnectionController(storage: storage, baseUrl: baseUrl),
-      permanent: true,
-    );
-
-    final dio = Dio(
-      BaseOptions(baseUrl: baseUrl, connectTimeout: const Duration(seconds: 5)),
-    );
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          final token = storage.read('token');
-          if (token is String && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          handler.next(options);
-        },
-        onError: (error, handler) async {
-          final statusCode = error.response?.statusCode;
-          final path = error.requestOptions.path;
-          final isAuthEndpoint =
-              path.contains('/auth/login') || path.contains('/auth/register');
-
-          if (statusCode == 401 && !isAuthEndpoint) {
-            await storage.remove('token');
-            await storage.remove('user');
-
-            if (Get.currentRoute != AppRoutes.login) {
-              Get.offAllNamed(AppRoutes.login);
-            }
-          }
-
-          handler.next(error);
-        },
+    if (!Get.isRegistered<AppEnvironment>()) {
+      Get.put(environment, permanent: true);
+    }
+    if (!Get.isRegistered<GetStorage>()) {
+      Get.put(storage, permanent: true);
+    }
+    if (!Get.isRegistered<AppPreferences>()) {
+      Get.put<AppPreferences>(
+        GetStorageAppPreferences(storage: storage),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<SessionStore>()) {
+      Get.put<SessionStore>(
+        GetStorageSessionStore(storage: storage),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<UserCache>()) {
+      Get.put<UserCache>(
+        GetStorageUserCache(storage: storage),
+        permanent: true,
+      );
+    }
+    final accessibilityController = Get.isRegistered<AccessibilityController>()
+        ? Get.find<AccessibilityController>()
+        : Get.put<AccessibilityController>(
+            AccessibilityController(storage: storage),
+            permanent: true,
+          );
+    if (!Get.isRegistered<AccessibilityService>()) {
+      Get.put<AccessibilityService>(accessibilityController, permanent: true);
+    }
+    if (!Get.isRegistered<AccessibilityController>()) {
+      Get.put<AccessibilityController>(
+        accessibilityController,
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<DashboardRefreshNotifier>()) {
+      Get.put<DashboardRefreshNotifier>(
+        DefaultDashboardRefreshNotifier(),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<ApiErrorMapper>()) {
+      Get.put<ApiErrorMapper>(const ApiErrorMapper(), permanent: true);
+    }
+    if (!Get.isRegistered<ApiRequestLogger>()) {
+      Get.put<ApiRequestLogger>(
+        ApiRequestLogger(apiErrorMapper: Get.find<ApiErrorMapper>()),
+        permanent: true,
+      );
+    }
+    Get.lazyPut<SessionCoordinator>(
+      () => DefaultSessionCoordinator(
+        sessionStore: Get.find(),
+        userCache: Get.find(),
+        realtimeClient: Get.find(),
+        restoreRemoteSession:
+            environment.backendProvider == BackendProviderKind.supabase
+            ? (token) async {
+                await Get.find<SupabaseClient>().auth.setSession(token);
+              }
+            : null,
+        remoteLogout:
+            environment.backendProvider == BackendProviderKind.supabase
+            ? () => Get.find<SupabaseClient>().auth.signOut()
+            : null,
       ),
-    );
-    Get.put(dio, permanent: true);
-
-    Get.put<IAuthRemoteDataSource>(
-      AuthRemoteDataSource(dio: dio),
-      permanent: true,
-    );
-    Get.put<IAuthLocalDataSource>(
-      AuthLocalDataSource(storage: storage),
-      permanent: true,
-    );
-    Get.put<IBankAccountDataSource>(
-      BankAccountRemoteDataSource(dio: dio),
-      permanent: true,
-    );
-    Get.put<ICategoryDataSource>(
-      CategoryRemoteDataSource(dio: dio),
-      permanent: true,
-    );
-    Get.put<ICreditCardDataSource>(
-      CreditCardRemoteDataSource(dio: dio),
-      permanent: true,
-    );
-    Get.put<ISubscriptionRemoteDataSource>(
-      SubscriptionRemoteDataSource(dio: dio),
-      permanent: true,
-    );
-    Get.put<ISubscriptionLocalDataSource>(
-      SubscriptionLocalDataSource(storage: storage),
-      permanent: true,
-    );
-    Get.put<ISubscriptionStoreDataSource>(
-      SubscriptionStoreDataSource(),
-      permanent: true,
-    );
-    Get.put<ITransactionDataSource>(
-      TransactionRemoteDataSource(dio: dio),
-      permanent: true,
-    );
-
-    Get.put<IAuthRepository>(
-      AuthRepository(
-        remoteDataSource: Get.find<IAuthRemoteDataSource>(),
-        localDataSource: Get.find<IAuthLocalDataSource>(),
-      ),
-      permanent: true,
-    );
-    Get.put<IBankAccountRepository>(
-      BankAccountRepository(dataSource: Get.find<IBankAccountDataSource>()),
-      permanent: true,
-    );
-    Get.put<ICategoryRepository>(
-      CategoryRepository(dataSource: Get.find<ICategoryDataSource>()),
-      permanent: true,
-    );
-    Get.put<ICreditCardRepository>(
-      CreditCardRepository(dataSource: Get.find<ICreditCardDataSource>()),
-      permanent: true,
-    );
-    Get.put<ISubscriptionRepository>(
-      SubscriptionRepository(
-        remoteDataSource: Get.find<ISubscriptionRemoteDataSource>(),
-        localDataSource: Get.find<ISubscriptionLocalDataSource>(),
-        storeDataSource: Get.find<ISubscriptionStoreDataSource>(),
-      ),
-      permanent: true,
-    );
-    Get.put<ITransactionRepository>(
-      TransactionRepository(dataSource: Get.find<ITransactionDataSource>()),
-      permanent: true,
+      fenix: true,
     );
   }
 }
