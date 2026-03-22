@@ -10,18 +10,26 @@ import '../../../../domain/entities/transaction_entity.dart';
 import '../transactions_controller.dart';
 
 class CreditCardFormView extends GetView<TransactionsController> {
-  CreditCardFormView({super.key}) : editingTransaction = Get.arguments is TransactionEntity ? Get.arguments as TransactionEntity : null {
-    final arg = Get.arguments;
+  CreditCardFormView({super.key})
+    : editingTransaction = Get.arguments is TransactionEntity
+          ? Get.arguments as TransactionEntity
+          : null {
     if (editingTransaction != null) {
       final trans = editingTransaction!;
-      amountController.text = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$')
-          .format(trans.amountCents / 100);
+      amountController.text = NumberFormat.currency(
+        locale: 'pt_BR',
+        symbol: 'R\$',
+      ).format(trans.amountCents / 100);
       descriptionController.text = trans.description;
       selectedDate.value = trans.transactionDate;
       installmentCount.value = trans.installmentCount ?? 1;
-      
-      selectedCard.value = controller.activeCards.firstWhereOrNull((c) => c.id == trans.creditCardId);
-      selectedCategory.value = controller.categories.firstWhereOrNull((c) => c.id == trans.categoryId);
+
+      selectedCard.value = controller.activeCards.firstWhereOrNull(
+        (c) => c.id == trans.creditCardId,
+      );
+      selectedCategory.value = controller.categories.firstWhereOrNull(
+        (c) => c.id == trans.categoryId,
+      );
     }
 
     amountFocusNode.addListener(() {
@@ -33,7 +41,7 @@ class CreditCardFormView extends GetView<TransactionsController> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final FocusNode amountFocusNode = FocusNode();
-  
+
   final TransactionEntity? editingTransaction;
 
   final RxBool isAmountFocused = false.obs;
@@ -100,7 +108,9 @@ class CreditCardFormView extends GetView<TransactionsController> {
                   children: [
                     Expanded(
                       child: _TypeTab(
-                        label: isEditing ? 'Editar Cartão' : 'Cartão de Crédito',
+                        label: isEditing
+                            ? 'Editar Cartão'
+                            : 'Cartão de Crédito',
                         icon: Icons.credit_card_rounded,
                         activeColor: activeColor,
                       ),
@@ -139,7 +149,8 @@ class CreditCardFormView extends GetView<TransactionsController> {
                   ],
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Informe o valor.';
-                    final numValue = int.tryParse(v!.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                    final numValue =
+                        int.tryParse(v!.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
                     if (numValue <= 0) return 'Maior que zero.';
                     return null;
                   },
@@ -157,7 +168,9 @@ class CreditCardFormView extends GetView<TransactionsController> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        isAmountFocused.value ? 'Toque para sair' : 'Toque para digitar',
+                        isAmountFocused.value
+                            ? 'Toque para sair'
+                            : 'Toque para digitar',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.4),
                           fontSize: 14,
@@ -166,7 +179,9 @@ class CreditCardFormView extends GetView<TransactionsController> {
                       ),
                       const SizedBox(width: 8),
                       Icon(
-                        isAmountFocused.value ? Icons.keyboard_hide_outlined : Icons.keyboard_alt_outlined,
+                        isAmountFocused.value
+                            ? Icons.keyboard_hide_outlined
+                            : Icons.keyboard_alt_outlined,
                         size: 16,
                         color: Colors.white.withValues(alpha: 0.4),
                       ),
@@ -192,11 +207,16 @@ class CreditCardFormView extends GetView<TransactionsController> {
 
                 // Installments Row (Disabled in Edit for now or handled carefully)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -226,7 +246,9 @@ class CreditCardFormView extends GetView<TransactionsController> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isEditing ? 'Parcela atual' : 'Quantidade de vezes',
+                              isEditing
+                                  ? 'Parcela atual'
+                                  : 'Quantidade de vezes',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
@@ -239,7 +261,11 @@ class CreditCardFormView extends GetView<TransactionsController> {
                       if (isEditing)
                         Text(
                           '${editingTransaction!.installmentNumber}/${editingTransaction!.installmentCount}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         )
                       else
                         Container(
@@ -253,11 +279,18 @@ class CreditCardFormView extends GetView<TransactionsController> {
                               GestureDetector(
                                 onTap: _decrementInstallments,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   color: Colors.transparent,
                                   child: Icon(
                                     Icons.remove_rounded,
-                                    color: Colors.white.withValues(alpha: installmentCount.value > 1 ? 0.8 : 0.2),
+                                    color: Colors.white.withValues(
+                                      alpha: installmentCount.value > 1
+                                          ? 0.8
+                                          : 0.2,
+                                    ),
                                     size: 20,
                                   ),
                                 ),
@@ -277,11 +310,18 @@ class CreditCardFormView extends GetView<TransactionsController> {
                               GestureDetector(
                                 onTap: _incrementInstallments,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   color: Colors.transparent,
                                   child: Icon(
                                     Icons.add_rounded,
-                                    color: Colors.white.withValues(alpha: installmentCount.value < 48 ? 0.8 : 0.2),
+                                    color: Colors.white.withValues(
+                                      alpha: installmentCount.value < 48
+                                          ? 0.8
+                                          : 0.2,
+                                    ),
                                     size: 20,
                                   ),
                                 ),
@@ -300,7 +340,10 @@ class CreditCardFormView extends GetView<TransactionsController> {
                     Expanded(
                       child: _DateChip(
                         label: 'Hoje',
-                        isSelected: _isSameDay(selectedDate.value, DateTime.now()),
+                        isSelected: _isSameDay(
+                          selectedDate.value,
+                          DateTime.now(),
+                        ),
                         activeColor: activeColor,
                         onTap: () => selectedDate.value = DateTime.now(),
                       ),
@@ -309,9 +352,13 @@ class CreditCardFormView extends GetView<TransactionsController> {
                     Expanded(
                       child: _DateChip(
                         label: 'Ontem',
-                        isSelected: _isSameDay(selectedDate.value, DateTime.now().subtract(const Duration(days: 1))),
+                        isSelected: _isSameDay(
+                          selectedDate.value,
+                          DateTime.now().subtract(const Duration(days: 1)),
+                        ),
                         activeColor: activeColor,
-                        onTap: () => selectedDate.value = DateTime.now().subtract(const Duration(days: 1)),
+                        onTap: () => selectedDate.value = DateTime.now()
+                            .subtract(const Duration(days: 1)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -319,8 +366,12 @@ class CreditCardFormView extends GetView<TransactionsController> {
                       child: _DateChip(
                         label: 'Data',
                         icon: Icons.calendar_today_outlined,
-                        isSelected: !_isSameDay(selectedDate.value, DateTime.now()) && 
-                                    !_isSameDay(selectedDate.value, DateTime.now().subtract(const Duration(days: 1))),
+                        isSelected:
+                            !_isSameDay(selectedDate.value, DateTime.now()) &&
+                            !_isSameDay(
+                              selectedDate.value,
+                              DateTime.now().subtract(const Duration(days: 1)),
+                            ),
                         activeColor: activeColor,
                         onTap: () => _pickDate(context, activeColor),
                       ),
@@ -359,7 +410,9 @@ class CreditCardFormView extends GetView<TransactionsController> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -372,7 +425,10 @@ class CreditCardFormView extends GetView<TransactionsController> {
                       Expanded(
                         child: TextFormField(
                           controller: descriptionController,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Descrição (opcional)',
                             hintStyle: TextStyle(
@@ -483,8 +539,8 @@ class CreditCardFormView extends GetView<TransactionsController> {
         await controller.updateTransaction(
           editingTransaction!.id,
           categoryId: selectedCategory.value!.id,
-          description: descriptionController.text.trim().isEmpty 
-              ? selectedCategory.value!.name 
+          description: descriptionController.text.trim().isEmpty
+              ? selectedCategory.value!.name
               : descriptionController.text.trim(),
           amountCents: amountCents,
           transactionDate: selectedDate.value,
@@ -498,8 +554,8 @@ class CreditCardFormView extends GetView<TransactionsController> {
         assetType: AssetType.creditCard,
         amountCents: amountCents,
         categoryId: selectedCategory.value!.id,
-        description: descriptionController.text.trim().isEmpty 
-            ? selectedCategory.value!.name 
+        description: descriptionController.text.trim().isEmpty
+            ? selectedCategory.value!.name
             : descriptionController.text.trim(),
         transactionDate: selectedDate.value,
         creditCardId: selectedCard.value!.id,
@@ -513,16 +569,28 @@ class CreditCardFormView extends GetView<TransactionsController> {
       AlertDialog(
         backgroundColor: AppColors.midnight,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Editar Parcelamento', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text('Deseja aplicar as mudanças apenas nesta parcela ou em todas?', style: TextStyle(color: Colors.white70)),
+        title: const Text(
+          'Editar Parcelamento',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Deseja aplicar as mudanças apenas nesta parcela ou em todas?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: () {
               Get.back();
               _performUpdate(amountCents, TransactionMutationScope.all);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.violet.withValues(alpha: 0.2), foregroundColor: AppColors.violet),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.violet.withValues(alpha: 0.2),
+              foregroundColor: AppColors.violet,
+            ),
             child: const Text('Todas'),
           ),
           ElevatedButton(
@@ -542,8 +610,8 @@ class CreditCardFormView extends GetView<TransactionsController> {
     controller.updateTransaction(
       editingTransaction!.id,
       categoryId: selectedCategory.value!.id,
-      description: descriptionController.text.trim().isEmpty 
-          ? selectedCategory.value!.name 
+      description: descriptionController.text.trim().isEmpty
+          ? selectedCategory.value!.name
           : descriptionController.text.trim(),
       amountCents: amountCents,
       transactionDate: selectedDate.value,
@@ -577,7 +645,14 @@ class _TypeTab extends StatelessWidget {
         children: [
           Icon(icon, color: activeColor, size: 20),
           const SizedBox(width: 8),
-          Text(label, style: TextStyle(color: activeColor, fontSize: 15, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              color: activeColor,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -607,23 +682,35 @@ class _DateChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.1)
+              : Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? activeColor.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05),
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.3)
+                : Colors.white.withValues(alpha: 0.05),
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5)),
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? activeColor
+                    : Colors.white.withValues(alpha: 0.5),
+              ),
               const SizedBox(width: 6),
             ],
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5),
+                color: isSelected
+                    ? activeColor
+                    : Colors.white.withValues(alpha: 0.5),
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -667,7 +754,10 @@ class _SelectionField<T> extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
-          icon: Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.4)),
+          icon: Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white.withValues(alpha: 0.4),
+          ),
           dropdownColor: AppColors.midnight,
           hint: Row(
             children: [
@@ -677,9 +767,22 @@ class _SelectionField<T> extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 12,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(hint, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(
+                    hint,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -688,15 +791,32 @@ class _SelectionField<T> extends StatelessWidget {
             return items.map((item) {
               return Row(
                 children: [
-                  Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 22),
+                  Icon(
+                    icon,
+                    color: Colors.white.withValues(alpha: 0.8),
+                    size: 22,
+                  ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 12,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(itemLabelBuilder(item), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                      Text(
+                        itemLabelBuilder(item),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -706,7 +826,10 @@ class _SelectionField<T> extends StatelessWidget {
           items: items.map((item) {
             return DropdownMenuItem<T>(
               value: item,
-              child: Text(itemLabelBuilder(item), style: const TextStyle(color: Colors.white)),
+              child: Text(
+                itemLabelBuilder(item),
+                style: const TextStyle(color: Colors.white),
+              ),
             );
           }).toList(),
           onChanged: onChanged,
