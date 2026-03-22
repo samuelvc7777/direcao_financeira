@@ -6,6 +6,7 @@ import '../../data/datasources/auth_datasource.dart';
 import '../../data/datasources/bank_account_datasource.dart';
 import '../../data/datasources/category_datasource.dart';
 import '../../data/datasources/credit_card_datasource.dart';
+import '../../data/datasources/costs_gains_settings_datasource.dart';
 import '../../data/datasources/i_journey_datasource.dart';
 import '../../data/datasources/i_ride_datasource.dart';
 import '../../data/datasources/journey_local_datasource.dart';
@@ -26,6 +27,7 @@ import '../../data/providers/nest/realtime/socket_io_realtime_client.dart';
 import '../../data/providers/nest/subscription/nest_subscription_remote_datasource.dart';
 import '../../data/providers/play_store/play_store_subscription_store_datasource.dart';
 import '../../data/providers/supabase/auth/supabase_auth_remote_datasource.dart';
+import '../../data/providers/supabase/costs_gains/supabase_costs_gains_remote_datasource.dart';
 import '../../data/providers/supabase/finance/supabase_bank_account_remote_datasource.dart';
 import '../../data/providers/supabase/finance/supabase_category_remote_datasource.dart';
 import '../../data/providers/supabase/finance/supabase_credit_card_remote_datasource.dart';
@@ -38,6 +40,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/bank_account_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/credit_card_repository.dart';
+import '../../data/repositories/costs_gains_repository.dart';
 import '../../data/repositories/journey_repository_impl.dart';
 import '../../data/repositories/ride_repository_impl.dart';
 import '../../data/repositories/subscription_repository.dart';
@@ -47,11 +50,14 @@ import '../../domain/repositories/i_auth_repository.dart';
 import '../../domain/repositories/i_bank_account_repository.dart';
 import '../../domain/repositories/i_category_repository.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
+import '../../domain/repositories/i_costs_gains_repository.dart';
 import '../../domain/repositories/i_journey_repository.dart';
 import '../../domain/repositories/i_ride_repository.dart';
 import '../../domain/repositories/i_subscription_repository.dart';
 import '../../domain/repositories/i_traffic_light_repository.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
+import '../../domain/usecases/create_detected_ride_usecase.dart';
+import '../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../config/app_environment.dart';
 import '../network/api_error_mapper.dart';
 import '../network/api_request_logger.dart';
@@ -260,6 +266,10 @@ class ProviderBinding extends Bindings {
       ),
       permanent: true,
     );
+    Get.put<CreateDetectedRideUseCase>(
+      CreateDetectedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
     Get.put<ITrafficLightRepository>(
       TrafficLightRepositoryImpl(localDataSource: Get.find()),
       permanent: true,
@@ -338,6 +348,10 @@ class ProviderBinding extends Bindings {
       TrafficLightLocalDataSourceImpl(storage: Get.find()),
       permanent: true,
     );
+    Get.put<ICostsGainsSettingsDataSource>(
+      SupabaseCostsGainsRemoteDataSource(client: supabaseClient),
+      permanent: true,
+    );
 
     Get.put<IAuthRepository>(
       AuthRepository(
@@ -412,8 +426,32 @@ class ProviderBinding extends Bindings {
       ),
       permanent: true,
     );
+    Get.put<CreateDetectedRideUseCase>(
+      CreateDetectedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
     Get.put<ITrafficLightRepository>(
       TrafficLightRepositoryImpl(localDataSource: Get.find()),
+      permanent: true,
+    );
+    Get.put<ICostsGainsRepository>(
+      CostsGainsRepository(
+        dataSource: Get.find(),
+        apiErrorMapper: Get.find<ApiErrorMapper>(),
+        apiRequestLogger: Get.find<ApiRequestLogger>(),
+      ),
+      permanent: true,
+    );
+    Get.put<GetCostsGainsSettingsUseCase>(
+      GetCostsGainsSettingsUseCase(Get.find<ICostsGainsRepository>()),
+      permanent: true,
+    );
+    Get.put<HasCostsGainsSettingsUseCase>(
+      HasCostsGainsSettingsUseCase(Get.find<ICostsGainsRepository>()),
+      permanent: true,
+    );
+    Get.put<SaveCostsGainsSettingsUseCase>(
+      SaveCostsGainsSettingsUseCase(Get.find<ICostsGainsRepository>()),
       permanent: true,
     );
   }

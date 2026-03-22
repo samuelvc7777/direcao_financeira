@@ -1,3 +1,6 @@
+import '../../../domain/entities/costs_gains_settings_entity.dart';
+export '../../../domain/entities/costs_gains_settings_entity.dart';
+
 class CostsGainsDraft {
   const CostsGainsDraft({
     required this.desiredNetProfitCents,
@@ -26,6 +29,23 @@ class CostsGainsDraft {
   final double kmPerLiter;
   final PlatformFeeType platformFeeType;
   final double platformFeeValue;
+
+  factory CostsGainsDraft.empty() {
+    return const CostsGainsDraft(
+      desiredNetProfitCents: 0,
+      workDaysPerWeek: 0,
+      workHoursPerDay: 0,
+      kmPerDay: 0,
+      financeOrRentMonthlyCents: 0,
+      insuranceMonthlyCents: 0,
+      maintenanceMonthlyCents: 0,
+      annualTaxesCents: 0,
+      fuelPricePerLiterCents: 0,
+      kmPerLiter: 0,
+      platformFeeType: PlatformFeeType.fixed,
+      platformFeeValue: 0,
+    );
+  }
 
   factory CostsGainsDraft.defaults() {
     return const CostsGainsDraft(
@@ -133,6 +153,40 @@ class CostsGainsDraft {
       platformFeeValue: platformFeeValue ?? this.platformFeeValue,
     );
   }
-}
 
-enum PlatformFeeType { percentage, fixed }
+  factory CostsGainsDraft.fromEntity(CostsGainsSettingsEntity entity) {
+    return CostsGainsDraft(
+      desiredNetProfitCents: entity.desiredMonthlyProfitCents,
+      workDaysPerWeek: entity.workDaysPerWeek,
+      workHoursPerDay: entity.workHoursPerDay,
+      kmPerDay: entity.kmPerDay,
+      financeOrRentMonthlyCents: entity.financeOrRentMonthlyCents,
+      insuranceMonthlyCents: entity.insuranceMonthlyCents,
+      maintenanceMonthlyCents: entity.maintenanceMonthlyCents,
+      annualTaxesCents: entity.annualTaxesCents,
+      fuelPricePerLiterCents: entity.fuelPricePerLiterCents,
+      kmPerLiter: entity.kmPerLiter,
+      platformFeeType: entity.platformFeeType,
+      platformFeeValue: entity.platformFeeValue,
+    );
+  }
+
+  CostsGainsSettingsEntity toEntity({required int userId, int? id}) {
+    return CostsGainsSettingsEntity(
+      id: id,
+      userId: userId,
+      desiredMonthlyProfitCents: desiredNetProfitCents,
+      workDaysPerWeek: workDaysPerWeek,
+      workHoursPerDay: workHoursPerDay,
+      kmPerDay: kmPerDay,
+      financeOrRentMonthlyCents: financeOrRentMonthlyCents,
+      insuranceMonthlyCents: insuranceMonthlyCents,
+      maintenanceMonthlyCents: maintenanceMonthlyCents,
+      annualTaxesCents: annualTaxesCents,
+      fuelPricePerLiterCents: fuelPricePerLiterCents,
+      kmPerLiter: kmPerLiter,
+      platformFeeType: platformFeeType,
+      platformFeeValue: platformFeeValue,
+    );
+  }
+}

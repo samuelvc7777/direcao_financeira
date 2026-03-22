@@ -34,6 +34,7 @@ class TransactionsFilterTabs extends StatelessWidget {
             child: _FilterTab(
               label: TransactionsFilter.all.label,
               icon: Icons.layers_rounded,
+              accentColor: AppColors.royalBlue,
               isSelected: selectedFilter == TransactionsFilter.all,
               onTap: () => onChanged(TransactionsFilter.all),
             ),
@@ -43,6 +44,7 @@ class TransactionsFilterTabs extends StatelessWidget {
             child: _FilterTab(
               label: TransactionsFilter.income.label,
               icon: Icons.arrow_upward_rounded,
+              accentColor: AppColors.emerald,
               isSelected: selectedFilter == TransactionsFilter.income,
               onTap: () => onChanged(TransactionsFilter.income),
             ),
@@ -52,6 +54,7 @@ class TransactionsFilterTabs extends StatelessWidget {
             child: _FilterTab(
               label: TransactionsFilter.expense.label,
               icon: Icons.arrow_downward_rounded,
+              accentColor: AppColors.rose,
               isSelected: selectedFilter == TransactionsFilter.expense,
               onTap: () => onChanged(TransactionsFilter.expense),
             ),
@@ -66,12 +69,14 @@ class _FilterTab extends StatelessWidget {
   const _FilterTab({
     required this.label,
     required this.icon,
+    required this.accentColor,
     required this.isSelected,
     required this.onTap,
   });
 
   final String label;
   final IconData icon;
+  final Color accentColor;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -84,6 +89,7 @@ class _FilterTab extends StatelessWidget {
     final labelSize = Responsive.sp(context, 14).clamp(13.0, 14.0);
 
     return ScaleButton(
+      enableHaptic: false,
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -93,15 +99,32 @@ class _FilterTab extends StatelessWidget {
           vertical: verticalPadding,
         ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.violet.withValues(alpha: 0.18)
-              : Colors.transparent,
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    accentColor.withValues(alpha: 0.16),
+                    accentColor.withValues(alpha: 0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
             color: isSelected
-                ? AppColors.violet.withValues(alpha: 0.42)
+                ? accentColor.withValues(alpha: 0.38)
                 : Colors.transparent,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.08),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -116,18 +139,24 @@ class _FilterTab extends StatelessWidget {
                       icon,
                       size: iconSize,
                       color: isSelected
-                          ? AppColors.violet
-                          : context.theme.colorScheme.onSurface.withValues(alpha: 0.46),
+                          ? accentColor
+                          : context.theme.colorScheme.onSurface.withValues(
+                              alpha: 0.46,
+                            ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       label,
                       style: TextStyle(
                         color: isSelected
-                            ? AppColors.violet
-                            : context.theme.colorScheme.onSurface.withValues(alpha: 0.52),
+                            ? accentColor
+                            : context.theme.colorScheme.onSurface.withValues(
+                                alpha: 0.52,
+                              ),
                         fontSize: labelSize,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                   ],

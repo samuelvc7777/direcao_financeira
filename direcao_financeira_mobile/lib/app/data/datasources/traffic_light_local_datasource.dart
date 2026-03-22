@@ -26,10 +26,23 @@ class TrafficLightLocalDataSourceImpl implements ITrafficLightLocalDataSource {
           'Lucro/H': true,
           'Nota': true,
         },
+        monitoredApps: {
+          'Uber': true,
+          '99': true,
+          'inDrive': true,
+          'MoveSj': false,
+        },
         fontSize: 15.0,
         opacity: 100.0,
         cardDuration: 10.0,
         colorBlindMode: false,
+        gainPerKmBad: 1.57,
+        gainPerKmGood: 2.60,
+        gainPerHourBad: 19.67,
+        gainPerHourGood: 32.50,
+        passengerRatingBad: 4.6,
+        passengerRatingGood: 5.0,
+        passengerRatingCustomized: false,
       );
     }
     return TrafficLightSettingsModel.fromJson(Map<String, dynamic>.from(json));

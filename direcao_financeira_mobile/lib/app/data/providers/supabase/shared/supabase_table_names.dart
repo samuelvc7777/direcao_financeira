@@ -11,4 +11,5 @@ class SupabaseTableNames {
   static const shifts = 'Shift';
   static const shiftRoutes = 'ShiftRoute';
   static const rides = 'Ride';
+  static const costsGainsSettings = 'CostsGainsSettings';
 }

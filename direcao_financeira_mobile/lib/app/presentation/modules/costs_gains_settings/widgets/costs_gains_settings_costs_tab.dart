@@ -52,7 +52,7 @@ class CostsGainsSettingsCostsTab extends StatelessWidget {
           icon: Icons.person_rounded,
           iconBackground: AppColors.amber,
           title: 'Nota do Passageiro',
-          subtitle: 'Nota mínima ideal',
+          subtitle: 'Nota minima ideal',
           badLabel: 'Ruim',
           goodLabel: 'Bom',
           badValue: '4.6',
@@ -60,7 +60,11 @@ class CostsGainsSettingsCostsTab extends StatelessWidget {
           cardTint: AppColors.amber,
         ),
         const SizedBox(height: 8),
-        _PrimaryAction(controller: controller),
+        _PrimaryAction(
+          onPressed: controller.openTrafficLightSettings,
+          icon: Icons.save_rounded,
+          label: 'Salvar Configuracoes',
+        ),
       ],
     );
   }
@@ -166,7 +170,7 @@ class CostsGainsSettingsDetailsSection extends StatelessWidget {
                       icon: Icons.local_gas_station_rounded,
                       iconColor: AppColors.amber,
                       iconBackground: const Color(0xFFFFF6E8),
-                      label: 'Combustível estimado',
+                      label: 'Combustivel estimado',
                       value: currency.format(controller.estimatedFuel),
                     ),
                     const SizedBox(height: 8),
@@ -198,7 +202,11 @@ class CostsGainsSettingsDetailsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _PrimaryAction(controller: controller),
+        _PrimaryAction(
+          onPressed: controller.applyToTrafficLight,
+          icon: Icons.traffic_rounded,
+          label: 'Aplicar no Semaforo',
+        ),
         const SizedBox(height: 8),
         _SecondaryAction(controller: controller),
       ],
@@ -249,7 +257,7 @@ class _TrafficLightHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Configurar Semáforo',
+            'Configurar Semaforo',
             textAlign: TextAlign.center,
             style: context.textTheme.titleLarge?.copyWith(
               color: colorScheme.onSurface,
@@ -562,9 +570,15 @@ class _CostRow extends StatelessWidget {
 }
 
 class _PrimaryAction extends StatelessWidget {
-  const _PrimaryAction({required this.controller});
+  const _PrimaryAction({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
 
-  final CostsGainsSettingsController controller;
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -585,7 +599,7 @@ class _PrimaryAction extends StatelessWidget {
           ],
         ),
         child: ElevatedButton.icon(
-          onPressed: controller.openTrafficLightSettings,
+          onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
@@ -595,9 +609,9 @@ class _PrimaryAction extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
           ),
-          icon: const Icon(Icons.save_rounded, color: Colors.white, size: 16),
+          icon: Icon(icon, color: Colors.white, size: 16),
           label: Text(
-            'Salvar Configurações',
+            label,
             style: context.textTheme.titleMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,

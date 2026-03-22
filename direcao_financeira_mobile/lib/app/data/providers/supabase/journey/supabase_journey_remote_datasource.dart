@@ -279,6 +279,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         .from(SupabaseTableNames.rides)
         .select()
         .eq('userId', userId)
+        .eq('status', 'FINISHED')
         .gte('createdAt', range.start.toUtc().toIso8601String())
         .lt('createdAt', range.endExclusive.toUtc().toIso8601String())
         .order('createdAt', ascending: false);

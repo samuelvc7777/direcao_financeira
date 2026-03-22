@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../datasources/i_ride_datasource.dart';
+import '../../../../domain/entities/detected_ride_draft_entity.dart';
 import '../../../models/ride_model.dart';
 
 class NestRideRemoteDataSource implements IRideDataSource {
@@ -28,5 +29,12 @@ class NestRideRemoteDataSource implements IRideDataSource {
         .whereType<Map>()
         .map((json) => RideModel.fromJson(Map<String, dynamic>.from(json)))
         .toList();
+  }
+
+  @override
+  Future<void> createDetectedRide(DetectedRideDraftEntity ride) {
+    throw UnsupportedError(
+      'Criacao de corrida pendente via overlay esta disponivel apenas no provider Supabase.',
+    );
   }
 }

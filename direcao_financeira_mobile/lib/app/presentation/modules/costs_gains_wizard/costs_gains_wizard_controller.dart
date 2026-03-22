@@ -4,12 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../costs_gains_settings/costs_gains_draft.dart';
 import '../costs_gains_settings/costs_gains_flow_coordinator.dart';
 
 enum CostsGainsWizardStep { goal, journey, mileage, vehicle, fuel, platform }
 
 class CostsGainsWizardController extends GetxController {
+  CostsGainsWizardController({required this.saveCostsGainsSettingsUseCase});
+
+  final SaveCostsGainsSettingsUseCase saveCostsGainsSettingsUseCase;
   final currentStep = 0.obs;
   final selectedPlatformFeeType = PlatformFeeType.fixed.obs;
   final isSubmitting = false.obs;
@@ -55,19 +59,19 @@ class CostsGainsWizardController extends GetxController {
 
     final draft = Get.arguments is CostsGainsDraft
         ? Get.arguments as CostsGainsDraft
-        : CostsGainsDraft.defaults();
+        : CostsGainsDraft.empty();
 
     desiredProfitController = TextEditingController(
       text: _formatCurrencyFromCents(draft.desiredNetProfitCents),
     );
     workDaysController = TextEditingController(
-      text: '${draft.workDaysPerWeek}',
+      text: _formatInt(draft.workDaysPerWeek),
     );
     workHoursController = TextEditingController(
-      text: draft.workHoursPerDay.toStringAsFixed(1).replaceAll('.', ','),
+      text: _formatDecimal(draft.workHoursPerDay),
     );
     kmPerDayController = TextEditingController(
-      text: draft.kmPerDay.toStringAsFixed(0),
+      text: _formatWholeNumber(draft.kmPerDay),
     );
     financeController = TextEditingController(
       text: _formatCurrencyFromCents(draft.financeOrRentMonthlyCents),
@@ -85,11 +89,13 @@ class CostsGainsWizardController extends GetxController {
       text: _formatCurrencyFromCents(draft.fuelPricePerLiterCents),
     );
     kmPerLiterController = TextEditingController(
-      text: draft.kmPerLiter.toStringAsFixed(1).replaceAll('.', ','),
+      text: _formatDecimal(draft.kmPerLiter),
     );
     selectedPlatformFeeType.value = draft.platformFeeType;
     platformFeeController = TextEditingController(
-      text: draft.platformFeeType == PlatformFeeType.fixed
+      text: draft.platformFeeValue <= 0
+          ? ''
+          : draft.platformFeeType == PlatformFeeType.fixed
           ? _formatCurrencyValue(draft.platformFeeValue)
           : _formatDecimal(draft.platformFeeValue),
     );
@@ -140,17 +146,27 @@ class CostsGainsWizardController extends GetxController {
 
     isSubmitting.value = true;
     final draft = buildDraft();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    final result = await saveCostsGainsSettingsUseCase(
+      draft.toEntity(userId: 0),
+    );
     isSubmitting.value = false;
-    CostsGainsFlowCoordinator.openResult(draft);
+    result.fold(
+      (failure) => AppSnackbar.show(
+        'Erro ao salvar',
+        failure.message,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+      ),
+      (entity) => CostsGainsFlowCoordinator.openResult(
+        CostsGainsDraft.fromEntity(entity),
+      ),
+    );
   }
 
   void updatePlatformFeeType(PlatformFeeType type) {
     if (selectedPlatformFeeType.value == type) return;
     selectedPlatformFeeType.value = type;
-    platformFeeController.text = type == PlatformFeeType.fixed
-        ? _formatCurrencyValue(800)
-        : _formatDecimal(10);
+    platformFeeController.clear();
   }
 
   CostsGainsDraft buildDraft() {
@@ -271,15 +287,28 @@ class CostsGainsWizardController extends GetxController {
   }
 
   String _formatCurrencyFromCents(int cents) {
+    if (cents <= 0) return '';
     return currencyFormatter.formatString((cents / 100).toStringAsFixed(2));
   }
 
   String _formatCurrencyValue(double value) {
+    if (value <= 0) return '';
     return currencyFormatter.formatString(value.toStringAsFixed(2));
   }
 
   String _formatDecimal(double value) {
+    if (value <= 0) return '';
     return value.toStringAsFixed(1).replaceAll('.', ',');
+  }
+
+  String _formatWholeNumber(double value) {
+    if (value <= 0) return '';
+    return value.toStringAsFixed(0);
+  }
+
+  String _formatInt(int value) {
+    if (value <= 0) return '';
+    return '$value';
   }
 }
 

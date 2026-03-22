@@ -1,46 +1,43 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/feedback/app_snackbar.dart';
+import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../routes/app_pages.dart';
 import 'costs_gains_draft.dart';
 import 'costs_gains_flow_coordinator.dart';
 
-enum CostsGainsSettingsTab { resultado, semaforo }
-
 class CostsGainsSettingsController extends GetxController {
-  final selectedTab = CostsGainsSettingsTab.resultado.obs;
-  late final CostsGainsDraft draft;
+  CostsGainsSettingsController({required this.getCostsGainsSettingsUseCase});
+
+  final GetCostsGainsSettingsUseCase getCostsGainsSettingsUseCase;
+  final isLoading = false.obs;
+  final draft = CostsGainsDraft.empty().obs;
 
   @override
   void onInit() {
     super.onInit();
     final argument = Get.arguments;
-    draft = argument is CostsGainsDraft ? argument : CostsGainsDraft.defaults();
+    if (argument is CostsGainsDraft) {
+      draft.value = argument;
+      return;
+    }
+
+    _loadSettings();
   }
 
-  double get monthlyGoal => draft.grossMonthlyGoal;
-  double get targetNetProfit => draft.desiredNetProfit;
-  double get weeklyTarget => draft.weeklyTarget;
-  double get dailyTarget => draft.dailyTarget;
-  double get perKmTarget => draft.perKmTarget;
-  double get perHourTarget => draft.perHourTarget;
-  double get fixedMonthlyCosts => draft.fixedMonthlyCosts;
-  double get estimatedFuel => draft.estimatedFuel;
-  double get platformFee => draft.platformFeeAmount;
-  double get totalCosts => draft.totalCosts;
-  String get platformLabel => draft.platformLabel;
-
-  void selectTab(CostsGainsSettingsTab tab) {
-    selectedTab.value = tab;
-  }
+  double get monthlyGoal => draft.value.grossMonthlyGoal;
+  double get targetNetProfit => draft.value.desiredNetProfit;
+  double get weeklyTarget => draft.value.weeklyTarget;
+  double get dailyTarget => draft.value.dailyTarget;
+  double get perKmTarget => draft.value.perKmTarget;
+  double get perHourTarget => draft.value.perHourTarget;
+  double get fixedMonthlyCosts => draft.value.fixedMonthlyCosts;
+  double get estimatedFuel => draft.value.estimatedFuel;
+  double get platformFee => draft.value.platformFeeAmount;
+  double get totalCosts => draft.value.totalCosts;
+  String get platformLabel => draft.value.platformLabel;
 
   void applyToTrafficLight() {
-    selectedTab.value = CostsGainsSettingsTab.semaforo;
-    _showInfo(
-      'Semaforo preparado',
-      'Visual de custos aplicado na aba de semaforo para esta demonstracao.',
-    );
+    Get.toNamed(AppRoutes.trafficLightSettings, arguments: draft.value);
   }
 
   void openTrafficLightSettings() {
@@ -48,15 +45,20 @@ class CostsGainsSettingsController extends GetxController {
   }
 
   void openAdjustCosts() {
-    CostsGainsFlowCoordinator.openWizard(draft);
+    CostsGainsFlowCoordinator.openWizard(draft.value);
   }
 
-  void _showInfo(String title, String message) {
-    AppSnackbar.show(
-      title,
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(16),
+  Future<void> _loadSettings() async {
+    isLoading.value = true;
+    final result = await getCostsGainsSettingsUseCase();
+    result.fold(
+      (failure) => CostsGainsFlowCoordinator.showLoadFailure(failure.message),
+      (entity) {
+        if (entity != null) {
+          draft.value = CostsGainsDraft.fromEntity(entity);
+        }
+      },
     );
+    isLoading.value = false;
   }
 }

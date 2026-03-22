@@ -94,6 +94,7 @@ model User {
   transactions    Transaction[]
   shifts          Shift[]
   rides           Ride[]
+  costsGainsSettings CostsGainsSettings?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 }
@@ -295,6 +296,28 @@ model Ride {
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([shiftId])
+}
+
+model CostsGainsSettings {
+  id                        Int             @id @default(autoincrement())
+  userId                    Int             @unique
+  desiredMonthlyProfitCents Int
+  workDaysPerWeek           Int
+  workHoursPerDay           Float
+  kmPerDay                  Float
+  financeOrRentMonthlyCents Int
+  insuranceMonthlyCents     Int
+  maintenanceMonthlyCents   Int
+  annualTaxesCents          Int
+  fuelPricePerLiterCents    Int
+  kmPerLiter                Float
+  platformFeeType           String
+  platformFeeValue          Float
+  user                      User            @relation(fields: [userId], references: [id])
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+
+  @@index([userId])
 }
 
 model CreditCardInvoice {

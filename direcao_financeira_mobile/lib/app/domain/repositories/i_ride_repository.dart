@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
+import '../entities/detected_ride_draft_entity.dart';
 import '../entities/ride_entity.dart';
 
 abstract class IRideRepository {
@@ -8,4 +9,8 @@ abstract class IRideRepository {
     String? date,
     String? endDate,
   });
+
+  Future<Either<Failure, Unit>> createDetectedRide(
+    DetectedRideDraftEntity ride,
+  );
 }

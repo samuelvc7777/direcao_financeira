@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../../domain/entities/detected_ride_draft_entity.dart';
+import '../../domain/usecases/create_detected_ride_usecase.dart';
 import 'accessibility_service.dart';
 
 class AccessibilityController extends GetxController
@@ -166,7 +168,119 @@ class AccessibilityController extends GetxController
       lastRaceData.value = data;
 
       developer.log('Corrida detectada pelo Accessibility Service: $data');
+      await _persistDetectedRide(data);
     }
+  }
+
+  Future<void> _persistDetectedRide(Map<String, dynamic> data) async {
+    if (!Get.isRegistered<CreateDetectedRideUseCase>()) {
+      return;
+    }
+
+    final ride = _mapDetectedRide(data);
+    if (ride == null) {
+      return;
+    }
+
+    final result = await Get.find<CreateDetectedRideUseCase>()(ride);
+    result.fold(
+      (failure) => developer.log(
+        'Erro ao salvar corrida detectada no Supabase: ${failure.message}',
+      ),
+      (_) => developer.log('Corrida detectada salva como PENDING.'),
+    );
+  }
+
+  DetectedRideDraftEntity? _mapDetectedRide(Map<String, dynamic> data) {
+    final grossValueCents = _parseCurrencyToCents(data['valor_bruto']);
+    final totalKm = _toDouble(data['km_total']);
+    final totalMinutes = _toInt(data['minutos_total']);
+
+    if (grossValueCents <= 0 || (totalKm <= 0 && totalMinutes <= 0)) {
+      return null;
+    }
+
+    return DetectedRideDraftEntity(
+      paymentMethod: _mapPaymentMethod(data['forma_pagamento']),
+      grossValueCents: grossValueCents,
+      netProfitCents: 0,
+      totalKm: totalKm,
+      totalTimeSeconds: totalMinutes * 60,
+      passengerName: _resolvePassengerName(data),
+      originAddress: null,
+      destinationAddress: null,
+    );
+  }
+
+  int _parseCurrencyToCents(dynamic rawValue) {
+    final text = rawValue?.toString().trim() ?? '';
+    if (text.isEmpty) {
+      return 0;
+    }
+
+    final normalized = text
+        .replaceAll(RegExp(r'[^0-9,\.]'), '')
+        .replaceAll('.', '')
+        .replaceAll(',', '.');
+    final value = double.tryParse(normalized) ?? 0.0;
+    return (value * 100).round();
+  }
+
+  double _toDouble(dynamic rawValue) {
+    if (rawValue is num) {
+      return rawValue.toDouble();
+    }
+
+    final text = rawValue?.toString().trim().replaceAll(',', '.') ?? '';
+    return double.tryParse(text) ?? 0.0;
+  }
+
+  int _toInt(dynamic rawValue) {
+    if (rawValue is int) {
+      return rawValue;
+    }
+
+    if (rawValue is num) {
+      return rawValue.round();
+    }
+
+    final text = rawValue?.toString().trim().replaceAll(',', '.') ?? '';
+    return double.tryParse(text)?.round() ?? 0;
+  }
+
+  String _mapPaymentMethod(dynamic rawValue) {
+    final normalized = rawValue?.toString().trim().toLowerCase() ?? '';
+
+    if (normalized.contains('pix')) {
+      return 'PIX';
+    }
+    if (normalized.contains('dinheiro') || normalized.contains('cash')) {
+      return 'CASH';
+    }
+    if (normalized.contains('cart')) {
+      return 'CARD';
+    }
+
+    return 'APP';
+  }
+
+  String? _resolvePassengerName(Map<String, dynamic> data) {
+    final profile = data['perfil_passageiro']?.toString().trim();
+    if (profile != null && profile.isNotEmpty) {
+      return profile;
+    }
+
+    final driver = data['motorista']?.toString().trim();
+    if (driver == null || driver.isEmpty) {
+      return null;
+    }
+
+    final lower = driver.toLowerCase();
+    if (lower == '99' || lower == 'movesj' || lower == 'motorista') {
+      return null;
+    }
+
+    return driver;
   }
 
   Future<void> checkServiceStatus() async {

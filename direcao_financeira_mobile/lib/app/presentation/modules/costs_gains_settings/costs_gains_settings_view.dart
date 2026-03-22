@@ -3,9 +3,7 @@ import 'package:get/get.dart';
 
 import '../../widgets/custom_app_bar.dart';
 import 'costs_gains_settings_controller.dart';
-import 'widgets/costs_gains_settings_costs_tab.dart';
 import 'widgets/costs_gains_settings_result_tab.dart';
-import 'widgets/costs_gains_settings_tab_switcher.dart';
 
 class CostsGainsSettingsView extends GetView<CostsGainsSettingsController> {
   const CostsGainsSettingsView({super.key});
@@ -39,24 +37,21 @@ class CostsGainsSettingsView extends GetView<CostsGainsSettingsController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CostsGainsSettingsTabSwitcher(controller: controller),
-                      const SizedBox(height: 10),
-                      Obx(
-                        () => AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          child:
-                              controller.selectedTab.value ==
-                                  CostsGainsSettingsTab.resultado
-                              ? CostsGainsSettingsResultTab(
-                                  key: const ValueKey('resultado'),
-                                  controller: controller,
-                                )
-                              : CostsGainsSettingsCostsTab(
-                                  key: const ValueKey('semaforo'),
-                                  controller: controller,
-                                ),
-                        ),
-                      ),
+                      Obx(() {
+                        if (controller.isLoading.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 48),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CostsGainsSettingsResultTab(controller: controller),
+                          ],
+                        );
+                      }),
                     ],
                   ),
                 ),

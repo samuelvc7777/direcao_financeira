@@ -6,7 +6,14 @@ import 'package:flutter/services.dart';
 class ScaleButton extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
-  const ScaleButton({super.key, required this.onTap, required this.child});
+  final bool enableHaptic;
+
+  const ScaleButton({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.enableHaptic = true,
+  });
 
   @override
   State<ScaleButton> createState() => _ScaleButtonState();
@@ -21,7 +28,9 @@ class _ScaleButtonState extends State<ScaleButton> {
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
-        HapticFeedback.lightImpact();
+        if (widget.enableHaptic) {
+          HapticFeedback.lightImpact();
+        }
         widget.onTap();
       },
       onTapCancel: () => setState(() => _isPressed = false),

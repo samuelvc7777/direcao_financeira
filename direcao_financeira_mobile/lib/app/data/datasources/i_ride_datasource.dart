@@ -1,3 +1,4 @@
+import '../../domain/entities/detected_ride_draft_entity.dart';
 import '../models/ride_model.dart';
 
 abstract class IRideDataSource {
@@ -6,4 +7,6 @@ abstract class IRideDataSource {
     String? date,
     String? endDate,
   });
+
+  Future<void> createDetectedRide(DetectedRideDraftEntity ride);
 }

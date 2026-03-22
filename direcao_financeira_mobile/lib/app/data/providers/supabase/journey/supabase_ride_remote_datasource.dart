@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../datasources/i_ride_datasource.dart';
+import '../../../../domain/entities/detected_ride_draft_entity.dart';
 import '../../../models/ride_model.dart';
 import '../shared/supabase_table_names.dart';
 import '../shared/supabase_time_filter.dart';
@@ -37,5 +38,26 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
     return (rows as List)
         .map((row) => RideModel.fromJson(Map<String, dynamic>.from(row as Map)))
         .toList();
+  }
+
+  @override
+  Future<void> createDetectedRide(DetectedRideDraftEntity ride) async {
+    final userId = await userScope.getCurrentUserId();
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    await client.from(SupabaseTableNames.rides).insert({
+      'userId': userId,
+      'status': 'PENDING',
+      'paymentMethod': ride.paymentMethod,
+      'grossValueCents': ride.grossValueCents,
+      'netProfitCents': ride.netProfitCents,
+      'totalKm': ride.totalKm,
+      'totalTime': ride.totalTimeSeconds,
+      'passengerName': ride.passengerName,
+      'originAddress': ride.originAddress,
+      'destinationAddress': ride.destinationAddress,
+      'createdAt': now,
+      'updatedAt': now,
+    });
   }
 }

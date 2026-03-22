@@ -30,6 +30,14 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
             SizedBox(height: Responsive.vp(context, 2)),
             const _PreviewCard(),
             SizedBox(height: Responsive.vp(context, 2.6)),
+            _buildSectionHeader(
+              context,
+              'Limites do Semaforo',
+              icon: Icons.traffic_rounded,
+            ),
+            SizedBox(height: Responsive.vp(context, 1.2)),
+            const _ThresholdsSection(),
+            SizedBox(height: Responsive.vp(context, 2.6)),
             Obx(
               () => _buildSectionHeader(
                 context,
@@ -159,10 +167,10 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
       final baseFontSize = controller.fontSize.value;
       final activeIndicators = controller.orderedActiveIndicators;
       final indicatorValues = <String, String>{
-        'R\$/Km': '2.35',
-        'R\$/Hora': '52.8',
-        'Nota': '4.92',
-        'Lucro/H': '38.9',
+        'R\$/Km': controller.gainPerKmGood.value.toStringAsFixed(2),
+        'R\$/Hora': controller.gainPerHourGood.value.toStringAsFixed(2),
+        'Nota': controller.passengerRatingGood.value.toStringAsFixed(1),
+        'Lucro/H': controller.gainPerHourGood.value.toStringAsFixed(2),
       };
 
       return Container(
@@ -672,6 +680,295 @@ class _TrafficLightPreviewTheme {
   }
 
   Color indicatorColor(String label) => indicatorColors[label] ?? borderColor;
+}
+
+class _ThresholdsSection extends GetView<TrafficLightSettingsController> {
+  const _ThresholdsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _ThresholdEditorCard(
+          title: 'Ganho por KM',
+          subtitle: 'Valores por km rodado',
+          icon: Icons.alt_route_rounded,
+          accent: const Color(0xFF10B981),
+          badLabel: 'Ruim',
+          goodLabel: 'Bom',
+          badController: controller.gainPerKmBadController,
+          goodController: controller.gainPerKmGoodController,
+          onBadDecrement: controller.decrementGainPerKmBad,
+          onBadIncrement: controller.incrementGainPerKmBad,
+          onGoodDecrement: controller.decrementGainPerKmGood,
+          onGoodIncrement: controller.incrementGainPerKmGood,
+          onBadSubmitted: controller.updateGainPerKmBad,
+          onGoodSubmitted: controller.updateGainPerKmGood,
+        ),
+        SizedBox(height: Responsive.vp(context, 1.2)),
+        _ThresholdEditorCard(
+          title: 'Ganho por Hora',
+          subtitle: 'Valores por hora trabalhada',
+          icon: Icons.schedule_rounded,
+          accent: Colors.deepPurpleAccent,
+          badLabel: 'Ruim',
+          goodLabel: 'Bom',
+          badController: controller.gainPerHourBadController,
+          goodController: controller.gainPerHourGoodController,
+          onBadDecrement: controller.decrementGainPerHourBad,
+          onBadIncrement: controller.incrementGainPerHourBad,
+          onGoodDecrement: controller.decrementGainPerHourGood,
+          onGoodIncrement: controller.incrementGainPerHourGood,
+          onBadSubmitted: controller.updateGainPerHourBad,
+          onGoodSubmitted: controller.updateGainPerHourGood,
+        ),
+        SizedBox(height: Responsive.vp(context, 1.2)),
+        _ThresholdEditorCard(
+          title: 'Avaliacao do Passageiro',
+          subtitle: 'Nota minima ideal',
+          icon: Icons.person_rounded,
+          accent: Colors.amber,
+          badLabel: 'Ruim',
+          goodLabel: 'Bom',
+          badController: controller.passengerRatingBadController,
+          goodController: controller.passengerRatingGoodController,
+          onBadDecrement: controller.decrementPassengerRatingBad,
+          onBadIncrement: controller.incrementPassengerRatingBad,
+          onGoodDecrement: controller.decrementPassengerRatingGood,
+          onGoodIncrement: controller.incrementPassengerRatingGood,
+          onBadSubmitted: controller.updatePassengerRatingBad,
+          onGoodSubmitted: controller.updatePassengerRatingGood,
+        ),
+      ],
+    );
+  }
+}
+
+class _ThresholdEditorCard extends StatelessWidget {
+  const _ThresholdEditorCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accent,
+    required this.badLabel,
+    required this.goodLabel,
+    required this.badController,
+    required this.goodController,
+    required this.onBadDecrement,
+    required this.onBadIncrement,
+    required this.onGoodDecrement,
+    required this.onGoodIncrement,
+    required this.onBadSubmitted,
+    required this.onGoodSubmitted,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final String badLabel;
+  final String goodLabel;
+  final TextEditingController badController;
+  final TextEditingController goodController;
+  final VoidCallback onBadDecrement;
+  final VoidCallback onBadIncrement;
+  final VoidCallback onGoodDecrement;
+  final VoidCallback onGoodIncrement;
+  final ValueChanged<String> onBadSubmitted;
+  final ValueChanged<String> onGoodSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(Responsive.sp(context, 14)),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 18)),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: Responsive.sp(context, 34),
+                height: Responsive.sp(context, 34),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(
+                    Responsive.sp(context, 12),
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: accent,
+                  size: Responsive.sp(context, 18),
+                ),
+              ),
+              SizedBox(width: Responsive.sp(context, 10)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: Responsive.sp(context, 16),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: Responsive.sp(context, 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: Responsive.vp(context, 1.4)),
+          Row(
+            children: [
+              Expanded(
+                child: _ThresholdValueBox(
+                  label: badLabel,
+                  controller: badController,
+                  borderColor: Colors.redAccent,
+                  onDecrement: onBadDecrement,
+                  onIncrement: onBadIncrement,
+                  onSubmitted: onBadSubmitted,
+                ),
+              ),
+              SizedBox(width: Responsive.sp(context, 10)),
+              Expanded(
+                child: _ThresholdValueBox(
+                  label: goodLabel,
+                  controller: goodController,
+                  borderColor: Colors.greenAccent,
+                  onDecrement: onGoodDecrement,
+                  onIncrement: onGoodIncrement,
+                  onSubmitted: onGoodSubmitted,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThresholdValueBox extends StatelessWidget {
+  const _ThresholdValueBox({
+    required this.label,
+    required this.controller,
+    required this.borderColor,
+    required this.onDecrement,
+    required this.onIncrement,
+    required this.onSubmitted,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final Color borderColor;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: Responsive.sp(context, 12),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        SizedBox(height: Responsive.vp(context, 0.8)),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: Responsive.sp(context, 10),
+            vertical: Responsive.sp(context, 8),
+          ),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(Responsive.sp(context, 14)),
+            border: Border.all(color: borderColor.withValues(alpha: 0.45)),
+          ),
+          child: Row(
+            children: [
+              _ThresholdIconButton(
+                icon: Icons.remove_rounded,
+                color: borderColor,
+                onTap: onDecrement,
+              ),
+              SizedBox(width: Responsive.sp(context, 8)),
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  onSubmitted: onSubmitted,
+                  onEditingComplete: () => onSubmitted(controller.text),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: Responsive.sp(context, 15),
+                    fontWeight: FontWeight.w800,
+                  ),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              SizedBox(width: Responsive.sp(context, 8)),
+              _ThresholdIconButton(
+                icon: Icons.add_rounded,
+                color: borderColor,
+                onTap: onIncrement,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThresholdIconButton extends StatelessWidget {
+  const _ThresholdIconButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Padding(
+        padding: EdgeInsets.all(Responsive.sp(context, 2)),
+        child: Icon(icon, color: color, size: Responsive.sp(context, 20)),
+      ),
+    );
+  }
 }
 
 class _GridPainter extends CustomPainter {
