@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../domain/entities/plan_entity.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_filled_button.dart';
 import 'subscription_controller.dart';
@@ -85,14 +86,34 @@ class _CurrentSubscriptionCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Ative ou renove seu plano para continuar com os recursos premium.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.72), height: 1.5),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.72),
+                height: 1.5,
+              ),
             ),
+            if (controller.usesPlayStoreBilling) ...[
+              const SizedBox(height: 14),
+              Text(
+                'No Android, o checkout agora acontece pela Google Play.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.62),
+                  height: 1.4,
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             Obx(
               () => CustomFilledButton(
-                text: 'RENOVAR ASSINATURA',
-                isLoading: controller.isActionLoading.value,
-                onPressed: () => controller.renewSubscription(autoRenew: true),
+                text: controller.usesPlayStoreBilling
+                    ? controller.ctaLabelForSelectedPlan()
+                    : 'RENOVAR ASSINATURA',
+                isLoading:
+                    controller.isPurchaseLoading.value ||
+                    controller.isStoreSyncingPurchase.value ||
+                    controller.isActionLoading.value,
+                onPressed: controller.usesPlayStoreBilling
+                    ? controller.purchaseSelectedPlan
+                    : () => controller.renewSubscription(autoRenew: true),
               ),
             ),
           ],
@@ -123,9 +144,14 @@ class _CurrentSubscriptionCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: controller.statusColor(subscription.status).withValues(alpha: 0.18),
+                  color: controller
+                      .statusColor(subscription.status)
+                      .withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -149,7 +175,10 @@ class _CurrentSubscriptionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             plan?.description ?? 'Sem descricao disponivel.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.74), height: 1.5),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.74),
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 18),
           Wrap(
@@ -159,7 +188,9 @@ class _CurrentSubscriptionCard extends StatelessWidget {
               _InfoBadge(
                 icon: Icons.payments_outlined,
                 label: 'Preco',
-                value: controller.formatPrice(plan?.priceCents ?? 0),
+                value: plan == null
+                    ? controller.formatPrice(0)
+                    : controller.planPriceLabel(plan),
               ),
               _InfoBadge(
                 icon: Icons.event_outlined,
@@ -173,17 +204,52 @@ class _CurrentSubscriptionCard extends StatelessWidget {
               ),
             ],
           ),
+          if (controller.usesPlayStoreBilling) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.shop_2_outlined, color: AppColors.aqua),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Compras e renovacoes no Android passam pela Google Play.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           Obx(
             () => Row(
               children: [
                 Expanded(
                   child: CustomFilledButton(
-                    text: subscription.autoRenew ? 'ATUALIZAR' : 'RENOVAR',
-                    isLoading: controller.isActionLoading.value,
-                    onPressed: () => controller.renewSubscription(
-                      autoRenew: !subscription.autoRenew,
-                    ),
+                    text: controller.usesPlayStoreBilling
+                        ? 'RENOVAR NA PLAY'
+                        : subscription.autoRenew
+                        ? 'ATUALIZAR'
+                        : 'RENOVAR',
+                    isLoading:
+                        controller.isPurchaseLoading.value ||
+                        controller.isStoreSyncingPurchase.value ||
+                        controller.isActionLoading.value,
+                    onPressed: controller.usesPlayStoreBilling
+                        ? controller.purchaseSelectedPlan
+                        : () => controller.renewSubscription(
+                            autoRenew: !subscription.autoRenew,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -229,7 +295,10 @@ class _PlansSection extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'A API deste ambiente nao retornou uma lista de planos disponiveis.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), height: 1.5),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -243,7 +312,7 @@ class _PlansSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Trocar de plano',
+            'Planos',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -252,9 +321,18 @@ class _PlansSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Selecione uma opcao para atualizar sua assinatura.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), height: 1.5),
+            controller.usesPlayStoreBilling
+                ? 'Selecione um plano para comprar ou renovar pela Google Play.'
+                : 'Selecione uma opcao para atualizar sua assinatura.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              height: 1.5,
+            ),
           ),
+          if (controller.usesPlayStoreBilling) ...[
+            const SizedBox(height: 14),
+            _StoreInfoBanner(controller: controller),
+          ],
           const SizedBox(height: 16),
           ...controller.plans.map(
             (plan) => Obx(
@@ -279,62 +357,14 @@ class _PlansSection extends StatelessWidget {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      plan.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                  if (controller.isCurrentPlan(plan))
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.aqua.withValues(alpha: 0.16),
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      child: const Text(
-                                        'Atual',
-                                        style: TextStyle(
-                                          color: AppColors.aqua,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                plan.description,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  height: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                '${controller.formatPrice(plan.priceCents)} / ${plan.durationDays} dias',
-                                style: const TextStyle(
-                                  color: AppColors.sand,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                          child: _PlanTileContent(
+                            controller: controller,
+                            plan: plan,
                           ),
                         ),
                         _PlanSelectionIndicator(
-                          isSelected: controller.selectedPlanId.value == plan.id,
+                          isSelected:
+                              controller.selectedPlanId.value == plan.id,
                           color: _parsePlanColor(plan.color),
                         ),
                       ],
@@ -347,11 +377,175 @@ class _PlansSection extends StatelessWidget {
           const SizedBox(height: 8),
           Obx(
             () => CustomFilledButton(
-              text: 'ALTERAR PLANO',
-              isLoading: controller.isActionLoading.value,
-              onPressed: controller.changePlan,
+              text: controller.ctaLabelForSelectedPlan(),
+              icon: controller.usesPlayStoreBilling
+                  ? Icons.shop_2_outlined
+                  : null,
+              isLoading:
+                  controller.isActionLoading.value ||
+                  controller.isPurchaseLoading.value ||
+                  controller.isStoreSyncingPurchase.value,
+              onPressed: controller.purchaseSelectedPlan,
             ),
           ),
+          if (controller.usesPlayStoreBilling) ...[
+            const SizedBox(height: 12),
+            Obx(
+              () => CustomFilledButton(
+                text: 'RESTAURAR COMPRAS',
+                backgroundColor: AppColors.surfaceDark,
+                isLoading: controller.isRestoringPurchases.value,
+                onPressed: controller.restorePurchases,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanTileContent extends StatelessWidget {
+  const _PlanTileContent({required this.controller, required this.plan});
+
+  final SubscriptionController controller;
+  final PlanEntity plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasStoreProduct = controller.hasStoreProductForPlan(plan);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                plan.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (controller.isCurrentPlan(plan))
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.aqua.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'Atual',
+                  style: TextStyle(
+                    color: AppColors.aqua,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          plan.description,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              '${controller.planPriceLabel(plan)} / ${plan.durationDays} dias',
+              style: const TextStyle(
+                color: AppColors.sand,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (controller.usesPlayStoreBilling)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: hasStoreProduct
+                      ? AppColors.teal.withValues(alpha: 0.16)
+                      : AppColors.rust.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  hasStoreProduct ? 'Google Play' : 'Sem productId',
+                  style: TextStyle(
+                    color: hasStoreProduct ? AppColors.aqua : AppColors.sand,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StoreInfoBanner extends StatelessWidget {
+  const _StoreInfoBanner({required this.controller});
+
+  final SubscriptionController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.shop_2_outlined, color: AppColors.aqua, size: 18),
+              SizedBox(width: 10),
+              Text(
+                'Google Play conectada',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          if (controller.isStoreCatalogLoading.value) ...[
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(
+              minHeight: 4,
+              color: AppColors.aqua,
+              backgroundColor: Colors.white24,
+            ),
+          ],
+          if (controller.storeErrorMessage.value != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              controller.storeErrorMessage.value!,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.72),
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -426,11 +620,15 @@ class _HistorySection extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           'Inicio: ${controller.formatDate(subscription.startDate)}',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.68),
+                          ),
                         ),
                         Text(
                           'Fim: ${controller.formatDate(subscription.endDate)}',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.68),
+                          ),
                         ),
                       ],
                     ),
@@ -472,7 +670,10 @@ class _InfoBadge extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.62), fontSize: 12),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.62),
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -512,21 +713,14 @@ class _PlanSelectionIndicator extends StatelessWidget {
         ),
       ),
       child: isSelected
-          ? const Icon(
-              Icons.check,
-              size: 14,
-              color: Colors.white,
-            )
+          ? const Icon(Icons.check, size: 14, color: Colors.white)
           : null,
     );
   }
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -553,7 +747,10 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               message,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), height: 1.5),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
@@ -574,7 +771,9 @@ class _ErrorState extends StatelessWidget {
 BoxDecoration _panelDecoration({Gradient? gradient}) {
   return BoxDecoration(
     gradient: gradient,
-    color: gradient == null ? AppColors.surfaceDark.withValues(alpha: 0.92) : null,
+    color: gradient == null
+        ? AppColors.surfaceDark.withValues(alpha: 0.92)
+        : null,
     borderRadius: BorderRadius.circular(28),
     border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
   );

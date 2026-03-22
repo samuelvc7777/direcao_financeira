@@ -28,6 +28,7 @@ class BankAccountRepository implements IBankAccountRepository {
   Future<Either<Failure, BankAccountEntity>> createBankAccount({
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   }) async {
@@ -36,6 +37,7 @@ class BankAccountRepository implements IBankAccountRepository {
         await dataSource.createBankAccount(
           name: name,
           bankName: bankName,
+          color: color,
           accountType: accountType,
           initialBalanceCents: initialBalanceCents,
         ),
@@ -54,6 +56,7 @@ class BankAccountRepository implements IBankAccountRepository {
     required int id,
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,
@@ -64,6 +67,7 @@ class BankAccountRepository implements IBankAccountRepository {
           id: id,
           name: name,
           bankName: bankName,
+          color: color,
           accountType: accountType,
           initialBalanceCents: initialBalanceCents,
           isActive: isActive,

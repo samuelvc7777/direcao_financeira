@@ -23,7 +23,9 @@ export class PrismaUserRepository implements UserRepository {
     },
   };
 
-  async create(data: CreateUserDto & { password: string }): Promise<UserWithSubscriptions> {
+  async create(
+    data: CreateUserDto & { password: string },
+  ): Promise<UserWithSubscriptions> {
     try {
       const { planId, ...userData } = data;
 
@@ -71,7 +73,10 @@ export class PrismaUserRepository implements UserRepository {
     });
   }
 
-  update(id: number, data: Omit<UpdateUserDto, 'planId'>): Promise<UserWithSubscriptions> {
+  update(
+    id: number,
+    data: Omit<UpdateUserDto, 'planId'>,
+  ): Promise<UserWithSubscriptions> {
     return this.prisma.client.user.update({
       where: { id },
       data,

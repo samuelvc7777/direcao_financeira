@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/network/connection_controller.dart';
 import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
@@ -53,6 +54,25 @@ class HomeController extends GetxController {
     super.onInit();
     _loadUserData();
     loadDashboardData();
+    _setupSocketListeners();
+  }
+
+  void _setupSocketListeners() {
+    try {
+      final connection = Get.find<ConnectionController>();
+      connection.socket?.on('transaction.created', (_) {
+        loadDashboardData(silent: true);
+      });
+    } catch (_) {}
+  }
+
+  @override
+  void onClose() {
+    try {
+      final connection = Get.find<ConnectionController>();
+      connection.socket?.off('transaction.created');
+    } catch (_) {}
+    super.onClose();
   }
 
   Future<void> loadDashboardData({bool silent = false}) async {
@@ -132,6 +152,9 @@ class HomeController extends GetxController {
   void openSubscription() => Get.toNamed(AppRoutes.subscription);
 
   Future<void> logout() async {
+    try {
+      Get.find<ConnectionController>().disconnect();
+    } catch (_) {}
     await logoutUseCase();
     Get.offAllNamed(AppRoutes.login);
   }

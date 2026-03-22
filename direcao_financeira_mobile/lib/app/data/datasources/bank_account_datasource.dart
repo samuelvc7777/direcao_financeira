@@ -8,6 +8,7 @@ abstract class IBankAccountDataSource {
   Future<BankAccountModel> createBankAccount({
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   });
@@ -15,6 +16,7 @@ abstract class IBankAccountDataSource {
     required int id,
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,
@@ -52,6 +54,7 @@ class BankAccountRemoteDataSource implements IBankAccountDataSource {
   Future<BankAccountModel> createBankAccount({
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   }) async {
@@ -60,6 +63,7 @@ class BankAccountRemoteDataSource implements IBankAccountDataSource {
       data: {
         'name': name,
         'bankName': bankName,
+        'color': color,
         'accountType': accountType.toApiValue(),
         'initialBalanceCents': initialBalanceCents,
       },
@@ -73,6 +77,7 @@ class BankAccountRemoteDataSource implements IBankAccountDataSource {
     required int id,
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,
@@ -80,6 +85,7 @@ class BankAccountRemoteDataSource implements IBankAccountDataSource {
     final data = <String, dynamic>{
       'name': name,
       'bankName': bankName,
+      'color': color,
       'accountType': accountType.toApiValue(),
       'initialBalanceCents': initialBalanceCents,
     };
@@ -94,10 +100,7 @@ class BankAccountRemoteDataSource implements IBankAccountDataSource {
 
   @override
   Future<void> deactivateBankAccount(int id) {
-    return dio.patch(
-      '/finance/bank-accounts/$id',
-      data: {'isActive': false},
-    );
+    return dio.delete('/finance/bank-accounts/$id');
   }
 
   @override

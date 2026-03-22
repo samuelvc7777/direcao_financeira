@@ -1,5 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { ChangePlanUseCase, RenewSubscriptionUseCase } from './subscription.use-cases';
+import {
+  ChangePlanUseCase,
+  RenewSubscriptionUseCase,
+} from './subscription.use-cases';
 import {
   SubscriptionDetails,
   SubscriptionRepository,
@@ -64,20 +67,23 @@ describe('Subscription use cases', () => {
 
   it('renew cria nova assinatura quando nao existe uma ativa e o ultimo plano segue ativo', async () => {
     subscriptionRepositoryMock.findActiveByUserId.mockResolvedValue(null);
-    subscriptionRepositoryMock.findLatestByUserId.mockResolvedValue(makeSubscription());
-    subscriptionRepositoryMock.createSubscription.mockImplementation(async (data) =>
-      makeSubscription({
-        id: 11,
-        userId: data.userId,
-        planId: data.planId,
-        status: 'ACTIVE',
-        startDate: data.startDate,
-        endDate: data.endDate,
-        canceledAt: null,
-        autoRenew: data.autoRenew,
-        createdAt: data.startDate,
-        updatedAt: data.startDate,
-      }),
+    subscriptionRepositoryMock.findLatestByUserId.mockResolvedValue(
+      makeSubscription(),
+    );
+    subscriptionRepositoryMock.createSubscription.mockImplementation(
+      async (data) =>
+        makeSubscription({
+          id: 11,
+          userId: data.userId,
+          planId: data.planId,
+          status: 'ACTIVE',
+          startDate: data.startDate,
+          endDate: data.endDate,
+          canceledAt: null,
+          autoRenew: data.autoRenew,
+          createdAt: data.startDate,
+          updatedAt: data.startDate,
+        }),
     );
 
     const useCase = new RenewSubscriptionUseCase(subscriptionRepositoryMock);

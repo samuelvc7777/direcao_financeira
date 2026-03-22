@@ -1,7 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  DASHBOARD_REPOSITORY,
-} from '../../domain/repositories/dashboard.repository';
+import { DASHBOARD_REPOSITORY } from '../../domain/repositories/dashboard.repository';
 import type { DashboardRepository } from '../../domain/repositories/dashboard.repository';
 
 @Injectable()

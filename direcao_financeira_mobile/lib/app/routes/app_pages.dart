@@ -19,9 +19,17 @@ import '../presentation/modules/bank_accounts/bank_accounts_view.dart';
 import '../presentation/modules/credit_cards/credit_cards_binding.dart';
 import '../presentation/modules/credit_cards/credit_cards_view.dart';
 import '../presentation/modules/transactions/transactions_binding.dart';
-import '../presentation/modules/transactions/views/expense_form_view.dart';
-import '../presentation/modules/transactions/views/income_form_view.dart';
+import '../presentation/modules/transactions/views/transaction_form_view.dart';
 import '../presentation/modules/transactions/views/credit_card_form_view.dart';
+import '../presentation/modules/journey/journey_view.dart';
+import '../presentation/modules/journey/journey_binding.dart';
+import '../presentation/modules/journey/operational_metrics_view.dart';
+import '../presentation/modules/journey/daily_statistics_view.dart';
+import '../presentation/modules/journey/shift_route_binding.dart';
+import '../presentation/modules/journey/shift_route_view.dart';
+import '../presentation/modules/traffic_light_settings/traffic_light_settings_view.dart';
+import '../presentation/modules/traffic_light_settings/traffic_light_settings_binding.dart';
+import '../domain/entities/transaction_entity.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -36,6 +44,11 @@ class AppRoutes {
   static const String transactionExpense = '/transactions/expense';
   static const String transactionIncome = '/transactions/income';
   static const String transactionCreditCard = '/transactions/credit-card';
+  static const String journey = '/journey';
+  static const String journeyMetrics = '/journey/metrics';
+  static const String shiftMetrics = '/journey/shift-metrics';
+  static const String shiftRoute = '/journey/shift-route';
+  static const String trafficLightSettings = '/traffic-light-settings';
 }
 
 class AppPages {
@@ -45,6 +58,34 @@ class AppPages {
       page: () => const LoginView(),
       binding: LoginBinding(),
       transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.journey,
+      page: () => const JourneyView(),
+      binding: JourneyBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.journeyMetrics,
+      page: () => const OperationalMetricsView(),
+      binding: JourneyBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.shiftMetrics,
+      page: () => const DailyStatisticsView(),
+      binding: JourneyBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.shiftRoute,
+      page: () => const ShiftRouteView(),
+      binding: ShiftRouteBinding(),
+      transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
@@ -105,22 +146,31 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.transactionExpense,
-      page: () => const ExpenseFormView(),
+      page: () => TransactionFormView(),
       binding: TransactionsBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
+      arguments: TransactionType.expense,
     ),
     GetPage(
       name: AppRoutes.transactionIncome,
-      page: () => const IncomeFormView(),
+      page: () => TransactionFormView(),
+      binding: TransactionsBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      arguments: TransactionType.income,
+    ),
+    GetPage(
+      name: AppRoutes.transactionCreditCard,
+      page: () => CreditCardFormView(),
       binding: TransactionsBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: AppRoutes.transactionCreditCard,
-      page: () => const CreditCardFormView(),
-      binding: TransactionsBinding(),
+      name: AppRoutes.trafficLightSettings,
+      page: () => const TrafficLightSettingsView(),
+      binding: TrafficLightSettingsBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

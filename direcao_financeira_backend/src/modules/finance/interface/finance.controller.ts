@@ -19,6 +19,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { CreateInvoicePaymentDto } from './dto/create-invoice-payment.dto';
+import { DeleteTransactionDto } from './dto/delete-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import type { AuthenticatedUser } from '../../auth/interface/types/authenticated-user.type';
 
 @Controller('finance')
@@ -31,7 +33,10 @@ export class FinanceController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateBankAccountDto,
   ) {
-    const account = await this.financeService.createBankAccount(user.userId, dto);
+    const account = await this.financeService.createBankAccount(
+      user.userId,
+      dto,
+    );
     return { message: 'Conta bancaria criada com sucesso.', account };
   }
 
@@ -46,7 +51,11 @@ export class FinanceController {
     @Param('id') id: string,
     @Body() dto: UpdateBankAccountDto,
   ) {
-    const account = await this.financeService.updateBankAccount(user.userId, +id, dto);
+    const account = await this.financeService.updateBankAccount(
+      user.userId,
+      +id,
+      dto,
+    );
     return { message: 'Conta bancaria atualizada com sucesso.', account };
   }
 
@@ -55,7 +64,10 @@ export class FinanceController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    const account = await this.financeService.deactivateBankAccount(user.userId, +id);
+    const account = await this.financeService.deactivateBankAccount(
+      user.userId,
+      +id,
+    );
     return { message: 'Conta bancaria desativada com sucesso.', account };
   }
 
@@ -79,7 +91,11 @@ export class FinanceController {
     @Param('id') id: string,
     @Body() dto: UpdateCreditCardDto,
   ) {
-    const card = await this.financeService.updateCreditCard(user.userId, +id, dto);
+    const card = await this.financeService.updateCreditCard(
+      user.userId,
+      +id,
+      dto,
+    );
     return { message: 'Cartao de credito atualizado com sucesso.', card };
   }
 
@@ -88,7 +104,10 @@ export class FinanceController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    const card = await this.financeService.deactivateCreditCard(user.userId, +id);
+    const card = await this.financeService.deactivateCreditCard(
+      user.userId,
+      +id,
+    );
     return { message: 'Cartao de credito desativado com sucesso.', card };
   }
 
@@ -112,7 +131,11 @@ export class FinanceController {
     @Param('id') id: string,
     @Body() dto: UpdateCategoryDto,
   ) {
-    const category = await this.financeService.updateCategory(user.userId, +id, dto);
+    const category = await this.financeService.updateCategory(
+      user.userId,
+      +id,
+      dto,
+    );
     return { message: 'Categoria atualizada com sucesso.', category };
   }
 
@@ -121,7 +144,10 @@ export class FinanceController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    const category = await this.financeService.deactivateCategory(user.userId, +id);
+    const category = await this.financeService.deactivateCategory(
+      user.userId,
+      +id,
+    );
     return { message: 'Categoria desativada com sucesso.', category };
   }
 
@@ -130,8 +156,11 @@ export class FinanceController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateTransactionDto,
   ) {
-    const transaction = await this.financeService.createTransaction(user.userId, dto);
-    return { message: 'Transacao criada com sucesso.', transaction };
+    const result = await this.financeService.createTransaction(
+      user.userId,
+      dto,
+    );
+    return { message: 'Transacao criada com sucesso.', ...result };
   }
 
   @Get('transactions')
@@ -139,13 +168,47 @@ export class FinanceController {
     return this.financeService.listTransactions(user.userId);
   }
 
+  @Patch('transactions/:id')
+  async updateTransaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    const result = await this.financeService.updateTransaction(
+      user.userId,
+      +id,
+      dto,
+    );
+    return { message: 'Transacao atualizada com sucesso.', ...result };
+  }
+
+  @Delete('transactions/:id')
+  async deleteTransaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: DeleteTransactionDto,
+  ) {
+    const result = await this.financeService.deleteTransaction(
+      user.userId,
+      +id,
+      dto,
+    );
+    return { message: 'Transacao excluida com sucesso.', ...result };
+  }
+
   @Get('transactions/:id')
-  findTransaction(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  findTransaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.financeService.findTransaction(user.userId, +id);
   }
 
   @Get('credit-cards/:id/invoices')
-  listCardInvoices(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  listCardInvoices(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.financeService.listCardInvoices(user.userId, +id);
   }
 
@@ -155,7 +218,11 @@ export class FinanceController {
     @Param('cardId') cardId: string,
     @Param('invoiceId') invoiceId: string,
   ) {
-    return this.financeService.findCardInvoice(user.userId, +cardId, +invoiceId);
+    return this.financeService.findCardInvoice(
+      user.userId,
+      +cardId,
+      +invoiceId,
+    );
   }
 
   @Post('invoices/:invoiceId/payments')
@@ -164,7 +231,11 @@ export class FinanceController {
     @Param('invoiceId') invoiceId: string,
     @Body() dto: CreateInvoicePaymentDto,
   ) {
-    const payment = await this.financeService.payInvoice(user.userId, +invoiceId, dto);
+    const payment = await this.financeService.payInvoice(
+      user.userId,
+      +invoiceId,
+      dto,
+    );
     return { message: 'Pagamento de fatura registrado com sucesso.', payment };
   }
 }

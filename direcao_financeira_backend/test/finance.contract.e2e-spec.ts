@@ -22,6 +22,8 @@ describe('Finance contract (e2e)', () => {
     updateCategory: jest.fn(),
     deactivateCategory: jest.fn(),
     createTransaction: jest.fn(),
+    updateTransaction: jest.fn(),
+    deleteTransaction: jest.fn(),
     listTransactions: jest.fn(),
     findTransaction: jest.fn(),
     listCardInvoices: jest.fn(),
@@ -67,10 +69,21 @@ describe('Finance contract (e2e)', () => {
 
   it('POST /finance/transactions preserva mensagem e payload', async () => {
     financeServiceMock.createTransaction.mockResolvedValue({
-      id: 123,
-      description: 'Mercado',
-      amountCents: 2590,
-      status: 'CLEARED',
+      transaction: {
+        id: 123,
+        description: 'Mercado',
+        amountCents: 2590,
+        status: 'CLEARED',
+      },
+      transactions: [
+        {
+          id: 123,
+          description: 'Mercado',
+          amountCents: 2590,
+          status: 'CLEARED',
+        },
+      ],
+      installmentGroupId: null,
     });
 
     const payload = {
@@ -88,7 +101,10 @@ describe('Finance contract (e2e)', () => {
       .send(payload)
       .expect(201);
 
-    expect(financeServiceMock.createTransaction).toHaveBeenCalledWith(11, payload);
+    expect(financeServiceMock.createTransaction).toHaveBeenCalledWith(
+      11,
+      payload,
+    );
     expect(response.body).toEqual({
       message: 'Transacao criada com sucesso.',
       transaction: {
@@ -97,6 +113,95 @@ describe('Finance contract (e2e)', () => {
         amountCents: 2590,
         status: 'CLEARED',
       },
+      transactions: [
+        {
+          id: 123,
+          description: 'Mercado',
+          amountCents: 2590,
+          status: 'CLEARED',
+        },
+      ],
+      installmentGroupId: null,
+    });
+  });
+
+  it('PATCH /finance/transactions/:id preserva mensagem, escopo e payload', async () => {
+    financeServiceMock.updateTransaction.mockResolvedValue({
+      transaction: {
+        id: 123,
+        description: 'Mercado atualizado',
+        amountCents: 3000,
+      },
+      transactions: [
+        {
+          id: 123,
+          description: 'Mercado atualizado',
+          amountCents: 3000,
+        },
+      ],
+      scope: 'CURRENT',
+    });
+
+    const payload = {
+      description: 'Mercado atualizado',
+      amountCents: 3000,
+      scope: 'CURRENT',
+    };
+
+    const response = await request(app.getHttpServer())
+      .patch('/finance/transactions/123')
+      .send(payload)
+      .expect(200);
+
+    expect(financeServiceMock.updateTransaction).toHaveBeenCalledWith(
+      11,
+      123,
+      payload,
+    );
+    expect(response.body).toEqual({
+      message: 'Transacao atualizada com sucesso.',
+      transaction: {
+        id: 123,
+        description: 'Mercado atualizado',
+        amountCents: 3000,
+      },
+      transactions: [
+        {
+          id: 123,
+          description: 'Mercado atualizado',
+          amountCents: 3000,
+        },
+      ],
+      scope: 'CURRENT',
+    });
+  });
+
+  it('DELETE /finance/transactions/:id preserva mensagem, escopo e ids removidos', async () => {
+    financeServiceMock.deleteTransaction.mockResolvedValue({
+      deletedCount: 3,
+      scope: 'ALL',
+      transactionIds: [123, 124, 125],
+    });
+
+    const payload = {
+      scope: 'ALL',
+    };
+
+    const response = await request(app.getHttpServer())
+      .delete('/finance/transactions/123')
+      .send(payload)
+      .expect(200);
+
+    expect(financeServiceMock.deleteTransaction).toHaveBeenCalledWith(
+      11,
+      123,
+      payload,
+    );
+    expect(response.body).toEqual({
+      message: 'Transacao excluida com sucesso.',
+      deletedCount: 3,
+      scope: 'ALL',
+      transactionIds: [123, 124, 125],
     });
   });
 

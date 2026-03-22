@@ -42,11 +42,16 @@ export interface UserWithSubscriptions {
 }
 
 export interface UserRepository {
-  create(data: CreateUserDto & { password: string }): Promise<UserWithSubscriptions>;
+  create(
+    data: CreateUserDto & { password: string },
+  ): Promise<UserWithSubscriptions>;
   findAll(): Promise<UserWithSubscriptions[]>;
   findById(id: number): Promise<UserWithSubscriptions | null>;
   findByEmail(email: string): Promise<UserWithSubscriptions | null>;
-  update(id: number, data: Omit<UpdateUserDto, 'planId'>): Promise<UserWithSubscriptions>;
+  update(
+    id: number,
+    data: Omit<UpdateUserDto, 'planId'>,
+  ): Promise<UserWithSubscriptions>;
   remove(id: number): Promise<void>;
   findDefaultActivePlanId(): Promise<number | null>;
 }

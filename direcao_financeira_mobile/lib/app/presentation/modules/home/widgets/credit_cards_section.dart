@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../home_controller.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 import '../../../../domain/entities/credit_card_entity.dart';
+import '../../../../core/utils/responsive.dart';
 
 class CreditCardsSection extends StatefulWidget {
   const CreditCardsSection({super.key});
@@ -17,8 +18,6 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
 
   bool _isInvoiceClosed(CreditCardEntity card) {
     final today = DateTime.now().day;
-    // Se o dia atual for maior ou igual ao dia de fechamento, a fatura fechou.
-    // Ela continuara aparecendo em 'Fechadas' ate o mes virar ou (no futuro) a fatura ser paga.
     return today >= card.closingDay;
   }
 
@@ -43,6 +42,15 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
 
       return LayoutBuilder(
         builder: (context, constraints) {
+          final sectionPadding = Responsive.hp(context, 2.1).clamp(8.0, 10.0);
+          final titleSize = Responsive.sp(context, 16).clamp(15.0, 16.0);
+          final titleGap = Responsive.hp(context, 1.8).clamp(6.0, 8.0);
+          final iconBoxSize = Responsive.hp(context, 7.4).clamp(28.0, 32.0);
+          final arrowBoxSize = Responsive.hp(context, 6.4).clamp(24.0, 28.0);
+          final sectionRadius = Responsive.hp(context, 4.8).clamp(16.0, 18.0);
+          final contentGap = Responsive.vp(context, 1).clamp(6.0, 8.0);
+          final listGap = Responsive.hp(context, 2.8).clamp(10.0, 12.0);
+          
           final cardWidth = constraints.maxWidth < 400
               ? constraints.maxWidth * 0.75
               : constraints.maxWidth < 720
@@ -51,67 +59,70 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
 
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(sectionPadding),
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
-              ),
+              color: const Color(0xFF1F222B),
+              borderRadius: BorderRadius.circular(sectionRadius),
+              border: Border.all(color: const Color(0xFF2F4367)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               children: [
-                GestureDetector(
+                InkWell(
                   onTap: () => Get.toNamed('/credit-cards'),
-                  behavior: HitTestBehavior.opaque,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.violet.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.credit_card,
-                                color: AppColors.violet,
-                                size: 18,
-                              ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: iconBoxSize,
+                          height: iconBoxSize,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4C2A77), // Violet shade for Credit Cards
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.credit_card_rounded,
+                            size: Responsive.sp(context, 16).clamp(15.0, 17.0),
+                            color: const Color(0xFFD4A5FF),
+                          ),
+                        ),
+                        SizedBox(width: titleGap),
+                        Expanded(
+                          child: Text(
+                            'Cartões de Crédito',
+                            style: TextStyle(
+                              color: context.theme.colorScheme.onSurface,
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w700,
                             ),
-                            const SizedBox(width: 10),
-                            Flexible(
-                              child: Text(
-                                'Cartoes de Credito',
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: context.theme.colorScheme.onSurface,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(8),
+                        Container(
+                          width: arrowBoxSize,
+                          height: arrowBoxSize,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF24364E),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            size: Responsive.sp(context, 16).clamp(15.0, 17.0),
+                            color: const Color(0xFF78AFFF),
+                          ),
                         ),
-                        child: Icon(
-                          Icons.chevron_right,
-                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
-                          size: 20,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: contentGap),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   physics: const ClampingScrollPhysics(),
@@ -129,24 +140,27 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: contentGap),
                 if (cartoesFiltrados.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    padding: EdgeInsets.symmetric(
+                      vertical: Responsive.vp(context, 3).clamp(18.0, 24.0),
+                    ),
                     child: Text(
                       _showOpenInvoices ? 'Nenhuma fatura aberta' : 'Nenhuma fatura fechada',
                       style: TextStyle(
                         color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        fontSize: Responsive.sp(context, 14).clamp(13.0, 14.0),
                       ),
                     ),
                   )
                 else
                   SizedBox(
-                    height: 180, // Aumentado de 160 para 180 para evitar overflow
+                    height: 180,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: cartoesFiltrados.length,
-                      separatorBuilder: (_, itemIndex) => const SizedBox(width: 12),
+                      separatorBuilder: (_, itemIndex) => SizedBox(width: listGap),
                       itemBuilder: (context, index) {
                         final cartao = cartoesFiltrados[index];
                         return SizedBox(
@@ -156,19 +170,18 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                       },
                     ),
                   ),
-                const SizedBox(height: 16),
-                Divider(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                ),
-                const SizedBox(height: 8),
+                SizedBox(height: contentGap),
+                Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                SizedBox(height: contentGap),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       _showOpenInvoices ? 'Faturas Totais (Abertas)' : 'Faturas Totais (Fechadas)',
                       style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
-                        fontSize: 14,
+                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                        fontSize: Responsive.sp(context, 13).clamp(12.0, 13.0),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     Flexible(
@@ -178,10 +191,10 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                           isVisible
                               ? currencyFormat.format(totalPagar)
                               : 'R\$ ....',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.rose,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            fontSize: Responsive.sp(context, 14).clamp(13.0, 14.0),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -198,12 +211,13 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
 
   Widget _buildTab(String text, bool isActive) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isActive
-            ? context.theme.colorScheme.onSurface.withValues(alpha: 0.12)
+            ? const Color(0xFF24364E)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
+        border: isActive ? Border.all(color: const Color(0xFF2F4367)) : null,
       ),
       child: Text(
         text,
@@ -212,7 +226,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
           color: isActive
               ? context.theme.colorScheme.onSurface
               : context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
@@ -223,63 +237,92 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     final fatura = cartao.usedLimit; // Simulando a fatura com o limite usado. Ficará real no módulo de Transacoes.
     final disponivel = cartao.availableLimit;
     final percentual = cartao.usedPercentage;
+    final cardColor = _parseColor(cartao.color);
+
+    final cardPadding = Responsive.hp(context, 3.2).clamp(10.0, 12.0);
+    final cardRadius = Responsive.hp(context, 4.3).clamp(14.0, 16.0);
+    final iconBoxSize = Responsive.hp(context, 6.9).clamp(24.0, 26.0);
+    final badgeHorizontal = Responsive.hp(context, 2.1).clamp(7.0, 8.0);
+    final badgeVertical = Responsive.vp(context, 0.4).clamp(3.0, 4.0);
+    final nameSize = Responsive.sp(context, 14).clamp(13.0, 14.0);
+    final valueSize = Responsive.sp(context, 15).clamp(14.0, 15.0);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            AppColors.violet.withValues(alpha: 0.25),
-            AppColors.violet.withValues(alpha: 0.10),
+            cardColor.withValues(alpha: 0.16),
+            cardColor.withValues(alpha: 0.08),
           ],
         ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.violet.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(cardRadius),
+        border: Border.all(color: cardColor.withValues(alpha: 0.42)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.credit_card, color: AppColors.violet, size: 22),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                width: iconBoxSize,
+                height: iconBoxSize,
                 decoration: BoxDecoration(
-                  color: AppColors.violet.withValues(alpha: 0.2),
+                  color: cardColor.withValues(alpha: 0.22),
                   borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.credit_card_rounded,
+                  size: Responsive.sp(context, 15).clamp(14.0, 15.0),
+                  color: cardColor,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: badgeHorizontal,
+                  vertical: badgeVertical,
+                ),
+                decoration: BoxDecoration(
+                  color: cardColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   cartao.brand.toUpperCase(),
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                    color: cardColor,
+                    fontSize: Responsive.sp(context, 8).clamp(7.0, 8.0),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const Spacer(),
           Text(
             cartao.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.86,
+              ),
+              fontSize: nameSize,
+              fontWeight: FontWeight.w500,
+              height: 1.15,
             ),
           ),
           Text(
             isOpenInvoice ? 'Fecha dia ${cartao.closingDay}' : 'Vence dia ${cartao.dueDay}',
             style: TextStyle(
               color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
-              fontSize: 12,
+              fontSize: Responsive.sp(context, 10).clamp(9.0, 10.0),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -287,37 +330,46 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
               isVisible
                   ? currencyFormat.format(fatura)
                   : 'R\$ ....',
-              style: const TextStyle(
-                color: AppColors.amber,
-                fontSize: 20,
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurface,
+                fontSize: valueSize,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: percentual,
-              backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
               valueColor: AlwaysStoppedAnimation<Color>(
-                percentual > 0.9 ? AppColors.rose : AppColors.violet,
+                percentual > 0.9 ? AppColors.rose : cardColor,
               ),
-              minHeight: 5,
+              minHeight: 4,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             isVisible
-                ? 'Disponivel: ${currencyFormat.format(disponivel)}'
-                : 'Disponivel: R\$ ....',
+                ? 'Lim: ${currencyFormat.format(disponivel)}'
+                : 'Lim: R\$ ....',
             style: TextStyle(
               color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
-              fontSize: 12,
+              fontSize: Responsive.sp(context, 9).clamp(8.0, 9.0),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _parseColor(String colorHex) {
+    final normalized = colorHex.replaceFirst('#', '');
+    if (normalized.length != 6) {
+      return AppColors.violet;
+    }
+
+    return Color(int.parse('FF$normalized', radix: 16));
   }
 }

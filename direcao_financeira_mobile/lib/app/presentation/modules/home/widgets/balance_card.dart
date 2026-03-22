@@ -1,8 +1,10 @@
+import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
+import 'package:direcao_financeira_mobile/app/core/utils/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+
 import '../home_controller.dart';
-import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class BalanceCard extends GetView<HomeController> {
   const BalanceCard({super.key});
@@ -14,214 +16,280 @@ class BalanceCard extends GetView<HomeController> {
     return Obx(() {
       final isVisible = controller.isBalanceVisible.value;
       final saldo = controller.saldoTotal;
-      final entradas = controller.entradas; // Sera real no proximo modulo
-      final saidas = controller.saidas;     // Sera real no proximo modulo
+      final entradas = controller.entradas;
+      final saidas = controller.saidas;
       final isPositivo = controller.isSaldoPositivo;
 
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 360;
-          final amountFontSize = isCompact
-              ? 28.0
-              : constraints.maxWidth < 430
-              ? 32.0
-              : 34.0;
+      return Container(
+        margin: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1)),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 360;
+            final cardPadding = Responsive.sp(context, isCompact ? 16 : 18);
+            final amountFontSize = Responsive.sp(context, isCompact ? 25 : 28);
 
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: EdgeInsets.all(isCompact ? 16 : 20),
+            return Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                borderRadius: BorderRadius.circular(Responsive.sp(context, 24)),
+                gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    context.theme.colorScheme.surface,
-                    context.theme.scaffoldBackgroundColor,
+                    Color(0xFF1F3654),
+                    Color(0xFF162A45),
+                    Color(0xFF122238),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.15)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.deepNavy.withOpacity(0.22),
+                    blurRadius: Responsive.sp(context, 20),
+                    offset: Offset(0, Responsive.sp(context, 8)),
+                  ),
+                ],
               ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.electricCyan.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_wallet,
-                              color: AppColors.electricCyan,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              'Saldo Atual',
-                              overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -Responsive.sp(context, 36),
+                    top: -Responsive.sp(context, 30),
+                    child: Container(
+                      width: Responsive.sp(context, 126),
+                      height: Responsive.sp(context, 126),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.04),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: Responsive.sp(context, 44),
+                    top: Responsive.sp(context, 52),
+                    child: Container(
+                      width: Responsive.sp(context, 12),
+                      height: Responsive.sp(context, 12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.04),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(cardPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: Responsive.sp(context, 30),
+                              height: Responsive.sp(context, 30),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.09),
+                                borderRadius: BorderRadius.circular(Responsive.sp(context, 10)),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.08),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.account_balance_wallet_rounded,
+                                color: Colors.white,
+                                size: Responsive.sp(context, 16),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        isVisible ? Icons.visibility : Icons.visibility_off,
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
-                        size: 22,
-                      ),
-                      onPressed: controller.toggleBalanceVisibility,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    isVisible
-                        ? currencyFormat.format(saldo)
-                        : 'R\$ .......',
-                    style: TextStyle(
-                      color: context.theme.colorScheme.onSurface,
-                      fontSize: amountFontSize,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isPositivo
-                        ? AppColors.emerald.withValues(alpha: 0.15)
-                        : AppColors.rose.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isPositivo ? Icons.trending_up : Icons.trending_down,
-                        color: isPositivo
-                            ? AppColors.emerald
-                            : AppColors.rose,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isPositivo ? 'Positivo' : 'Negativo',
-                        style: TextStyle(
-                          color: isPositivo
-                              ? AppColors.emerald
-                              : AppColors.rose,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                            SizedBox(width: Responsive.hp(context, 2.2)),
+                            Expanded(
+                              child: Text(
+                                'Saldo Atual',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.82),
+                                  fontSize: Responsive.sp(context, 14),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(999),
+                                onTap: controller.toggleBalanceVisibility,
+                                child: Ink(
+                                  width: Responsive.sp(context, 32),
+                                  height: Responsive.sp(context, 32),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.10),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                                    color: Colors.white.withOpacity(0.82),
+                                    size: Responsive.sp(context, 16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        SizedBox(height: Responsive.vp(context, 1.7)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            isVisible ? currencyFormat.format(saldo) : 'R\$ ••••••',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: amountFontSize,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.6,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: Responsive.vp(context, 1.8)),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Responsive.sp(context, 10),
+                            vertical: Responsive.sp(context, 6),
+                          ),
+                          decoration: BoxDecoration(
+                            color: isPositivo
+                                ? AppColors.emerald.withOpacity(0.20)
+                                : AppColors.rose.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: isPositivo
+                                  ? AppColors.emerald.withOpacity(0.20)
+                                  : AppColors.rose.withOpacity(0.20),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPositivo ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                                color: isPositivo ? AppColors.emerald : AppColors.rose,
+                                size: Responsive.sp(context, 14),
+                              ),
+                              SizedBox(width: Responsive.hp(context, 1)),
+                              Text(
+                                isPositivo ? 'Positivo' : 'Negativo',
+                                style: TextStyle(
+                                  color: isPositivo ? AppColors.emerald : AppColors.rose,
+                                  fontSize: Responsive.sp(context, 12),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: Responsive.vp(context, 2.1)),
+                        Container(
+                          height: 1,
+                          color: Colors.white.withOpacity(0.10),
+                        ),
+                        SizedBox(height: Responsive.vp(context, 1.8)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _InfoItem(
+                                icon: Icons.arrow_upward_rounded,
+                                label: 'Entradas',
+                                value: entradas,
+                                accent: AppColors.emerald,
+                                isVisible: isVisible,
+                                currencyFormat: currencyFormat,
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: Responsive.sp(context, 36),
+                              margin: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 4)),
+                              color: Colors.white.withOpacity(0.10),
+                            ),
+                            Expanded(
+                              child: _InfoItem(
+                                icon: Icons.arrow_downward_rounded,
+                                label: 'Saidas',
+                                value: saidas,
+                                accent: AppColors.rose,
+                                isVisible: isVisible,
+                                currencyFormat: currencyFormat,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Divider(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildIndicator(
-                        context: context,
-                        icon: Icons.arrow_upward,
-                        label: 'Entradas',
-                        value: entradas,
-                        color: AppColors.emerald,
-                        isVisible: isVisible,
-                        currencyFormat: currencyFormat,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildIndicator(
-                        context: context,
-                        icon: Icons.arrow_downward,
-                        label: 'Saidas',
-                        value: saidas,
-                        color: AppColors.rose,
-                        isVisible: isVisible,
-                        currencyFormat: currencyFormat,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       );
     });
   }
+}
 
-  Widget _buildIndicator({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required double value,
-    required Color color,
-    required bool isVisible,
-    required NumberFormat currencyFormat,
-  }) {
+class _InfoItem extends StatelessWidget {
+  const _InfoItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+    required this.isVisible,
+    required this.currencyFormat,
+  });
+
+  final IconData icon;
+  final String label;
+  final double value;
+  final Color accent;
+  final bool isVisible;
+  final NumberFormat currencyFormat;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          width: Responsive.sp(context, 26),
+          height: Responsive.sp(context, 26),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
+            color: accent.withOpacity(0.16),
+            borderRadius: BorderRadius.circular(Responsive.sp(context, 8)),
           ),
-          child: Icon(icon, color: color, size: 18),
+          child: Icon(
+            icon,
+            color: accent,
+            size: Responsive.sp(context, 14),
+          ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: Responsive.hp(context, 2)),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
-                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.62),
+                  fontSize: Responsive.sp(context, 11.5),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+              SizedBox(height: Responsive.vp(context, 0.2)),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  isVisible
-                      ? currencyFormat.format(value)
-                      : 'R\$ ....',
+                  isVisible ? currencyFormat.format(value) : 'R\$ ••••',
                   style: TextStyle(
-                    color: color,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: Responsive.sp(context, 16),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),

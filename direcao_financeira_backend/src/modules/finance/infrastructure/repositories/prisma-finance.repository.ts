@@ -1,5 +1,11 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { InvoiceStatus, Prisma, TransactionStatus, TransactionType, AssetType } from '@prisma/client';
+import {
+  InvoiceStatus,
+  Prisma,
+  TransactionStatus,
+  TransactionType,
+  AssetType,
+} from '@prisma/client';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { CreateBankAccountDto } from '../../interface/dto/create-bank-account.dto';
 import { CreateCategoryDto } from '../../interface/dto/create-category.dto';
@@ -9,7 +15,9 @@ import { UpdateCategoryDto } from '../../interface/dto/update-category.dto';
 import { UpdateCreditCardDto } from '../../interface/dto/update-credit-card.dto';
 import {
   BankAccountRecord,
+  BankAccountFinancialSnapshot,
   CategoryRecord,
+  CreditCardFinancialSnapshot,
   CreditCardInvoiceDetails,
   CreditCardInvoiceListDetails,
   CreditCardInvoiceRecord,
@@ -27,6 +35,13 @@ function isPrismaKnownError(error: unknown): error is { code: string } {
 
 class PrismaFinanceTransactionContext implements FinanceTransactionContext {
   constructor(private readonly tx: Prisma.TransactionClient) {}
+
+  private readonly transactionInclude = {
+    category: true,
+    bankAccount: true,
+    creditCard: true,
+    invoice: true,
+  } satisfies Prisma.TransactionInclude;
 
   findActiveBankAccount(userId: number, id: number) {
     return this.tx.bankAccount.findFirst({
@@ -70,6 +85,24 @@ class PrismaFinanceTransactionContext implements FinanceTransactionContext {
     });
   }
 
+  findInvoiceById(id: number) {
+    return this.tx.creditCardInvoice.findUnique({
+      where: { id },
+    });
+  }
+
+  async getInvoiceClearedTotal(invoiceId: number): Promise<number> {
+    const aggregate = await this.tx.transaction.aggregate({
+      where: {
+        invoiceId,
+        status: TransactionStatus.CLEARED,
+      },
+      _sum: { amountCents: true },
+    });
+
+    return aggregate._sum.amountCents ?? 0;
+  }
+
   createInvoice(data: {
     creditCardId: number;
     referenceMonth: number;
@@ -85,7 +118,11 @@ class PrismaFinanceTransactionContext implements FinanceTransactionContext {
 
   async updateInvoice(
     id: number,
-    data: Partial<{ totalCents: number; paidCents: number; status: InvoiceStatus }>,
+    data: Partial<{
+      totalCents: number;
+      paidCents: number;
+      status: InvoiceStatus;
+    }>,
   ) {
     await this.tx.creditCardInvoice.update({
       where: { id },
@@ -107,16 +144,163 @@ class PrismaFinanceTransactionContext implements FinanceTransactionContext {
     competencyDate: Date | null;
     status: TransactionStatus;
     notes?: string;
+    installmentGroupId?: string;
+    installmentNumber?: number;
+    installmentCount?: number;
   }): Promise<TransactionWithRelations> {
     return this.tx.transaction.create({
       data,
-      include: {
-        category: true,
-        bankAccount: true,
-        creditCard: true,
-        invoice: true,
-      },
+      include: this.transactionInclude,
     });
+  }
+
+  findTransactionById(
+    userId: number,
+    id: number,
+  ): Promise<TransactionWithRelations | null> {
+    return this.tx.transaction.findFirst({
+      where: { id, userId },
+      include: this.transactionInclude,
+    });
+  }
+
+  listTransactionsByIds(
+    userId: number,
+    ids: number[],
+  ): Promise<TransactionWithRelations[]> {
+    return this.tx.transaction.findMany({
+      where: { userId, id: { in: ids } },
+      include: this.transactionInclude,
+      orderBy: [{ transactionDate: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  listTransactionsByInstallmentGroup(
+    userId: number,
+    installmentGroupId: string,
+  ): Promise<TransactionWithRelations[]> {
+    return this.tx.transaction.findMany({
+      where: { userId, installmentGroupId },
+      include: this.transactionInclude,
+      orderBy: [
+        { installmentNumber: 'asc' },
+        { transactionDate: 'asc' },
+        { id: 'asc' },
+      ],
+    });
+  }
+
+  updateTransaction(
+    id: number,
+    data: Partial<{
+      categoryId: number;
+      description: string;
+      amountCents: number;
+      transactionDate: Date;
+      competencyDate: Date | null;
+      status: TransactionStatus;
+      notes: string | null;
+      invoiceId: number | null;
+    }>,
+  ): Promise<TransactionWithRelations> {
+    return this.tx.transaction.update({
+      where: { id },
+      data,
+      include: this.transactionInclude,
+    });
+  }
+
+  async deleteTransactions(ids: number[]): Promise<number> {
+    if (ids.length === 0) {
+      return 0;
+    }
+
+    const result = await this.tx.transaction.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    return result.count;
+  }
+
+  async getBankAccountFinancialSnapshot(
+    id: number,
+  ): Promise<BankAccountFinancialSnapshot> {
+    const account = await this.tx.bankAccount.findUnique({
+      where: { id },
+      select: { initialBalanceCents: true },
+    });
+
+    if (!account) {
+      throw new ConflictException(
+        'Conta bancaria nao encontrada para recalculo.',
+      );
+    }
+
+    const incomeAggregate = await this.tx.transaction.aggregate({
+      where: {
+        bankAccountId: id,
+        status: TransactionStatus.CLEARED,
+        type: TransactionType.INCOME,
+      },
+      _sum: { amountCents: true },
+    });
+
+    const expenseAggregate = await this.tx.transaction.aggregate({
+      where: {
+        bankAccountId: id,
+        status: TransactionStatus.CLEARED,
+        type: TransactionType.EXPENSE,
+      },
+      _sum: { amountCents: true },
+    });
+
+    const paymentAggregate = await this.tx.invoicePayment.aggregate({
+      where: { bankAccountId: id },
+      _sum: { amountCents: true },
+    });
+
+    return {
+      initialBalanceCents: account.initialBalanceCents,
+      clearedIncomeCents: incomeAggregate._sum.amountCents ?? 0,
+      clearedExpenseCents: expenseAggregate._sum.amountCents ?? 0,
+      invoicePaymentsCents: paymentAggregate._sum.amountCents ?? 0,
+    };
+  }
+
+  async getCreditCardFinancialSnapshot(
+    id: number,
+  ): Promise<CreditCardFinancialSnapshot> {
+    const card = await this.tx.creditCard.findUnique({
+      where: { id },
+      select: { limitCents: true },
+    });
+
+    if (!card) {
+      throw new ConflictException(
+        'Cartao de credito nao encontrado para recalculo.',
+      );
+    }
+
+    const spentAggregate = await this.tx.transaction.aggregate({
+      where: {
+        creditCardId: id,
+        status: TransactionStatus.CLEARED,
+      },
+      _sum: { amountCents: true },
+    });
+
+    const paidAggregate = await this.tx.invoicePayment.aggregate({
+      where: {
+        invoice: { creditCardId: id },
+      },
+      _sum: { amountCents: true },
+    });
+
+    return {
+      limitCents: card.limitCents,
+      clearedSpentCents: spentAggregate._sum.amountCents ?? 0,
+      paidCents: paidAggregate._sum.amountCents ?? 0,
+    };
   }
 
   findInvoiceForPayment(
@@ -152,7 +336,17 @@ class PrismaFinanceTransactionContext implements FinanceTransactionContext {
 export class PrismaFinanceRepository implements FinanceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  createBankAccount(userId: number, dto: CreateBankAccountDto): Promise<BankAccountRecord> {
+  private readonly transactionInclude = {
+    category: true,
+    bankAccount: true,
+    creditCard: true,
+    invoice: true,
+  } satisfies Prisma.TransactionInclude;
+
+  createBankAccount(
+    userId: number,
+    dto: CreateBankAccountDto,
+  ): Promise<BankAccountRecord> {
     return this.prisma.client.bankAccount.create({
       data: {
         userId,
@@ -193,7 +387,10 @@ export class PrismaFinanceRepository implements FinanceRepository {
     });
   }
 
-  createCreditCard(userId: number, dto: CreateCreditCardDto): Promise<CreditCardRecord> {
+  createCreditCard(
+    userId: number,
+    dto: CreateCreditCardDto,
+  ): Promise<CreditCardRecord> {
     return this.prisma.client.creditCard.create({
       data: {
         userId,
@@ -226,7 +423,10 @@ export class PrismaFinanceRepository implements FinanceRepository {
 
   updateCreditCard(
     id: number,
-    dto: UpdateCreditCardDto & { availableLimitCents?: number; isActive?: boolean },
+    dto: UpdateCreditCardDto & {
+      availableLimitCents?: number;
+      isActive?: boolean;
+    },
   ): Promise<CreditCardRecord> {
     return this.prisma.client.creditCard.update({
       where: { id },
@@ -234,7 +434,10 @@ export class PrismaFinanceRepository implements FinanceRepository {
     });
   }
 
-  async createCategory(userId: number, dto: CreateCategoryDto): Promise<CategoryRecord> {
+  async createCategory(
+    userId: number,
+    dto: CreateCategoryDto,
+  ): Promise<CategoryRecord> {
     try {
       return await this.prisma.client.category.create({
         data: { userId, ...dto },
@@ -292,25 +495,18 @@ export class PrismaFinanceRepository implements FinanceRepository {
   listTransactions(userId: number): Promise<TransactionWithRelations[]> {
     return this.prisma.client.transaction.findMany({
       where: { userId },
-      include: {
-        category: true,
-        bankAccount: true,
-        creditCard: true,
-        invoice: true,
-      },
+      include: this.transactionInclude,
       orderBy: [{ transactionDate: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
-  findTransaction(userId: number, id: number): Promise<TransactionWithRelations | null> {
+  findTransaction(
+    userId: number,
+    id: number,
+  ): Promise<TransactionWithRelations | null> {
     return this.prisma.client.transaction.findFirst({
       where: { id, userId },
-      include: {
-        category: true,
-        bankAccount: true,
-        creditCard: true,
-        invoice: true,
-      },
+      include: this.transactionInclude,
     });
   }
 

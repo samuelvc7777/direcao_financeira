@@ -1,3 +1,4 @@
+import 'package:direcao_financeira_mobile/app/presentation/modules/journey/journey_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -12,24 +13,11 @@ class InitialView extends GetView<InitialController> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      const HomeView(),
-      const TransactionsView(),
-      const Center(
-        child: Text('Orcamento', style: TextStyle(color: Colors.white)),
-      ),
-      const Center(
-        child: Text('Veiculo', style: TextStyle(color: Colors.white)),
-      ),
-      const SettingsView(),
-    ];
-
     return Scaffold(
-      extendBody: true,
       body: Obx(
         () => IndexedStack(
           index: controller.currentIndex.value,
-          children: screens,
+          children: List.generate(4, _buildScreenForIndex),
         ),
       ),
       bottomNavigationBar: Obx(
@@ -39,5 +27,24 @@ class InitialView extends GetView<InitialController> {
         ),
       ),
     );
+  }
+
+  Widget _buildScreenForIndex(int index) {
+    if (!controller.isTabLoaded(index)) {
+      return const SizedBox.shrink();
+    }
+
+    switch (index) {
+      case 0:
+        return const HomeView();
+      case 1:
+        return const TransactionsView();
+      case 2:
+        return const JourneyView();
+      case 3:
+        return const SettingsView();
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }

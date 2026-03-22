@@ -104,7 +104,11 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
     });
   }
 
-  async renewActiveSubscription(userId: number, endDate: Date, autoRenew: boolean) {
+  async renewActiveSubscription(
+    userId: number,
+    endDate: Date,
+    autoRenew: boolean,
+  ) {
     const activeSubscription = await this.findActiveByUserId(userId);
 
     if (!activeSubscription) {

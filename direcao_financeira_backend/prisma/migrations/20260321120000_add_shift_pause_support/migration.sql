@@ -1,0 +1,2 @@
+ALTER TABLE "Shift"
+DROP COLUMN IF EXISTS "pausedAt";

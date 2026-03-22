@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+
+import '../../../widgets/app_month_selector.dart';
 import '../home_controller.dart';
 
 class MonthSelector extends GetView<HomeController> {
@@ -15,49 +17,10 @@ class MonthSelector extends GetView<HomeController> {
         'pt_BR',
       ).format(month).toUpperCase();
 
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: context.theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.chevron_left,
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-              onPressed: controller.previousMonth,
-              splashRadius: 20,
-            ),
-            Expanded(
-              child: Text(
-                formatted,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: context.theme.colorScheme.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.chevron_right,
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-              onPressed: controller.nextMonth,
-              splashRadius: 20,
-            ),
-          ],
-        ),
+      return AppMonthSelector(
+        label: formatted,
+        onPrevious: controller.previousMonth,
+        onNext: controller.nextMonth,
       );
     });
   }

@@ -4,6 +4,7 @@ class TransactionModel extends TransactionEntity {
   TransactionModel({
     required super.id,
     required super.type,
+    required super.status,
     required super.assetType,
     required super.amountCents,
     required super.categoryId,
@@ -11,6 +12,9 @@ class TransactionModel extends TransactionEntity {
     required super.transactionDate,
     super.bankAccountId,
     super.creditCardId,
+    super.installmentGroupId,
+    super.installmentNumber,
+    super.installmentCount,
     super.categoryName,
     super.categoryColor,
     super.categoryIcon,
@@ -25,6 +29,7 @@ class TransactionModel extends TransactionEntity {
     return TransactionModel(
       id: json['id'] as int,
       type: TransactionType.fromApiValue(json['type'] as String),
+      status: TransactionStatus.fromApiValue(json['status'] as String),
       assetType: AssetType.fromApiValue(json['assetType'] as String),
       amountCents: json['amountCents'] as int,
       categoryId: json['categoryId'] as int,
@@ -32,6 +37,9 @@ class TransactionModel extends TransactionEntity {
       transactionDate: DateTime.parse(json['transactionDate'] as String),
       bankAccountId: json['bankAccountId'] as int?,
       creditCardId: json['creditCardId'] as int?,
+      installmentGroupId: json['installmentGroupId'] as String?,
+      installmentNumber: json['installmentNumber'] as int?,
+      installmentCount: json['installmentCount'] as int?,
       categoryName: category?['name'] as String?,
       categoryColor: category?['color'] as String?,
       categoryIcon: category?['icon'] as String?,
@@ -43,6 +51,7 @@ class TransactionModel extends TransactionEntity {
     return {
       'id': id,
       'type': type.toApiValue(),
+      'status': status.toApiValue(),
       'assetType': assetType.toApiValue(),
       'amountCents': amountCents,
       'categoryId': categoryId,

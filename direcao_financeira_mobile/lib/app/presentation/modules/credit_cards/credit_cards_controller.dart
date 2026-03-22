@@ -24,6 +24,19 @@ class CreditCardsController extends GetxController {
   final errorMessage = RxnString();
   final creditCards = <CreditCardEntity>[].obs;
 
+  final colorOptions = const <String>[
+    '#22c55e',
+    '#06B6D4',
+    '#038C8C',
+    '#3b82f6',
+    '#6366f1',
+    '#8B5CF6',
+    '#f97316',
+    '#ef4444',
+    '#eab308',
+    '#ec4899',
+  ];
+
   List<CreditCardEntity> get activeCards =>
       creditCards.where((card) => card.isActive).toList();
 
@@ -52,6 +65,7 @@ class CreditCardsController extends GetxController {
   Future<void> createCreditCard({
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -61,6 +75,7 @@ class CreditCardsController extends GetxController {
       action: () => createCreditCardUseCase(
         name: name,
         brand: brand,
+        color: color,
         limitCents: limitCents,
         closingDay: closingDay,
         dueDay: dueDay,
@@ -74,6 +89,7 @@ class CreditCardsController extends GetxController {
     required int id,
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -84,6 +100,7 @@ class CreditCardsController extends GetxController {
         id: id,
         name: name,
         brand: brand,
+        color: color,
         limitCents: limitCents,
         closingDay: closingDay,
         dueDay: dueDay,
@@ -184,5 +201,14 @@ class CreditCardsController extends GetxController {
           : const Color(0xFF03A696).withValues(alpha: 0.12),
       colorText: Get.theme.colorScheme.onSurface,
     );
+  }
+
+  Color colorFromHex(String colorHex) {
+    final normalized = colorHex.replaceFirst('#', '');
+    if (normalized.length != 6) {
+      return const Color(0xFF8B5CF6);
+    }
+
+    return Color(int.parse('FF$normalized', radix: 16));
   }
 }

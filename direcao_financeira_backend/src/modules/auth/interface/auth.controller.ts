@@ -20,7 +20,8 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
-    const { access_token, user } = await this.authService.register(createUserDto);
+    const { access_token, user } =
+      await this.authService.register(createUserDto);
     return {
       message: 'Usuario cadastrado com sucesso! Bem-vindo(a) ao sistema.',
       access_token,

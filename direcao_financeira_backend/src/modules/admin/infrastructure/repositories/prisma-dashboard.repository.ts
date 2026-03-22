@@ -14,23 +14,31 @@ export class PrismaDashboardRepository implements DashboardRepository {
     const dayAgo = new Date();
     dayAgo.setDate(dayAgo.getDate() - 1);
 
-    const [totalUsers, activeUsers, newUsers24h, activeSubscriptions, plansCatalog] =
-      await Promise.all([
-        this.prisma.client.user.count(),
-        this.prisma.client.user.count({ where: { isActive: true } }),
-        this.prisma.client.user.count({ where: { createdAt: { gte: dayAgo } } }),
-        this.prisma.client.subscription.findMany({
-          where: { status: SubscriptionStatus.ACTIVE },
-          include: { plan: true },
-        }),
-        this.prisma.client.plan.findMany({
-          orderBy: { priceCents: 'asc' },
-        }),
-      ]);
+    const [
+      totalUsers,
+      activeUsers,
+      newUsers24h,
+      activeSubscriptions,
+      plansCatalog,
+    ] = await Promise.all([
+      this.prisma.client.user.count(),
+      this.prisma.client.user.count({ where: { isActive: true } }),
+      this.prisma.client.user.count({ where: { createdAt: { gte: dayAgo } } }),
+      this.prisma.client.subscription.findMany({
+        where: { status: SubscriptionStatus.ACTIVE },
+        include: { plan: true },
+      }),
+      this.prisma.client.plan.findMany({
+        orderBy: { priceCents: 'asc' },
+      }),
+    ]);
 
-    const estimatedRevenueCents = activeSubscriptions.reduce((sum, subscription) => {
-      return sum + subscription.plan.priceCents;
-    }, 0);
+    const estimatedRevenueCents = activeSubscriptions.reduce(
+      (sum, subscription) => {
+        return sum + subscription.plan.priceCents;
+      },
+      0,
+    );
 
     const plans = plansCatalog.map((plan) => {
       const activeCount = activeSubscriptions.filter(

@@ -1,4 +1,4 @@
-import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
+import 'package:direcao_financeira_mobile/app/core/utils/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -22,16 +22,36 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final appBarTheme = context.theme.appBarTheme;
+    final titleColor =
+        appBarTheme.titleTextStyle?.color ?? colorScheme.onSurface;
+    final subtitleColor = titleColor.withValues(alpha: 0.66);
+    final iconContainerColor = colorScheme.primary.withValues(alpha: 0.12);
+    final iconColor = colorScheme.primary;
+    final iconBoxSize = Responsive.sp(context, 42).clamp(38.0, 44.0);
+    final iconSize = Responsive.sp(context, 22).clamp(20.0, 23.0);
+    final titleFontSize = Responsive.sp(context, 21).clamp(20.0, 22.0);
+    final subtitleFontSize = Responsive.sp(context, 12.5).clamp(12.0, 13.0);
+    final spacing = Responsive.hp(context, 3.0).clamp(10.0, 12.0);
+    final backgroundColor =
+        appBarTheme.backgroundColor ?? context.theme.scaffoldBackgroundColor;
+
     return AppBar(
-      toolbarHeight: 88,
-      titleSpacing: showBackButton ? 0 : 16,
-      backgroundColor: Colors.transparent,
+      toolbarHeight: 78,
+      leadingWidth: showBackButton ? 52 : 0,
+      titleSpacing: 16,
+      backgroundColor: backgroundColor,
+      surfaceTintColor: backgroundColor,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
       leading: showBackButton
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+              icon: Icon(
+                Icons.arrow_back_ios_new,
+                color: colorScheme.onSurface,
+              ),
               onPressed: () => Get.back(),
             )
           : null,
@@ -39,29 +59,27 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           if (leadingIcon != null) ...[
             Container(
-              width: 46,
-              height: 46,
+              width: iconBoxSize,
+              height: iconBoxSize,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.royalBlue.withValues(alpha: 0.95),
-                    AppColors.royalBlue.withValues(alpha: 0.75),
-                  ],
+                borderRadius: BorderRadius.circular(
+                  Responsive.sp(context, 14).clamp(12.0, 14.0),
+                ),
+                color: iconContainerColor,
+                border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.14),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.royalBlue.withValues(alpha: 0.18),
-                    blurRadius: 16,
+                    color: colorScheme.primary.withValues(alpha: 0.08),
+                    blurRadius: 12,
                     offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              child: Icon(leadingIcon, color: Colors.white, size: 24),
+              child: Icon(leadingIcon, color: iconColor, size: iconSize),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: spacing),
           ],
           Expanded(
             child: Column(
@@ -71,19 +89,25 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface,
-                    fontSize: 26,
+                    color: titleColor,
+                    fontSize: titleFontSize,
                     fontWeight: FontWeight.w800,
+                    height: 1,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null)
                   Text(
                     subtitle!,
                     style: TextStyle(
-                      color: context.theme.colorScheme.onSurface.withValues(alpha: 0.66),
-                      fontSize: 15,
+                      color: subtitleColor,
+                      fontSize: subtitleFontSize,
                       fontWeight: FontWeight.w500,
+                      height: 1.1,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),
@@ -96,5 +120,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(88 + (bottom?.preferredSize.height ?? 0.0));
+  Size get preferredSize =>
+      Size.fromHeight(78 + (bottom?.preferredSize.height ?? 0.0));
 }

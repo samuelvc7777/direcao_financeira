@@ -14,5 +14,20 @@ abstract class ITransactionRepository {
     required DateTime transactionDate,
     int? bankAccountId,
     int? creditCardId,
+    int? installmentCount,
+  });
+
+  Future<Either<Failure, TransactionEntity>> updateTransaction(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    DateTime? transactionDate,
+    TransactionMutationScope? scope,
+  });
+
+  Future<Either<Failure, void>> deleteTransaction(
+    int id, {
+    TransactionMutationScope? scope,
   });
 }

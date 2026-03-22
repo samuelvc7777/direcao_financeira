@@ -18,27 +18,41 @@ class AuthRepository implements IAuthRepository {
 
   @override
   Future<Either<Failure, UserEntity>> login(String email, String password) async {
+    print('AuthRepository.login() - Iniciando login no repositório');
     try {
       final response = await remoteDataSource.login(
         email: email,
         password: password,
       );
+      print('AuthRepository.login() - Resposta do datasource recebida');
       final token = response['access_token'];
       final userData = response['user'];
 
       if (token is String && token.isNotEmpty) {
+        print('AuthRepository.login() - Token válido, salvando no localDataSource');
         await localDataSource.saveToken(token);
-      }
-      if (userData is Map<String, dynamic>) {
-        await localDataSource.saveUser(userData);
-        return Right(UserModel.fromJson(userData));
+      } else {
+        print('AuthRepository.login() - ALERTA: Token ausente ou inválido na resposta');
       }
 
+      if (userData is Map<String, dynamic>) {
+        print('AuthRepository.login() - User data válido, salvando e retornando');
+        await localDataSource.saveUser(userData);
+        return Right(UserModel.fromJson(userData));
+      } else {
+        print('AuthRepository.login() - ALERTA: User data ausente ou inválido na resposta');
+      }
+
+      print('AuthRepository.login() - Retornando ServerFailure (Resposta inválida)');
       return Left(ServerFailure('Resposta invalida ao realizar login.'));
     } on DioException catch (e) {
+      print('AuthRepository.login() - Capturado DioException: ${e.message}, status: ${e.response?.statusCode}');
+      print('AuthRepository.login() - Dados do erro: ${e.response?.data}');
       final message = _extractMessage(e, 'Erro ao realizar login.');
       return Left(ServerFailure(message));
-    } catch (e) {
+    } catch (e, stack) {
+      print('AuthRepository.login() - Erro inesperado: $e');
+      print('AuthRepository.login() - StackTrace: $stack');
       return Left(ServerFailure('Erro inesperado ao realizar login.'));
     }
   }

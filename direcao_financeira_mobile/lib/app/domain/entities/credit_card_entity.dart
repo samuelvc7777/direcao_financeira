@@ -2,6 +2,7 @@ class CreditCardEntity {
   final int id;
   final String name;
   final String brand;
+  final String color;
   final int limitCents;
   final int availableLimitCents;
   final int closingDay;
@@ -13,6 +14,7 @@ class CreditCardEntity {
     required this.id,
     required this.name,
     required this.brand,
+    required this.color,
     required this.limitCents,
     required this.availableLimitCents,
     required this.closingDay,

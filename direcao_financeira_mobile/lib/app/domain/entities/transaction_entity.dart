@@ -50,9 +50,29 @@ enum AssetType {
   }
 }
 
+enum TransactionMutationScope {
+  current,
+  all;
+
+  String toApiValue() => name.toUpperCase();
+}
+
+enum TransactionStatus {
+  cleared,
+  pending;
+
+  String toApiValue() => name.toUpperCase();
+
+  static TransactionStatus fromApiValue(String value) {
+    if (value.toUpperCase() == 'CLEARED') return TransactionStatus.cleared;
+    return TransactionStatus.pending;
+  }
+}
+
 class TransactionEntity {
   final int id;
   final TransactionType type;
+  final TransactionStatus status;
   final AssetType assetType;
   final int amountCents;
   final int categoryId;
@@ -60,6 +80,9 @@ class TransactionEntity {
   final DateTime transactionDate;
   final int? bankAccountId;
   final int? creditCardId;
+  final String? installmentGroupId;
+  final int? installmentNumber;
+  final int? installmentCount;
 
   // Campos extras que podem vir populados do backend (joins)
   final String? categoryName;
@@ -70,6 +93,7 @@ class TransactionEntity {
   TransactionEntity({
     required this.id,
     required this.type,
+    required this.status,
     required this.assetType,
     required this.amountCents,
     required this.categoryId,
@@ -77,6 +101,9 @@ class TransactionEntity {
     required this.transactionDate,
     this.bankAccountId,
     this.creditCardId,
+    this.installmentGroupId,
+    this.installmentNumber,
+    this.installmentCount,
     this.categoryName,
     this.categoryColor,
     this.categoryIcon,

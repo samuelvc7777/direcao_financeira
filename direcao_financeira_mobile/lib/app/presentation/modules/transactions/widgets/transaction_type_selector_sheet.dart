@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/responsive.dart';
 import '../../../../routes/app_pages.dart';
 import '../../../widgets/scale_button.dart';
 
@@ -11,59 +10,77 @@ class TransactionTypeSelectorSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: Responsive.hp(context, 6),
-        vertical: Responsive.vp(context, 4),
-      ),
-      decoration: BoxDecoration(
-        color: context.theme.colorScheme.surface,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(Responsive.sp(context, 32)),
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      decoration: const BoxDecoration(
+        color: AppColors.backgroundDark,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: Responsive.hp(context, 12),
-            height: Responsive.vp(context, 0.6),
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.12),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(99),
             ),
           ),
-          SizedBox(height: Responsive.vp(context, 4)),
-          Text(
-            'O que voce deseja registrar?',
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface,
-              fontSize: Responsive.sp(context, 22),
-              fontWeight: FontWeight.w900,
-            ),
+          const SizedBox(height: 24),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nova transação',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'O que deseja registrar?',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Get.back(),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: Responsive.vp(context, 4)),
-          // Row com IntrinsicHeight para garantir que ambos tenham a mesma altura
+          const SizedBox(height: 28),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: _SelectorItem(
-                    title: 'Entrada',
-                    subtitle: 'Receita / Salario',
-                    icon: Icons.arrow_upward_rounded,
-                    color: AppColors.emerald,
-                    onTap: () {
-                      Get.back();
-                      Get.toNamed(AppRoutes.transactionIncome);
-                    },
-                  ),
-                ),
-                SizedBox(width: Responsive.hp(context, 4)),
-                Expanded(
-                  child: _SelectorItem(
-                    title: 'Saida',
-                    subtitle: 'Despesa / Pagamento',
+                    title: 'Nova Saída',
+                    subtitle: 'Despesas e gastos',
                     icon: Icons.arrow_downward_rounded,
                     color: AppColors.rose,
                     onTap: () {
@@ -72,23 +89,34 @@ class TransactionTypeSelectorSheet extends StatelessWidget {
                     },
                   ),
                 ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _SelectorItem(
+                    title: 'Nova Entrada',
+                    subtitle: 'Receitas e ganhos',
+                    icon: Icons.arrow_upward_rounded,
+                    color: AppColors.emerald,
+                    onTap: () {
+                      Get.back();
+                      Get.toNamed(AppRoutes.transactionIncome);
+                    },
+                  ),
+                ),
               ],
             ),
           ),
-          SizedBox(height: Responsive.vp(context, 2)),
-          _SelectorItem(
-            title: 'Cartao de Credito',
-            subtitle: 'Nova compra no credito',
+          const SizedBox(height: 16),
+          _SelectorItemRow(
+            title: 'Compra no Cartão',
+            subtitle: 'Crédito • Parcelas • Fatura',
             icon: Icons.credit_card_rounded,
-            color: AppColors.royalBlue,
-            isFullWidth: true,
+            color: AppColors.violet,
             onTap: () {
               Get.back();
               Get.toNamed(AppRoutes.transactionCreditCard);
             },
           ),
-          // Aumentado o espacamento na base para nao ficar colado
-          SizedBox(height: Responsive.vp(context, 6)),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -102,7 +130,6 @@ class _SelectorItem extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
-    this.isFullWidth = false,
   });
 
   final String title;
@@ -110,53 +137,152 @@ class _SelectorItem extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  final bool isFullWidth;
 
   @override
   Widget build(BuildContext context) {
     return ScaleButton(
       onTap: onTap,
       child: Container(
-        width: isFullWidth ? double.infinity : null,
-        padding: EdgeInsets.all(Responsive.sp(context, 20)),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(Responsive.sp(context, 24)),
-          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.05),
+              blurRadius: 24,
+              spreadRadius: 2,
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: isFullWidth ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(Responsive.sp(context, 12)),
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
+                color: color,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Icon(
-                icon, 
-                color: color, 
-                size: Responsive.sp(context, 28),
-              ),
+              child: Icon(icon, color: Colors.white, size: 28),
             ),
-            SizedBox(height: Responsive.vp(context, 2)),
+            const SizedBox(height: 20),
             Text(
               title,
-              style: TextStyle(
-                color: context.theme.colorScheme.onSurface,
-                fontSize: Responsive.sp(context, 16),
-                fontWeight: FontWeight.bold,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
               ),
+              textAlign: TextAlign.center,
             ),
-            SizedBox(height: Responsive.vp(context, 0.5)),
+            const SizedBox(height: 6),
             Text(
               subtitle,
               style: TextStyle(
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                fontSize: Responsive.sp(context, 12),
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
-              textAlign: isFullWidth ? TextAlign.center : TextAlign.start,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectorItemRow extends StatelessWidget {
+  const _SelectorItemRow({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleButton(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.05),
+              blurRadius: 24,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: color.withValues(alpha: 0.8),
+              size: 24,
             ),
           ],
         ),

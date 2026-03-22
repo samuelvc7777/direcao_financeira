@@ -70,7 +70,9 @@ describe('Subscription contract (e2e)', () => {
       .send({ planId: 2 })
       .expect(201);
 
-    expect(subscriptionServiceMock.changePlan).toHaveBeenCalledWith(7, { planId: 2 });
+    expect(subscriptionServiceMock.changePlan).toHaveBeenCalledWith(7, {
+      planId: 2,
+    });
     expect(response.body).toEqual({
       message: 'Plano alterado com sucesso.',
       subscription: {

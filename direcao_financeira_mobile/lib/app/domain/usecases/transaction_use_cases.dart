@@ -58,6 +58,7 @@ class CreateTransactionUseCase {
     required DateTime transactionDate,
     int? bankAccountId,
     int? creditCardId,
+    int? installmentCount,
   }) async {
     return await repository.createTransaction(
       type: type,
@@ -68,6 +69,44 @@ class CreateTransactionUseCase {
       transactionDate: transactionDate,
       bankAccountId: bankAccountId,
       creditCardId: creditCardId,
+      installmentCount: installmentCount,
     );
+  }
+}
+
+class UpdateTransactionUseCase {
+  final ITransactionRepository repository;
+
+  UpdateTransactionUseCase(this.repository);
+
+  Future<Either<Failure, TransactionEntity>> call(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    DateTime? transactionDate,
+    TransactionMutationScope? scope,
+  }) async {
+    return await repository.updateTransaction(
+      id,
+      categoryId: categoryId,
+      description: description,
+      amountCents: amountCents,
+      transactionDate: transactionDate,
+      scope: scope,
+    );
+  }
+}
+
+class DeleteTransactionUseCase {
+  final ITransactionRepository repository;
+
+  DeleteTransactionUseCase(this.repository);
+
+  Future<Either<Failure, void>> call(
+    int id, {
+    TransactionMutationScope? scope,
+  }) async {
+    return await repository.deleteTransaction(id, scope: scope);
   }
 }

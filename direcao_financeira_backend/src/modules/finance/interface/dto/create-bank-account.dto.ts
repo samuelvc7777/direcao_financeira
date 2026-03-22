@@ -1,5 +1,12 @@
 import { AccountType } from '@prisma/client';
-import { IsEnum, IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateBankAccountDto {
   @IsString()
@@ -9,6 +16,10 @@ export class CreateBankAccountDto {
   @IsString()
   @IsNotEmpty({ message: 'O nome do banco e obrigatorio.' })
   bankName: string;
+
+  @IsString()
+  @IsOptional()
+  color?: string;
 
   @IsEnum(AccountType, { message: 'Tipo de conta invalido.' })
   accountType: AccountType;

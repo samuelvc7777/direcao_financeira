@@ -39,6 +39,18 @@ class TransactionsBinding extends Bindings {
         fenix: true,
       );
     }
+    if (!Get.isRegistered<UpdateTransactionUseCase>()) {
+      Get.lazyPut(
+        () => UpdateTransactionUseCase(Get.find<ITransactionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<DeleteTransactionUseCase>()) {
+      Get.lazyPut(
+        () => DeleteTransactionUseCase(Get.find<ITransactionRepository>()),
+        fenix: true,
+      );
+    }
     if (!Get.isRegistered<GetCategoriesUseCase>()) {
       Get.lazyPut(() => GetCategoriesUseCase(Get.find<ICategoryRepository>()), fenix: true);
     }
@@ -53,6 +65,8 @@ class TransactionsBinding extends Bindings {
       Get.lazyPut<TransactionsController>(
         () => TransactionsController(
           createTransactionUseCase: Get.find<CreateTransactionUseCase>(),
+          updateTransactionUseCase: Get.find<UpdateTransactionUseCase>(),
+          deleteTransactionUseCase: Get.find<DeleteTransactionUseCase>(),
           getTransactionsUseCase: Get.find<GetTransactionsUseCase>(),
           getCategoriesUseCase: Get.find<GetCategoriesUseCase>(),
           getBankAccountsUseCase: Get.find<GetBankAccountsUseCase>(),

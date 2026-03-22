@@ -1,4 +1,12 @@
-import { IsInt, IsNotEmpty, IsString, Length, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateCreditCardDto {
   @IsString()
@@ -10,7 +18,13 @@ export class CreateCreditCardDto {
   brand: string;
 
   @IsString()
-  @Length(4, 4, { message: 'Os ultimos quatro digitos devem ter 4 caracteres.' })
+  @IsOptional()
+  color?: string;
+
+  @IsString()
+  @Length(4, 4, {
+    message: 'Os ultimos quatro digitos devem ter 4 caracteres.',
+  })
   lastFourDigits: string;
 
   @IsInt({ message: 'O limite deve ser um numero inteiro em centavos.' })

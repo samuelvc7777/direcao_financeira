@@ -2,6 +2,7 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/bank_account_entity.dart';
@@ -11,8 +12,47 @@ import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import '../home/home_controller.dart';
 
+enum TransactionsFilter {
+  all,
+  income,
+  expense;
+
+  String get label {
+    switch (this) {
+      case TransactionsFilter.all:
+        return 'Todos';
+      case TransactionsFilter.income:
+        return 'Entradas';
+      case TransactionsFilter.expense:
+        return 'Saidas';
+    }
+  }
+}
+
+class TransactionsDayGroup {
+  TransactionsDayGroup({
+    required this.date,
+    required this.transactions,
+  });
+
+  final DateTime date;
+  final List<TransactionEntity> transactions;
+
+  int get totalCents => transactions.fold<int>(
+        0,
+        (total, transaction) =>
+            total + transaction.amountCents * _signalFor(transaction.type),
+      );
+
+  static int _signalFor(TransactionType type) {
+    return type == TransactionType.expense ? -1 : 1;
+  }
+}
+
 class TransactionsController extends GetxController {
   final CreateTransactionUseCase createTransactionUseCase;
+  final UpdateTransactionUseCase updateTransactionUseCase;
+  final DeleteTransactionUseCase deleteTransactionUseCase;
   final GetTransactionsUseCase getTransactionsUseCase;
   final GetCategoriesUseCase getCategoriesUseCase;
   final GetBankAccountsUseCase getBankAccountsUseCase;
@@ -20,6 +60,8 @@ class TransactionsController extends GetxController {
 
   TransactionsController({
     required this.createTransactionUseCase,
+    required this.updateTransactionUseCase,
+    required this.deleteTransactionUseCase,
     required this.getTransactionsUseCase,
     required this.getCategoriesUseCase,
     required this.getBankAccountsUseCase,
@@ -28,11 +70,17 @@ class TransactionsController extends GetxController {
 
   final isSubmitting = false.obs;
   final isLoading = true.obs;
+  final deletingTransactionIds = <int>{}.obs;
 
   final transactions = <TransactionEntity>[].obs;
   final categories = <CategoryEntity>[].obs;
   final activeAccounts = <BankAccountEntity>[].obs;
   final activeCards = <CreditCardEntity>[].obs;
+  final selectedFilter = TransactionsFilter.all.obs;
+  final selectedMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  ).obs;
 
   @override
   void onInit() {
@@ -83,6 +131,12 @@ class TransactionsController extends GetxController {
           ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
 
         transactions.assignAll(sortedData);
+
+        if (sortedData.isNotEmpty &&
+            !_hasTransactionsInSelectedMonth(sortedData)) {
+          final latestDate = sortedData.first.transactionDate;
+          selectedMonth.value = DateTime(latestDate.year, latestDate.month);
+        }
       },
     );
 
@@ -91,11 +145,103 @@ class TransactionsController extends GetxController {
     }
   }
 
-  List<CategoryEntity> get incomeCategories =>
-      categories.where((category) => category.type.name.toUpperCase() == 'INCOME').toList();
+  List<CategoryEntity> get incomeCategories => categories
+      .where((category) => category.type.name.toUpperCase() == 'INCOME')
+      .toList();
 
-  List<CategoryEntity> get expenseCategories =>
-      categories.where((category) => category.type.name.toUpperCase() == 'EXPENSE').toList();
+  List<CategoryEntity> get expenseCategories => categories
+      .where((category) => category.type.name.toUpperCase() == 'EXPENSE')
+      .toList();
+
+  List<TransactionEntity> get monthTransactions {
+    return transactions
+        .where(
+          (transaction) =>
+              transaction.transactionDate.year == selectedMonth.value.year &&
+              transaction.transactionDate.month == selectedMonth.value.month,
+        )
+        .toList();
+  }
+
+  List<TransactionEntity> get visibleTransactions {
+    switch (selectedFilter.value) {
+      case TransactionsFilter.all:
+        return monthTransactions;
+      case TransactionsFilter.income:
+        return monthTransactions
+            .where((transaction) => transaction.type == TransactionType.income)
+            .toList();
+      case TransactionsFilter.expense:
+        return monthTransactions
+            .where((transaction) =>
+                transaction.type == TransactionType.expense)
+            .toList();
+    }
+  }
+
+  int get totalIncomeCents => monthTransactions
+      .where((transaction) => transaction.type == TransactionType.income)
+      .fold<int>(0, (total, transaction) => total + transaction.amountCents);
+
+  int get totalExpenseCents => monthTransactions
+      .where((transaction) => transaction.type == TransactionType.expense)
+      .fold<int>(0, (total, transaction) => total + transaction.amountCents);
+
+  int get balanceCents => totalIncomeCents - totalExpenseCents;
+
+  String get selectedMonthSubtitle {
+    final formatted =
+        DateFormat("MMMM 'de' yyyy", 'pt_BR').format(selectedMonth.value);
+    return _capitalize(formatted);
+  }
+
+  String get selectedMonthLabelUppercase =>
+      DateFormat('MMMM yyyy', 'pt_BR').format(selectedMonth.value).toUpperCase();
+
+  List<TransactionsDayGroup> get groupedVisibleTransactions {
+    final buckets = <DateTime, List<TransactionEntity>>{};
+
+    for (final transaction in visibleTransactions) {
+      final day = DateTime(
+        transaction.transactionDate.year,
+        transaction.transactionDate.month,
+        transaction.transactionDate.day,
+      );
+
+      buckets.putIfAbsent(day, () => <TransactionEntity>[]).add(transaction);
+    }
+
+    final groups = buckets.entries
+        .map(
+          (entry) => TransactionsDayGroup(
+            date: entry.key,
+            transactions: entry.value
+              ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate)),
+          ),
+        )
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    return groups;
+  }
+
+  void changeFilter(TransactionsFilter filter) {
+    selectedFilter.value = filter;
+  }
+
+  void goToPreviousMonth() {
+    selectedMonth.value = DateTime(
+      selectedMonth.value.year,
+      selectedMonth.value.month - 1,
+    );
+  }
+
+  void goToNextMonth() {
+    selectedMonth.value = DateTime(
+      selectedMonth.value.year,
+      selectedMonth.value.month + 1,
+    );
+  }
 
   Future<bool> createTransaction({
     required TransactionType type,
@@ -106,6 +252,7 @@ class TransactionsController extends GetxController {
     required DateTime transactionDate,
     int? bankAccountId,
     int? creditCardId,
+    int? installmentCount,
   }) async {
     isSubmitting.value = true;
 
@@ -118,6 +265,7 @@ class TransactionsController extends GetxController {
       transactionDate: transactionDate,
       bankAccountId: bankAccountId,
       creditCardId: creditCardId,
+      installmentCount: installmentCount,
     );
 
     isSubmitting.value = false;
@@ -143,6 +291,11 @@ class TransactionsController extends GetxController {
         }
 
         transactions.insert(0, transaction);
+        transactions.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+        selectedMonth.value = DateTime(
+          transaction.transactionDate.year,
+          transaction.transactionDate.month,
+        );
 
         if (Get.isRegistered<HomeController>()) {
           Get.find<HomeController>().loadDashboardData(silent: true);
@@ -162,5 +315,106 @@ class TransactionsController extends GetxController {
         return true;
       },
     );
+  }
+
+  Future<void> updateTransaction(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    DateTime? transactionDate,
+    TransactionMutationScope? scope,
+  }) async {
+    isSubmitting.value = true;
+
+    final result = await updateTransactionUseCase(
+      id,
+      categoryId: categoryId,
+      description: description,
+      amountCents: amountCents,
+      transactionDate: transactionDate,
+      scope: scope,
+    );
+
+    isSubmitting.value = false;
+
+    result.fold(
+      (failure) => Get.snackbar('Erro', failure.message),
+      (transaction) {
+        if (scope == TransactionMutationScope.all) {
+          loadData(silent: true);
+        } else {
+          final index = transactions.indexWhere((t) => t.id == id);
+          if (index != -1) {
+            transactions[index] = transaction;
+          }
+        }
+
+        if (Get.isRegistered<HomeController>()) {
+          Get.find<HomeController>().loadDashboardData(silent: true);
+        }
+
+        Get.back();
+        Get.snackbar('Sucesso', 'Transacao atualizada.');
+      },
+    );
+  }
+
+  Future<void> deleteTransaction(
+    int id, {
+    TransactionMutationScope? scope,
+  }) async {
+    if (deletingTransactionIds.contains(id)) {
+      return;
+    }
+
+    deletingTransactionIds.add(id);
+    isLoading.value = true;
+    Get.closeAllSnackbars();
+
+    final result = await deleteTransactionUseCase(id, scope: scope);
+
+    result.fold(
+      (failure) {
+        deletingTransactionIds.remove(id);
+        isLoading.value = false;
+        Get.closeAllSnackbars();
+        Get.snackbar('Erro', failure.message);
+      },
+      (_) {
+        if (scope == TransactionMutationScope.all) {
+          loadData(silent: true);
+        } else {
+          transactions.removeWhere((t) => t.id == id);
+          isLoading.value = false;
+        }
+
+        if (Get.isRegistered<HomeController>()) {
+          Get.find<HomeController>().loadDashboardData(silent: true);
+        }
+
+        deletingTransactionIds.remove(id);
+        Get.closeAllSnackbars();
+        Get.snackbar('Sucesso', 'Transacao excluida.');
+      },
+    );
+  }
+
+  bool isDeletingTransaction(int id) => deletingTransactionIds.contains(id);
+
+  bool _hasTransactionsInSelectedMonth(List<TransactionEntity> data) {
+    return data.any(
+      (transaction) =>
+          transaction.transactionDate.year == selectedMonth.value.year &&
+          transaction.transactionDate.month == selectedMonth.value.month,
+    );
+  }
+
+  String _capitalize(String value) {
+    if (value.isEmpty) {
+      return value;
+    }
+
+    return value[0].toUpperCase() + value.substring(1);
   }
 }

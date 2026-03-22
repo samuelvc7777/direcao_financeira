@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Brand Colors - Nova Paleta Vibrante Sólida
-  static const Color deepNavy = Color(0xFF141518);     // Background Principal (Escuro suave)
-  static const Color midnight = Color(0xFF1C1D22);     // Surface / Cards (Cinza sutil)
-  static const Color royalBlue = Color(0xFF3B82F6);    // Primary / Ações Principais (Azul mais suave)
+  static const Color deepNavy = Color(0xFF141518);     // Background Principal (Preto mais claro)
+  static const Color midnight = Color(0xFF101010);     // Surface / Cards (Preto um pouco mais suave)
+  static const Color royalBlue = Color(0xFF1E40AF);    // Primary / Ações Principais (Azul mais forte e escuro)
   static const Color electricCyan = Color(0xFF06B6D4); // Contas Bancárias / Destaques
   static const Color violet = Color(0xFF8B5CF6);       // Cartões de Crédito
   static const Color emerald = Color(0xFF10B981);      // Sucesso / Entradas

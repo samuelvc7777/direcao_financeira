@@ -24,6 +24,19 @@ class BankAccountsController extends GetxController {
   final errorMessage = RxnString();
   final bankAccounts = <BankAccountEntity>[].obs;
 
+  final colorOptions = const <String>[
+    '#22c55e',
+    '#06B6D4',
+    '#038C8C',
+    '#3b82f6',
+    '#6366f1',
+    '#8B5CF6',
+    '#f97316',
+    '#ef4444',
+    '#eab308',
+    '#ec4899',
+  ];
+
   List<BankAccountEntity> get activeAccounts =>
       bankAccounts.where((account) => account.isActive).toList();
 
@@ -52,6 +65,7 @@ class BankAccountsController extends GetxController {
   Future<void> createBankAccount({
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   }) async {
@@ -59,6 +73,7 @@ class BankAccountsController extends GetxController {
       action: () => createBankAccountUseCase(
         name: name,
         bankName: bankName,
+        color: color,
         accountType: accountType,
         initialBalanceCents: initialBalanceCents,
       ),
@@ -70,6 +85,7 @@ class BankAccountsController extends GetxController {
     required int id,
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   }) async {
@@ -78,6 +94,7 @@ class BankAccountsController extends GetxController {
         id: id,
         name: name,
         bankName: bankName,
+        color: color,
         accountType: accountType,
         initialBalanceCents: initialBalanceCents,
       ),
@@ -176,5 +193,14 @@ class BankAccountsController extends GetxController {
           : const Color(0xFF03A696).withValues(alpha: 0.12),
       colorText: Get.theme.colorScheme.onSurface,
     );
+  }
+
+  Color colorFromHex(String colorHex) {
+    final normalized = colorHex.replaceFirst('#', '');
+    if (normalized.length != 6) {
+      return const Color(0xFF06B6D4);
+    }
+
+    return Color(int.parse('FF$normalized', radix: 16));
   }
 }

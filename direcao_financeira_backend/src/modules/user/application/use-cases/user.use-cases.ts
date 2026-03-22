@@ -3,9 +3,7 @@ import { CreateUserDto } from '../../interface/dto/create-user.dto';
 import { UpdateUserDto } from '../../interface/dto/update-user.dto';
 import { PASSWORD_HASHER } from '../../../auth/domain/services/password-hasher';
 import { toUserProfileOutput } from '../../domain/services/user-output.mapper';
-import {
-  USER_REPOSITORY,
-} from '../../domain/repositories/user.repository';
+import { USER_REPOSITORY } from '../../domain/repositories/user.repository';
 import type { PasswordHasher } from '../../../auth/domain/services/password-hasher';
 import type { UserRepository } from '../../domain/repositories/user.repository';
 
@@ -22,10 +20,13 @@ export class CreateUserUseCase {
     let planId: number | undefined = createUserDto.planId;
 
     if (!planId && (!createUserDto.role || createUserDto.role === 'USER')) {
-      planId = (await this.userRepository.findDefaultActivePlanId()) ?? undefined;
+      planId =
+        (await this.userRepository.findDefaultActivePlanId()) ?? undefined;
     }
 
-    const hashedPassword = await this.passwordHasher.hash(createUserDto.password);
+    const hashedPassword = await this.passwordHasher.hash(
+      createUserDto.password,
+    );
 
     const user = await this.userRepository.create({
       ...createUserDto,

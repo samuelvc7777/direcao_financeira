@@ -1,9 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePlanDto } from '../../interface/dto/create-plan.dto';
 import { UpdatePlanDto } from '../../interface/dto/update-plan.dto';
-import {
-  PLAN_REPOSITORY,
-} from '../../domain/repositories/plan.repository';
+import { PLAN_REPOSITORY } from '../../domain/repositories/plan.repository';
 import type { PlanRepository } from '../../domain/repositories/plan.repository';
 
 @Injectable()

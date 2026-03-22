@@ -1,8 +1,4 @@
-import {
-  AssetType,
-  TransactionStatus,
-  TransactionType,
-} from '@prisma/client';
+import { AssetType, TransactionStatus, TransactionType } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
@@ -46,6 +42,11 @@ export class CreateTransactionDto {
   @IsInt({ message: 'O valor deve ser inteiro em centavos.' })
   @Min(1, { message: 'O valor deve ser maior que zero.' })
   amountCents: number;
+
+  @IsOptional()
+  @IsInt({ message: 'A quantidade de parcelas deve ser inteira.' })
+  @Min(1, { message: 'A quantidade de parcelas deve ser maior que zero.' })
+  installmentCount?: number;
 
   @IsDateString({}, { message: 'A data da transacao e invalida.' })
   transactionDate: string;

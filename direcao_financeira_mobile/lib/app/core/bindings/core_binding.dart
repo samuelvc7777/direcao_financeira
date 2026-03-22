@@ -2,12 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../network/connection_controller.dart';
 import '../preferences/app_preferences.dart';
 import '../../data/datasources/auth_datasource.dart';
 import '../../data/datasources/bank_account_datasource.dart';
 import '../../data/datasources/category_datasource.dart';
 import '../../data/datasources/credit_card_datasource.dart';
 import '../../data/datasources/subscription_datasource.dart';
+import '../../data/datasources/subscription_store_datasource.dart';
 import '../../data/datasources/transaction_datasource.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/bank_account_repository.dart';
@@ -21,6 +23,8 @@ import '../../domain/repositories/i_category_repository.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
 import '../../domain/repositories/i_subscription_repository.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
+import '../accessibility/accessibility_controller.dart';
+import '../../routes/app_pages.dart';
 
 class CoreBinding extends Bindings {
   @override
@@ -32,11 +36,22 @@ class CoreBinding extends Bindings {
       permanent: true,
     );
 
+    Get.put<AccessibilityController>(
+      AccessibilityController(),
+      permanent: true,
+    );
+
+    // Use 10.0.2.2 para testar no emulador Android (redireciona para o localhost do seu PC).
+    // Caso esteja testando em um dispositivo físico, use o IP da sua máquina na rede local: 'http://192.168.3.114:3000'
+    const baseUrl = 'https://barbie-inseverable-audrianna.ngrok-free.dev';
+
+    Get.put<ConnectionController>(
+      ConnectionController(storage: storage, baseUrl: baseUrl),
+      permanent: true,
+    );
+
     final dio = Dio(
-      BaseOptions(
-        baseUrl: 'http://100.88.15.104:3000',
-        connectTimeout: const Duration(seconds: 5),
-      ),
+      BaseOptions(baseUrl: baseUrl, connectTimeout: const Duration(seconds: 5)),
     );
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -46,6 +61,23 @@ class CoreBinding extends Bindings {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
+        },
+        onError: (error, handler) async {
+          final statusCode = error.response?.statusCode;
+          final path = error.requestOptions.path;
+          final isAuthEndpoint =
+              path.contains('/auth/login') || path.contains('/auth/register');
+
+          if (statusCode == 401 && !isAuthEndpoint) {
+            await storage.remove('token');
+            await storage.remove('user');
+
+            if (Get.currentRoute != AppRoutes.login) {
+              Get.offAllNamed(AppRoutes.login);
+            }
+          }
+
+          handler.next(error);
         },
       ),
     );
@@ -79,6 +111,10 @@ class CoreBinding extends Bindings {
       SubscriptionLocalDataSource(storage: storage),
       permanent: true,
     );
+    Get.put<ISubscriptionStoreDataSource>(
+      SubscriptionStoreDataSource(),
+      permanent: true,
+    );
     Get.put<ITransactionDataSource>(
       TransactionRemoteDataSource(dio: dio),
       permanent: true,
@@ -107,6 +143,7 @@ class CoreBinding extends Bindings {
       SubscriptionRepository(
         remoteDataSource: Get.find<ISubscriptionRemoteDataSource>(),
         localDataSource: Get.find<ISubscriptionLocalDataSource>(),
+        storeDataSource: Get.find<ISubscriptionStoreDataSource>(),
       ),
       permanent: true,
     );

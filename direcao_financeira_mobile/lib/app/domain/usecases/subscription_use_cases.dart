@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 
 import '../../core/errors/failures.dart';
 import '../entities/plan_entity.dart';
+import '../entities/store_product_entity.dart';
 import '../entities/subscription_entity.dart';
 import '../repositories/i_subscription_repository.dart';
 
@@ -60,9 +61,7 @@ class RenewSubscriptionUseCase {
 
   final ISubscriptionRepository _repository;
 
-  Future<Either<Failure, SubscriptionEntity?>> call({
-    required bool autoRenew,
-  }) {
+  Future<Either<Failure, SubscriptionEntity?>> call({required bool autoRenew}) {
     return _repository.renewSubscription(autoRenew: autoRenew);
   }
 }
@@ -80,5 +79,65 @@ class SyncStoredUserSubscriptionUseCase {
       activeSubscription: activeSubscription,
       subscriptions: subscriptions,
     );
+  }
+}
+
+class IsStoreAvailableUseCase {
+  IsStoreAvailableUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Future<Either<Failure, bool>> call() {
+    return _repository.isStoreAvailable();
+  }
+}
+
+class GetStoreProductsUseCase {
+  GetStoreProductsUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Future<Either<Failure, List<StoreProductEntity>>> call(
+    Set<String> productIds,
+  ) {
+    return _repository.getStoreProducts(productIds);
+  }
+}
+
+class BuyStoreProductUseCase {
+  BuyStoreProductUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Future<Either<Failure, void>> call({
+    required String productId,
+    String? applicationUserName,
+  }) {
+    return _repository.buyProduct(
+      productId: productId,
+      applicationUserName: applicationUserName,
+    );
+  }
+}
+
+class RestorePurchasesUseCase {
+  RestorePurchasesUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Future<Either<Failure, void>> call({String? applicationUserName}) {
+    return _repository.restorePurchases(
+      applicationUserName: applicationUserName,
+    );
+  }
+}
+
+class CompletePurchaseUseCase {
+  CompletePurchaseUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Future<Either<Failure, void>> call(String productId) {
+    return _repository.completePurchase(productId);
   }
 }

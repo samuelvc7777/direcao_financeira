@@ -1,6 +1,4 @@
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ChangePlanDto } from './dto/change-plan.dto';
 import { RenewSubscriptionDto } from './dto/renew-subscription.dto';
 import {

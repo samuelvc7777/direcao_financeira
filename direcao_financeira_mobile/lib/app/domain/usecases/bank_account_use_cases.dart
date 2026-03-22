@@ -22,12 +22,14 @@ class CreateBankAccountUseCase {
   Future<Either<Failure, BankAccountEntity>> call({
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   }) {
     return _repository.createBankAccount(
       name: name,
       bankName: bankName,
+      color: color,
       accountType: accountType,
       initialBalanceCents: initialBalanceCents,
     );
@@ -43,6 +45,7 @@ class UpdateBankAccountUseCase {
     required int id,
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,
@@ -51,6 +54,7 @@ class UpdateBankAccountUseCase {
       id: id,
       name: name,
       bankName: bankName,
+      color: color,
       accountType: accountType,
       initialBalanceCents: initialBalanceCents,
       isActive: isActive,

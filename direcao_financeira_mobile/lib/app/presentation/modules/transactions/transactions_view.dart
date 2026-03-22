@@ -5,271 +5,225 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/entities/transaction_entity.dart';
+import '../../../routes/app_pages.dart';
+import '../../widgets/app_month_selector.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/scale_button.dart';
 import 'transactions_controller.dart';
 import 'widgets/transaction_type_selector_sheet.dart';
+import 'widgets/transactions_add_button.dart';
+import 'widgets/transactions_day_group_section.dart';
+import 'widgets/transactions_empty_state.dart';
+import 'widgets/transactions_filter_tabs.dart';
+import 'widgets/transactions_summary_cards.dart';
 
 class TransactionsView extends GetView<TransactionsController> {
   const TransactionsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.simpleCurrency(locale: 'pt_BR');
-    final dateFormat = DateFormat('dd/MM', 'pt_BR');
-
     return Scaffold(
       backgroundColor: context.theme.scaffoldBackgroundColor,
-      appBar: CustomAppBar(
-        title: 'Transacoes',
-        subtitle: 'Seu historico de movimentacoes',
-        leadingIcon: Icons.receipt_long_rounded,
-        showBackButton: false,
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: Responsive.hp(context, 4)),
-            child: ScaleButton(
-              onTap: () {
-                Get.bottomSheet(
-                  const TransactionTypeSelectorSheet(),
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                );
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: Responsive.hp(context, 3.2),
-                  vertical: Responsive.vp(context, 1),
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.teal.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(Responsive.sp(context, 12)),
-                  border: Border.all(color: AppColors.teal.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.add_rounded,
-                      color: AppColors.teal,
-                      size: Responsive.sp(context, 20),
-                    ),
-                    SizedBox(width: Responsive.hp(context, 1)),
-                    Text(
-                      'Nova',
-                      style: TextStyle(
-                        color: AppColors.teal,
-                        fontWeight: FontWeight.bold,
-                        fontSize: Responsive.sp(context, 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 40),
+        child: Obx(
+          () => CustomAppBar(
+            title: 'Transacoes',
+            subtitle: controller.selectedMonthSubtitle,
+            leadingIcon: Icons.receipt_long_rounded,
+            showBackButton: false,
           ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final horizontalPadding = width < 360
-              ? Responsive.hp(context, 3.2)
-              : width < 430
-                  ? Responsive.hp(context, 4.2)
-                  : Responsive.hp(context, 5.2);
-
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: context.theme.scaffoldBackgroundColor,
-            child: Obx(() {
-              final transacoes = controller.transactions;
-
-              if (controller.isLoading.value) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.aqua),
-                );
-              }
-
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: transacoes.isEmpty
-                    ? Center(
-                        key: const ValueKey('empty'),
-                        child: Padding(
-                          padding: EdgeInsets.all(Responsive.sp(context, 32)),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
-                                size: Responsive.sp(context, 80),
-                              ),
-                              SizedBox(height: Responsive.vp(context, 3)),
-                              Text(
-                                'Nenhuma transacao',
-                                style: TextStyle(
-                                  color: context.theme.colorScheme.onSurface,
-                                  fontSize: Responsive.sp(context, 20),
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              SizedBox(height: Responsive.vp(context, 1.5)),
-                              Text(
-                                'Sua lista de despesas e receitas aparecera aqui.',
-                                style: TextStyle(
-                                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                  height: 1.5,
-                                  fontSize: Responsive.sp(context, 14),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.separated(
-                        key: const ValueKey('list'),
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          Responsive.vp(context, 2),
-                          horizontalPadding,
-                          Responsive.vp(context, 12),
-                        ),
-                        itemCount: transacoes.length,
-                        separatorBuilder: (context, index) =>
-                            SizedBox(height: Responsive.vp(context, 1.5)),
-                        itemBuilder: (context, index) {
-                          final transaction = transacoes[index];
-                          return _buildTransactionItem(
-                            context,
-                            transaction,
-                            currencyFormat,
-                            dateFormat,
-                            constraints.maxWidth,
-                          );
-                        },
-                      ),
-              );
-            }),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTransactionItem(
-    BuildContext context,
-    TransactionEntity transacao,
-    NumberFormat currencyFormat,
-    DateFormat dateFormat,
-    double maxWidth,
-  ) {
-    final valor = transacao.amount;
-    final isNegativo = transacao.type == TransactionType.expense;
-    final isCompact = maxWidth < 390;
-
-    return Container(
-      padding: EdgeInsets.all(Responsive.sp(context, 16)),
-      decoration: BoxDecoration(
-        color: context.theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
-        border: Border.all(
-          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
         ),
       ),
-      child: isCompact
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _buildLeading(context, isNegativo),
-                    SizedBox(width: Responsive.hp(context, 3.5)),
-                    Expanded(child: _buildInfo(context, transacao, dateFormat)),
-                  ],
-                ),
-                SizedBox(height: Responsive.vp(context, 1.2)),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _buildValue(context, valor, isNegativo, currencyFormat),
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                _buildLeading(context, isNegativo),
-                SizedBox(width: Responsive.hp(context, 3.5)),
-                Expanded(child: _buildInfo(context, transacao, dateFormat)),
-                SizedBox(width: Responsive.hp(context, 3)),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: _buildValue(context, valor, isNegativo, currencyFormat),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: TransactionsAddButton(
+        onTap: _openCreateTransactionFlow,
+      ),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.violet),
+          );
+        }
+
+        final currencyFormat = NumberFormat.currency(
+          locale: 'pt_BR',
+          symbol: 'R\$ ',
+        );
+        final compactCurrencyFormat = NumberFormat.currency(
+          locale: 'pt_BR',
+          symbol: 'R\$ ',
+          decimalDigits: 0,
+        );
+        final groups = controller.groupedVisibleTransactions;
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 720;
+            final horizontalPadding = isWide
+                ? 0.0
+                : Responsive.hp(context, 4.8).clamp(16.0, 18.0);
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    Responsive.vp(context, 2.2).clamp(16.0, 18.0),
+                    horizontalPadding,
+                    Responsive.vp(context, 18).clamp(132.0, 148.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppMonthSelector(
+                        label: controller.selectedMonthLabelUppercase,
+                        onPrevious: controller.goToPreviousMonth,
+                        onNext: controller.goToNextMonth,
+                      ),
+                      SizedBox(
+                        height: Responsive.vp(context, 1.2).clamp(8.0, 10.0),
+                      ),
+                      TransactionsSummaryCards(
+                        incomeAmount:
+                            currencyFormat.format(controller.totalIncomeCents / 100),
+                        expenseAmount: currencyFormat.format(
+                          controller.totalExpenseCents / 100,
+                        ),
+                        balanceAmount:
+                            currencyFormat.format(controller.balanceCents / 100),
+                      ),
+                      SizedBox(
+                        height: Responsive.vp(context, 2.2).clamp(16.0, 18.0),
+                      ),
+                      TransactionsFilterTabs(
+                        selectedFilter: controller.selectedFilter.value,
+                        onChanged: controller.changeFilter,
+                      ),
+                      SizedBox(
+                        height: Responsive.vp(context, 3).clamp(20.0, 24.0),
+                      ),
+                      if (groups.isEmpty)
+                        TransactionsEmptyState(
+                          monthLabel: controller.selectedMonthSubtitle,
+                          hasTransactionsLoaded:
+                              controller.transactions.isNotEmpty,
+                        )
+                      else
+                        Column(
+                          children: [
+                            for (var index = 0; index < groups.length; index++) ...[
+                              TransactionsDayGroupSection(
+                                group: groups[index],
+                                amountFormat: currencyFormat,
+                                compactAmountFormat: compactCurrencyFormat,
+                                onEdit: _onEditTransaction,
+                                onDelete: _onDeleteTransaction,
+                              ),
+                              if (index != groups.length - 1)
+                                SizedBox(
+                                  height:
+                                      Responsive.vp(context, 2.2).clamp(16.0, 18.0),
+                                ),
+                            ],
+                          ],
+                        ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+
+  void _openCreateTransactionFlow() {
+    Get.bottomSheet(
+      const TransactionTypeSelectorSheet(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  void _onEditTransaction(TransactionEntity transaction) {
+    if (transaction.assetType == AssetType.creditCard) {
+      Get.toNamed(AppRoutes.transactionCreditCard, arguments: transaction);
+    } else {
+      Get.toNamed(AppRoutes.transactionExpense, arguments: transaction);
+    }
+  }
+
+  void _onDeleteTransaction(TransactionEntity transaction) {
+    final isInstallment = transaction.installmentGroupId != null;
+    Get.closeAllSnackbars();
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: AppColors.midnight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text(
+          'Excluir Transacao',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          isInstallment
+              ? 'Esta transacao faz parte de uma compra parcelada. O que deseja fazer?'
+              : 'Deseja realmente excluir esta transacao?',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
             ),
-    );
-  }
-
-  Widget _buildLeading(BuildContext context, bool isNegativo) {
-    return Container(
-      padding: EdgeInsets.all(Responsive.sp(context, 12)),
-      decoration: BoxDecoration(
-        color: (isNegativo ? AppColors.rose : AppColors.emerald).withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 14)),
-      ),
-      child: Icon(
-        isNegativo ? Icons.arrow_downward : Icons.arrow_upward,
-        color: isNegativo ? AppColors.rose : AppColors.emerald,
-        size: Responsive.sp(context, 20),
-      ),
-    );
-  }
-
-  Widget _buildInfo(
-    BuildContext context,
-    TransactionEntity transacao,
-    DateFormat dateFormat,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          transacao.description,
-          style: TextStyle(
-            color: context.theme.colorScheme.onSurface,
-            fontSize: Responsive.sp(context, 16),
-            fontWeight: FontWeight.bold,
           ),
-        ),
-        SizedBox(height: Responsive.vp(context, 0.5)),
-        Text(
-          '${transacao.categoryName ?? 'Sem categoria'} - ${dateFormat.format(transacao.transactionDate)}',
-          style: TextStyle(
-            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            fontSize: Responsive.sp(context, 13),
-          ),
-        ),
-      ],
-    );
-  }
+          if (isInstallment)
+            ElevatedButton(
+              onPressed: () {
+                if (controller.isDeletingTransaction(transaction.id)) {
+                  return;
+                }
 
-  Widget _buildValue(
-    BuildContext context,
-    double valor,
-    bool isNegativo,
-    NumberFormat currencyFormat,
-  ) {
-    return Text(
-      '${isNegativo ? '- ' : '+ '}${currencyFormat.format(valor)}',
-      style: TextStyle(
-        color: isNegativo ? AppColors.rose : AppColors.emerald,
-        fontSize: Responsive.sp(context, 16),
-        fontWeight: FontWeight.w900,
+                Get.closeAllSnackbars();
+                Get.back();
+                controller.deleteTransaction(
+                  transaction.id,
+                  scope: TransactionMutationScope.all,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.rose.withValues(alpha: 0.1),
+                foregroundColor: AppColors.rose,
+                elevation: 0,
+              ),
+              child: const Text('Todas Parcelas'),
+            ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.isDeletingTransaction(transaction.id)) {
+                return;
+              }
+
+              Get.closeAllSnackbars();
+              Get.back();
+              controller.deleteTransaction(
+                transaction.id,
+                scope: TransactionMutationScope.current,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.rose,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: Text(isInstallment ? 'Apenas esta' : 'Excluir'),
+          ),
+        ],
       ),
     );
   }

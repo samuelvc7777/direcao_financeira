@@ -67,6 +67,19 @@ enum InvoiceStatus {
   OVERDUE
 }
 
+enum RideStatus {
+  PENDING
+  FINISHED
+  CANCELED
+}
+
+enum RidePaymentMethod {
+  PIX
+  CARD
+  CASH
+  APP
+}
+
 model User {
   id              Int                 @id @default(autoincrement())
   email           String              @unique
@@ -79,6 +92,8 @@ model User {
   creditCards     CreditCard[]
   categories      Category[]
   transactions    Transaction[]
+  shifts          Shift[]
+  rides           Ride[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 }
@@ -137,6 +152,7 @@ model BankAccount {
   userId              Int
   name                String
   bankName            String
+  color               String?
   accountType         AccountType
   initialBalanceCents Int
   currentBalanceCents Int
@@ -155,6 +171,7 @@ model CreditCard {
   userId              Int
   name                String
   brand               String
+  color               String?
   lastFourDigits      String
   limitCents          Int
   availableLimitCents Int
@@ -196,6 +213,9 @@ model Transaction {
   creditCardId   Int?
   categoryId     Int
   invoiceId      Int?
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentCount   Int?
   description    String
   amountCents    Int
   transactionDate DateTime
@@ -215,6 +235,66 @@ model Transaction {
   @@index([creditCardId])
   @@index([categoryId])
   @@index([invoiceId])
+  @@index([installmentGroupId])
+}
+
+model Shift {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  startTime       DateTime  @default(now())
+  endTime         DateTime?
+  totalTime       Int       @default(0) // segundos
+  idleTime        Int       @default(0) // segundos
+  averageTime     Int       @default(0) // segundos
+  totalDrivenKm   Float     @default(0)
+  averageKmh      Float     @default(0)
+  user            User      @relation(fields: [userId], references: [id])
+  rides           Ride[]
+  route           ShiftRoute?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model ShiftRoute {
+  id                 Int      @id @default(autoincrement())
+  shiftId            Int      @unique
+  points             Json
+  pointCount         Int      @default(0)
+  totalDistanceMeters Float   @default(0)
+  startedAt          DateTime
+  endedAt            DateTime
+  shift              Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Ride {
+  id                 Int               @id @default(autoincrement())
+  userId             Int
+  shiftId            Int?
+  status             RideStatus        @default(PENDING)
+  paymentMethod      RidePaymentMethod
+  grossValueCents    Int
+  netProfitCents     Int
+  totalKm            Float
+  totalTime          Int               @default(0) // segundos
+  customerRating     Int?
+  gainPerKmCents     Int               @default(0)
+  gainPerHourCents   Int               @default(0)
+  originAddress      String?
+  destinationAddress String?
+  stops              Json?
+  passengerName      String?
+  user               User              @relation(fields: [userId], references: [id])
+  shift              Shift?            @relation(fields: [shiftId], references: [id])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([shiftId])
 }
 
 model CreditCardInvoice {

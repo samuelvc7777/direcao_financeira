@@ -40,9 +40,8 @@ export class AdminController {
 
   @Post('users/:id/subscription/cancel')
   async cancelUserSubscription(@Param('id') id: string) {
-    const subscription = await this.subscriptionService.cancelCurrentSubscription(
-      +id,
-    );
+    const subscription =
+      await this.subscriptionService.cancelCurrentSubscription(+id);
 
     return {
       message: 'Assinatura do usuario cancelada com sucesso.',

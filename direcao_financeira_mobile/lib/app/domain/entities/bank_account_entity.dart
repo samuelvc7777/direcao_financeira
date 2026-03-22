@@ -20,12 +20,23 @@ enum AccountType {
     }
   }
 
-  String toApiValue() => name.toUpperCase();
+  String toApiValue() {
+    switch (this) {
+      case AccountType.checking:
+        return 'CHECKING';
+      case AccountType.savings:
+        return 'SAVINGS';
+      case AccountType.wallet:
+      case AccountType.investment:
+      case AccountType.other:
+        return 'WALLET';
+    }
+  }
 
   static AccountType fromApiValue(String value) {
     return AccountType.values.firstWhere(
       (e) => e.name.toUpperCase() == value.toUpperCase(),
-      orElse: () => AccountType.other,
+      orElse: () => AccountType.wallet,
     );
   }
 }
@@ -34,6 +45,7 @@ class BankAccountEntity {
   final int id;
   final String name;
   final String bankName;
+  final String color;
   final AccountType accountType;
   final int initialBalanceCents;
   final int currentBalanceCents;
@@ -43,6 +55,7 @@ class BankAccountEntity {
     required this.id,
     required this.name,
     required this.bankName,
+    required this.color,
     required this.accountType,
     required this.initialBalanceCents,
     required this.currentBalanceCents,

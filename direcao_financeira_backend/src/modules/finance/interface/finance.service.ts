@@ -1,7 +1,5 @@
-import {
-  AssetType,
-  TransactionStatus,
-} from '@prisma/client';
+import { randomUUID } from 'crypto';
+import { AssetType, CreditCard, TransactionStatus } from '@prisma/client';
 import {
   ConflictException,
   Inject,
@@ -16,12 +14,17 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { CreateInvoicePaymentDto } from './dto/create-invoice-payment.dto';
+import { DeleteTransactionDto } from './dto/delete-transaction.dto';
+import { TransactionMutationScope } from './dto/transaction-mutation-scope.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import {
   FINANCE_REPOSITORY,
   FinanceTransactionContext,
+  TransactionWithRelations,
 } from '../domain/repositories/finance.repository';
 import type { FinanceRepository } from '../domain/repositories/finance.repository';
 import { FinanceRulesService } from '../domain/services/finance-rules.service';
+import { AppGateway } from '../../websocket/interface/app.gateway';
 
 @Injectable()
 export class FinanceService {
@@ -29,6 +32,7 @@ export class FinanceService {
     @Inject(FINANCE_REPOSITORY)
     private readonly financeRepository: FinanceRepository,
     private readonly financeRulesService: FinanceRulesService,
+    private readonly appGateway: AppGateway,
   ) {}
 
   createBankAccount(userId: number, dto: CreateBankAccountDto) {
@@ -39,7 +43,11 @@ export class FinanceService {
     return this.financeRepository.listBankAccounts(userId);
   }
 
-  async updateBankAccount(userId: number, id: number, dto: UpdateBankAccountDto) {
+  async updateBankAccount(
+    userId: number,
+    id: number,
+    dto: UpdateBankAccountDto,
+  ) {
     await this.getBankAccountOrThrow(userId, id, false);
     return this.financeRepository.updateBankAccount(id, dto);
   }
@@ -106,7 +114,10 @@ export class FinanceService {
   }
 
   async findTransaction(userId: number, id: number) {
-    const transaction = await this.financeRepository.findTransaction(userId, id);
+    const transaction = await this.financeRepository.findTransaction(
+      userId,
+      id,
+    );
 
     if (!transaction) {
       throw new NotFoundException('Transacao nao encontrada.');
@@ -118,18 +129,32 @@ export class FinanceService {
   async createTransaction(userId: number, dto: CreateTransactionDto) {
     const category = await this.getCategoryOrThrow(userId, dto.categoryId);
 
-    this.financeRulesService.assertCategoryMatchesTransaction(dto.type, category.type);
+    this.financeRulesService.assertCategoryMatchesTransaction(
+      dto.type,
+      category.type,
+    );
     const { bankAccountId, creditCardId } =
       this.financeRulesService.resolveAssetIds(dto);
-    this.financeRulesService.assertCreditCardExpenseOnly(dto.assetType, dto.type);
+    this.financeRulesService.assertCreditCardExpenseOnly(
+      dto.assetType,
+      dto.type,
+    );
+
+    const installmentCount = dto.installmentCount ?? 1;
+    this.financeRulesService.assertInstallmentConfiguration(
+      dto.assetType,
+      installmentCount,
+    );
 
     const status = dto.status ?? TransactionStatus.CLEARED;
     const transactionDate = new Date(dto.transactionDate);
-    const competencyDate = dto.competencyDate ? new Date(dto.competencyDate) : null;
+    const competencyDate = dto.competencyDate
+      ? new Date(dto.competencyDate)
+      : null;
 
-    return this.financeRepository.runInTransaction(async (tx) => {
+    const result = await this.financeRepository.runInTransaction(async (tx) => {
       if (dto.assetType === AssetType.BANK_ACCOUNT && bankAccountId) {
-        return this.createBankAccountTransaction({
+        const transaction = await this.createBankAccountTransaction({
           tx,
           userId,
           bankAccountId,
@@ -138,13 +163,19 @@ export class FinanceService {
           transactionDate,
           competencyDate,
         });
+
+        return {
+          transaction,
+          transactions: [transaction],
+          installmentGroupId: transaction.installmentGroupId,
+        };
       }
 
       if (!creditCardId) {
         throw new NotFoundException('Cartao de credito ativo nao encontrado.');
       }
 
-      return this.createCreditCardTransaction({
+      const transactions = await this.createCreditCardTransactions({
         tx,
         userId,
         creditCardId,
@@ -152,7 +183,224 @@ export class FinanceService {
         status,
         transactionDate,
         competencyDate,
+        installmentCount,
       });
+
+      return {
+        transaction: transactions[0],
+        transactions,
+        installmentGroupId: transactions[0]?.installmentGroupId ?? null,
+      };
+    });
+
+    this.appGateway.emitToUser(userId, 'transaction.created', result);
+
+    return result;
+  }
+
+  async updateTransaction(
+    userId: number,
+    id: number,
+    dto: UpdateTransactionDto,
+  ) {
+    const category =
+      dto.categoryId !== undefined
+        ? await this.getCategoryOrThrow(userId, dto.categoryId)
+        : null;
+    const scope = dto.scope ?? TransactionMutationScope.CURRENT;
+
+    return this.financeRepository.runInTransaction(async (tx) => {
+      const baseTransaction = await this.getTransactionOrThrow(tx, userId, id);
+
+      if (category) {
+        this.financeRulesService.assertCategoryMatchesTransaction(
+          baseTransaction.type,
+          category.type,
+        );
+      }
+
+      const targetTransactions = await this.resolveTransactionsForScope(
+        tx,
+        userId,
+        baseTransaction,
+        scope,
+      );
+
+      if (
+        baseTransaction.assetType === AssetType.BANK_ACCOUNT &&
+        targetTransactions.length > 1
+      ) {
+        throw new ConflictException(
+          'Conta bancaria nao suporta alteracao em grupo de parcelas.',
+        );
+      }
+
+      const invoiceIdsToSync = new Set<number>();
+      const bankAccountIdsToSync = new Set<number>();
+      const creditCardIdsToSync = new Set<number>();
+
+      this.captureAffectedStates(
+        targetTransactions,
+        invoiceIdsToSync,
+        bankAccountIdsToSync,
+        creditCardIdsToSync,
+      );
+      this.ensureTransactionsCanMutate(targetTransactions);
+
+      let amountMap = new Map<number, number>();
+      if (dto.amountCents !== undefined) {
+        amountMap = this.resolveUpdatedAmounts(
+          targetTransactions,
+          scope,
+          dto.amountCents,
+        );
+      }
+
+      const updatedTransactions: TransactionWithRelations[] = [];
+      for (const transaction of targetTransactions) {
+        const nextTransactionDate =
+          dto.transactionDate !== undefined
+            ? dto.transactionDate
+              ? this.shiftInstallmentDate(
+                  new Date(dto.transactionDate),
+                  this.getInstallmentOffset(targetTransactions, transaction),
+                )
+              : transaction.transactionDate
+            : transaction.transactionDate;
+        const nextCompetencyDate =
+          dto.competencyDate !== undefined
+            ? dto.competencyDate
+              ? this.shiftInstallmentDate(
+                  new Date(dto.competencyDate),
+                  this.getInstallmentOffset(targetTransactions, transaction),
+                )
+              : null
+            : transaction.competencyDate;
+        const nextStatus = dto.status ?? transaction.status;
+        const nextAmount =
+          amountMap.get(transaction.id) ?? transaction.amountCents;
+        const nextInvoiceId =
+          transaction.assetType === AssetType.CREDIT_CARD
+            ? await this.resolveInvoiceIdForMutation(
+                tx,
+                transaction,
+                nextTransactionDate,
+                nextStatus,
+              )
+            : undefined;
+
+        if (
+          transaction.assetType === AssetType.CREDIT_CARD &&
+          nextStatus === TransactionStatus.CLEARED &&
+          transaction.creditCardId
+        ) {
+          const card = await tx.findActiveCreditCard(
+            userId,
+            transaction.creditCardId,
+          );
+
+          if (!card) {
+            throw new NotFoundException(
+              'Cartao de credito ativo nao encontrado.',
+            );
+          }
+
+          const snapshot = await tx.getCreditCardFinancialSnapshot(card.id);
+          const currentAvailableLimit =
+            this.financeRulesService.calculateCreditCardAvailableLimit(
+              snapshot,
+            );
+          const releasedAmount =
+            transaction.status === TransactionStatus.CLEARED
+              ? transaction.amountCents
+              : 0;
+          const availableForUpdate = currentAvailableLimit + releasedAmount;
+          this.financeRulesService.ensureCreditLimit(
+            availableForUpdate,
+            nextAmount,
+          );
+        }
+
+        const updated = await tx.updateTransaction(transaction.id, {
+          categoryId: dto.categoryId,
+          description: dto.description,
+          amountCents: dto.amountCents !== undefined ? nextAmount : undefined,
+          transactionDate:
+            dto.transactionDate !== undefined ? nextTransactionDate : undefined,
+          competencyDate:
+            dto.competencyDate !== undefined ? nextCompetencyDate : undefined,
+          status: dto.status,
+          notes: dto.notes !== undefined ? dto.notes || null : undefined,
+          invoiceId: nextInvoiceId,
+        });
+
+        updatedTransactions.push(updated);
+        this.captureAffectedStates(
+          [updated],
+          invoiceIdsToSync,
+          bankAccountIdsToSync,
+          creditCardIdsToSync,
+        );
+      }
+
+      await this.syncFinancialStates(
+        tx,
+        invoiceIdsToSync,
+        bankAccountIdsToSync,
+        creditCardIdsToSync,
+      );
+
+      return {
+        transaction: updatedTransactions[0],
+        transactions: updatedTransactions,
+        scope,
+      };
+    });
+  }
+
+  async deleteTransaction(
+    userId: number,
+    id: number,
+    dto: DeleteTransactionDto,
+  ) {
+    const scope = dto.scope ?? TransactionMutationScope.CURRENT;
+
+    return this.financeRepository.runInTransaction(async (tx) => {
+      const baseTransaction = await this.getTransactionOrThrow(tx, userId, id);
+      const targetTransactions = await this.resolveTransactionsForScope(
+        tx,
+        userId,
+        baseTransaction,
+        scope,
+      );
+
+      this.ensureTransactionsCanMutate(targetTransactions);
+
+      const invoiceIdsToSync = new Set<number>();
+      const bankAccountIdsToSync = new Set<number>();
+      const creditCardIdsToSync = new Set<number>();
+      this.captureAffectedStates(
+        targetTransactions,
+        invoiceIdsToSync,
+        bankAccountIdsToSync,
+        creditCardIdsToSync,
+      );
+
+      const deletedCount = await tx.deleteTransactions(
+        targetTransactions.map((item) => item.id),
+      );
+      await this.syncFinancialStates(
+        tx,
+        invoiceIdsToSync,
+        bankAccountIdsToSync,
+        creditCardIdsToSync,
+      );
+
+      return {
+        deletedCount,
+        scope,
+        transactionIds: targetTransactions.map((item) => item.id),
+      };
     });
   }
 
@@ -160,7 +408,11 @@ export class FinanceService {
     return this.financeRepository.listCardInvoices(userId, creditCardId);
   }
 
-  async findCardInvoice(userId: number, creditCardId: number, invoiceId: number) {
+  async findCardInvoice(
+    userId: number,
+    creditCardId: number,
+    invoiceId: number,
+  ) {
     const invoice = await this.financeRepository.findCardInvoice(
       userId,
       creditCardId,
@@ -182,7 +434,10 @@ export class FinanceService {
         throw new NotFoundException('Fatura nao encontrada.');
       }
 
-      const bankAccount = await tx.findActiveBankAccount(userId, dto.bankAccountId);
+      const bankAccount = await tx.findActiveBankAccount(
+        userId,
+        dto.bankAccountId,
+      );
 
       if (!bankAccount) {
         throw new NotFoundException('Conta bancaria ativa nao encontrada.');
@@ -229,7 +484,11 @@ export class FinanceService {
     });
   }
 
-  private async getBankAccountOrThrow(userId: number, id: number, onlyActive = true) {
+  private async getBankAccountOrThrow(
+    userId: number,
+    id: number,
+    onlyActive = true,
+  ) {
     const account = await this.financeRepository.findBankAccount(
       userId,
       id,
@@ -247,8 +506,16 @@ export class FinanceService {
     return account;
   }
 
-  private async getCreditCardOrThrow(userId: number, id: number, onlyActive = true) {
-    const card = await this.financeRepository.findCreditCard(userId, id, onlyActive);
+  private async getCreditCardOrThrow(
+    userId: number,
+    id: number,
+    onlyActive = true,
+  ) {
+    const card = await this.financeRepository.findCreditCard(
+      userId,
+      id,
+      onlyActive,
+    );
 
     if (!card) {
       throw new NotFoundException(
@@ -261,16 +528,40 @@ export class FinanceService {
     return card;
   }
 
-  private async getCategoryOrThrow(userId: number, id: number, onlyActive = true) {
-    const category = await this.financeRepository.findCategory(userId, id, onlyActive);
+  private async getCategoryOrThrow(
+    userId: number,
+    id: number,
+    onlyActive = true,
+  ) {
+    const category = await this.financeRepository.findCategory(
+      userId,
+      id,
+      onlyActive,
+    );
 
     if (!category) {
       throw new NotFoundException(
-        onlyActive ? 'Categoria ativa nao encontrada.' : 'Categoria nao encontrada.',
+        onlyActive
+          ? 'Categoria ativa nao encontrada.'
+          : 'Categoria nao encontrada.',
       );
     }
 
     return category;
+  }
+
+  private async getTransactionOrThrow(
+    tx: FinanceTransactionContext,
+    userId: number,
+    id: number,
+  ) {
+    const transaction = await tx.findTransactionById(userId, id);
+
+    if (!transaction) {
+      throw new NotFoundException('Transacao nao encontrada.');
+    }
+
+    return transaction;
   }
 
   private async createBankAccountTransaction(params: {
@@ -320,7 +611,7 @@ export class FinanceService {
     return transaction;
   }
 
-  private async createCreditCardTransaction(params: {
+  private async createCreditCardTransactions(params: {
     tx: FinanceTransactionContext;
     userId: number;
     creditCardId: number;
@@ -328,6 +619,7 @@ export class FinanceService {
     status: TransactionStatus;
     transactionDate: Date;
     competencyDate: Date | null;
+    installmentCount: number;
   }) {
     const creditCard = await params.tx.findActiveCreditCard(
       params.userId,
@@ -345,61 +637,83 @@ export class FinanceService {
       );
     }
 
-    const invoice =
-      params.status === TransactionStatus.CLEARED
-        ? await this.findOrCreateInvoice(
-            params.tx,
-            creditCard.id,
-            params.transactionDate,
-            creditCard.closingDay,
-            creditCard.dueDay,
-          )
+    const groupId = params.installmentCount > 1 ? randomUUID() : undefined;
+    const amounts = this.financeRulesService.splitInstallmentAmounts(
+      params.dto.amountCents,
+      params.installmentCount,
+    );
+    const transactions: TransactionWithRelations[] = [];
+
+    for (let index = 0; index < params.installmentCount; index += 1) {
+      const installmentNumber = index + 1;
+      const installmentDate = this.shiftInstallmentDate(
+        params.transactionDate,
+        index,
+      );
+      const installmentCompetencyDate = params.competencyDate
+        ? this.shiftInstallmentDate(params.competencyDate, index)
         : null;
+      const invoice =
+        params.status === TransactionStatus.CLEARED
+          ? await this.findOrCreateInvoice(
+              params.tx,
+              creditCard,
+              installmentDate,
+            )
+          : null;
 
-    const transaction = await params.tx.createTransaction({
-      userId: params.userId,
-      type: params.dto.type,
-      assetType: params.dto.assetType,
-      creditCardId: params.creditCardId,
-      categoryId: params.dto.categoryId,
-      invoiceId: invoice?.id,
-      description: params.dto.description,
-      amountCents: params.dto.amountCents,
-      transactionDate: params.transactionDate,
-      competencyDate: params.competencyDate,
-      status: params.status,
-      notes: params.dto.notes,
-    });
+      const transaction = await params.tx.createTransaction({
+        userId: params.userId,
+        type: params.dto.type,
+        assetType: params.dto.assetType,
+        creditCardId: params.creditCardId,
+        categoryId: params.dto.categoryId,
+        invoiceId: invoice?.id,
+        description: params.dto.description,
+        amountCents: amounts[index],
+        transactionDate: installmentDate,
+        competencyDate: installmentCompetencyDate,
+        status: params.status,
+        notes: params.dto.notes,
+        installmentGroupId: groupId,
+        installmentNumber:
+          params.installmentCount > 1 ? installmentNumber : undefined,
+        installmentCount:
+          params.installmentCount > 1 ? params.installmentCount : undefined,
+      });
 
-    if (params.status === TransactionStatus.CLEARED && invoice) {
-      await params.tx.updateCreditCard(creditCard.id, {
-        availableLimitCents: creditCard.availableLimitCents - params.dto.amountCents,
-      });
-      await params.tx.updateInvoice(invoice.id, {
-        totalCents: invoice.totalCents + params.dto.amountCents,
-        status: this.financeRulesService.resolveInvoiceStatus(
-          invoice.closingDate,
-          invoice.dueDate,
-          invoice.totalCents + params.dto.amountCents,
-          invoice.paidCents,
-        ),
-      });
+      transactions.push(transaction);
     }
 
-    return transaction;
+    const invoiceIdsToSync = new Set<number>();
+    this.captureAffectedStates(
+      transactions,
+      invoiceIdsToSync,
+      new Set<number>(),
+      new Set<number>(),
+    );
+    await this.syncFinancialStates(
+      params.tx,
+      invoiceIdsToSync,
+      new Set<number>(),
+      new Set<number>([creditCard.id]),
+    );
+
+    return transactions;
   }
 
   private async findOrCreateInvoice(
     tx: FinanceTransactionContext,
-    creditCardId: number,
+    creditCard: CreditCard,
     transactionDate: Date,
-    closingDay: number,
-    dueDay: number,
   ) {
     const { referenceMonth, referenceYear } =
-      this.financeRulesService.resolveInvoiceReference(transactionDate, closingDay);
+      this.financeRulesService.resolveInvoiceReference(
+        transactionDate,
+        creditCard.closingDay,
+      );
     const existing = await tx.findInvoiceByReference(
-      creditCardId,
+      creditCard.id,
       referenceMonth,
       referenceYear,
     );
@@ -411,12 +725,12 @@ export class FinanceService {
     const { closingDate, dueDate } = this.financeRulesService.buildInvoiceDates(
       referenceYear,
       referenceMonth,
-      closingDay,
-      dueDay,
+      creditCard.closingDay,
+      creditCard.dueDay,
     );
 
     return tx.createInvoice({
-      creditCardId,
+      creditCardId: creditCard.id,
       referenceMonth,
       referenceYear,
       closingDate,
@@ -428,6 +742,185 @@ export class FinanceService {
         dueDate,
         0,
         0,
+      ),
+    });
+  }
+
+  private async resolveTransactionsForScope(
+    tx: FinanceTransactionContext,
+    userId: number,
+    baseTransaction: TransactionWithRelations,
+    scope: TransactionMutationScope,
+  ) {
+    if (
+      scope === TransactionMutationScope.ALL &&
+      baseTransaction.installmentGroupId
+    ) {
+      return tx.listTransactionsByInstallmentGroup(
+        userId,
+        baseTransaction.installmentGroupId,
+      );
+    }
+
+    return [baseTransaction];
+  }
+
+  private ensureTransactionsCanMutate(
+    transactions: TransactionWithRelations[],
+  ) {
+    for (const transaction of transactions) {
+      if (transaction.invoice && transaction.invoice.paidCents > 0) {
+        throw new ConflictException(
+          'Nao e possivel alterar ou excluir transacoes de faturas que ja receberam pagamento.',
+        );
+      }
+    }
+  }
+
+  private resolveUpdatedAmounts(
+    transactions: TransactionWithRelations[],
+    scope: TransactionMutationScope,
+    amountCents: number,
+  ) {
+    if (scope === TransactionMutationScope.ALL && transactions.length > 1) {
+      const splitAmounts = this.financeRulesService.splitInstallmentAmounts(
+        amountCents,
+        transactions.length,
+      );
+
+      return new Map(
+        transactions.map((transaction, index) => [
+          transaction.id,
+          splitAmounts[index],
+        ]),
+      );
+    }
+
+    return new Map(
+      transactions.map((transaction) => [transaction.id, amountCents]),
+    );
+  }
+
+  private getInstallmentOffset(
+    transactions: TransactionWithRelations[],
+    currentTransaction: TransactionWithRelations,
+  ) {
+    const baseNumber = transactions[0]?.installmentNumber ?? 1;
+    const currentNumber = currentTransaction.installmentNumber ?? baseNumber;
+    return currentNumber - baseNumber;
+  }
+
+  private shiftInstallmentDate(baseDate: Date, monthOffset: number) {
+    const shiftedDate = new Date(baseDate);
+    shiftedDate.setMonth(shiftedDate.getMonth() + monthOffset);
+    return shiftedDate;
+  }
+
+  private captureAffectedStates(
+    transactions: TransactionWithRelations[],
+    invoiceIds: Set<number>,
+    bankAccountIds: Set<number>,
+    creditCardIds: Set<number>,
+  ) {
+    for (const transaction of transactions) {
+      if (transaction.invoiceId) {
+        invoiceIds.add(transaction.invoiceId);
+      }
+      if (transaction.bankAccountId) {
+        bankAccountIds.add(transaction.bankAccountId);
+      }
+      if (transaction.creditCardId) {
+        creditCardIds.add(transaction.creditCardId);
+      }
+    }
+  }
+
+  private async resolveInvoiceIdForMutation(
+    tx: FinanceTransactionContext,
+    transaction: TransactionWithRelations,
+    transactionDate: Date,
+    status: TransactionStatus,
+  ) {
+    if (transaction.assetType !== AssetType.CREDIT_CARD) {
+      return undefined;
+    }
+
+    if (status !== TransactionStatus.CLEARED) {
+      return null;
+    }
+
+    if (!transaction.creditCardId) {
+      throw new NotFoundException('Cartao de credito ativo nao encontrado.');
+    }
+
+    const card = await tx.findActiveCreditCard(
+      transaction.userId,
+      transaction.creditCardId,
+    );
+
+    if (!card) {
+      throw new NotFoundException('Cartao de credito ativo nao encontrado.');
+    }
+
+    const invoice = await this.findOrCreateInvoice(tx, card, transactionDate);
+    return invoice.id;
+  }
+
+  private async syncFinancialStates(
+    tx: FinanceTransactionContext,
+    invoiceIds: Set<number>,
+    bankAccountIds: Set<number>,
+    creditCardIds: Set<number>,
+  ) {
+    for (const bankAccountId of bankAccountIds) {
+      const snapshot = await tx.getBankAccountFinancialSnapshot(bankAccountId);
+      const nextBalance =
+        this.financeRulesService.calculateBankAccountCurrentBalance(snapshot);
+      this.financeRulesService.ensureNonNegativeBalance(nextBalance);
+      await tx.updateBankAccountBalance(bankAccountId, nextBalance);
+    }
+
+    for (const invoiceId of invoiceIds) {
+      await this.syncInvoice(tx, invoiceId);
+    }
+
+    for (const creditCardId of creditCardIds) {
+      const snapshot = await tx.getCreditCardFinancialSnapshot(creditCardId);
+      const nextAvailableLimit =
+        this.financeRulesService.calculateCreditCardAvailableLimit(snapshot);
+      if (nextAvailableLimit < 0) {
+        throw new ConflictException(
+          'Limite disponivel insuficiente para esta compra.',
+        );
+      }
+      await tx.updateCreditCard(creditCardId, {
+        availableLimitCents: nextAvailableLimit,
+      });
+    }
+  }
+
+  private async syncInvoice(tx: FinanceTransactionContext, invoiceId: number) {
+    const invoice = await tx.findInvoiceById(invoiceId);
+
+    if (!invoice) {
+      return;
+    }
+
+    const totalCents = await tx.getInvoiceClearedTotal(invoiceId);
+
+    if (invoice.paidCents > totalCents) {
+      throw new ConflictException(
+        'Nao e possivel alterar a transacao porque a fatura ficaria menor que o valor ja pago.',
+      );
+    }
+
+    await tx.updateInvoice(invoiceId, {
+      totalCents,
+      status: this.financeRulesService.resolveInvoiceStatus(
+        invoice.closingDate,
+        invoice.dueDate,
+        totalCents,
+        invoice.paidCents,
       ),
     });
   }

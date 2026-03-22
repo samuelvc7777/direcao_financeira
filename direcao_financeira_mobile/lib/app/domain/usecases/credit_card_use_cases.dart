@@ -22,6 +22,7 @@ class CreateCreditCardUseCase {
   Future<Either<Failure, CreditCardEntity>> call({
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -30,6 +31,7 @@ class CreateCreditCardUseCase {
     return _repository.createCreditCard(
       name: name,
       brand: brand,
+      color: color,
       limitCents: limitCents,
       closingDay: closingDay,
       dueDay: dueDay,
@@ -47,6 +49,7 @@ class UpdateCreditCardUseCase {
     required int id,
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -57,6 +60,7 @@ class UpdateCreditCardUseCase {
       id: id,
       name: name,
       brand: brand,
+      color: color,
       limitCents: limitCents,
       closingDay: closingDay,
       dueDay: dueDay,

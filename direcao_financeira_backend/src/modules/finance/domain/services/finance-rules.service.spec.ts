@@ -37,4 +37,14 @@ describe('FinanceRulesService', () => {
       }),
     ).toThrow(ConflictException);
   });
+
+  it('divide o valor total em parcelas preservando o total', () => {
+    expect(service.splitInstallmentAmounts(1000, 3)).toEqual([334, 333, 333]);
+  });
+
+  it('bloqueia parcelamento fora de cartao de credito', () => {
+    expect(() =>
+      service.assertInstallmentConfiguration(AssetType.BANK_ACCOUNT, 2),
+    ).toThrow(ConflictException);
+  });
 });

@@ -23,7 +23,8 @@ import { NestJwtTokenService } from '../infrastructure/services/nest-jwt-token.s
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback_secret_not_for_prod',
       signOptions: {
-        expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as JwtSignOptions['expiresIn'],
+        expiresIn: (process.env.JWT_EXPIRES_IN ||
+          '1d') as JwtSignOptions['expiresIn'],
       },
     }),
   ],

@@ -28,6 +28,7 @@ class CreditCardRepository implements ICreditCardRepository {
   Future<Either<Failure, CreditCardEntity>> createCreditCard({
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -38,6 +39,7 @@ class CreditCardRepository implements ICreditCardRepository {
         await dataSource.createCreditCard(
           name: name,
           brand: brand,
+          color: color,
           limitCents: limitCents,
           closingDay: closingDay,
           dueDay: dueDay,
@@ -58,6 +60,7 @@ class CreditCardRepository implements ICreditCardRepository {
     required int id,
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -70,6 +73,7 @@ class CreditCardRepository implements ICreditCardRepository {
           id: id,
           name: name,
           brand: brand,
+          color: color,
           limitCents: limitCents,
           closingDay: closingDay,
           dueDay: dueDay,

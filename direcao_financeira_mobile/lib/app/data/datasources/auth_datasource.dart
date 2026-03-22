@@ -34,12 +34,20 @@ class AuthRemoteDataSource implements IAuthRemoteDataSource {
     required String email,
     required String password,
   }) async {
-    final response = await dio.post(
-      '/auth/login',
-      data: {'email': email, 'password': password},
-    );
+    print('AuthRemoteDataSource.login() - POST /auth/login para o email: $email');
+    try {
+      final response = await dio.post(
+        '/auth/login',
+        data: {'email': email, 'password': password},
+      );
+      print('AuthRemoteDataSource.login() - POST /auth/login Status: ${response.statusCode}');
+      print('AuthRemoteDataSource.login() - POST /auth/login Response data: ${response.data}');
 
-    return Map<String, dynamic>.from(response.data as Map);
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (e) {
+      print('AuthRemoteDataSource.login() - EXCEPTION durante POST /auth/login: $e');
+      rethrow;
+    }
   }
 
   @override

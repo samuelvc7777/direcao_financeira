@@ -90,10 +90,7 @@ class CategoryRemoteDataSource implements ICategoryDataSource {
 
   @override
   Future<void> deactivateCategory(int id) {
-    return dio.patch(
-      '/finance/categories/$id',
-      data: {'isActive': false},
-    );
+    return dio.delete('/finance/categories/$id');
   }
 
   @override
@@ -106,6 +103,9 @@ class CategoryRemoteDataSource implements ICategoryDataSource {
 
   CategoryModel _parseCategory(dynamic data) {
     if (data is Map<String, dynamic>) {
+      if (data['category'] is Map<String, dynamic>) {
+        return CategoryModel.fromJson(data['category'] as Map<String, dynamic>);
+      }
       if (data['data'] is Map<String, dynamic>) {
         return CategoryModel.fromJson(data['data'] as Map<String, dynamic>);
       }

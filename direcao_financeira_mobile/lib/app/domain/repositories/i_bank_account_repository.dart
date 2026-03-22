@@ -7,6 +7,7 @@ abstract class IBankAccountRepository {
   Future<Either<Failure, BankAccountEntity>> createBankAccount({
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
   });
@@ -14,6 +15,7 @@ abstract class IBankAccountRepository {
     required int id,
     required String name,
     required String bankName,
+    required String color,
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,

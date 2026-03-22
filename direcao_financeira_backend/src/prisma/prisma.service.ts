@@ -16,7 +16,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     });
-    
+
     const adapter = new PrismaPg(pool);
     this.client = new PrismaClient({ adapter });
   }

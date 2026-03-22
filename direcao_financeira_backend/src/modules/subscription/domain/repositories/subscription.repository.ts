@@ -44,9 +44,19 @@ export interface SubscriptionDetails {
 export interface SubscriptionRepository {
   findActiveByUserId(userId: number): Promise<SubscriptionDetails | null>;
   findHistoryByUserId(userId: number): Promise<SubscriptionDetails[]>;
-  findActivePlanById(planId: number): Promise<SubscriptionDetails['plan'] | null>;
-  cancelActiveSubscription(userId: number, now: Date): Promise<SubscriptionDetails | null>;
-  changePlan(userId: number, planId: number, now: Date, endDate: Date): Promise<SubscriptionDetails>;
+  findActivePlanById(
+    planId: number,
+  ): Promise<SubscriptionDetails['plan'] | null>;
+  cancelActiveSubscription(
+    userId: number,
+    now: Date,
+  ): Promise<SubscriptionDetails | null>;
+  changePlan(
+    userId: number,
+    planId: number,
+    now: Date,
+    endDate: Date,
+  ): Promise<SubscriptionDetails>;
   renewActiveSubscription(
     userId: number,
     endDate: Date,

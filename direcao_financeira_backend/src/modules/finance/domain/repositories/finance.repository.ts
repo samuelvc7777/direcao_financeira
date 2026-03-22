@@ -14,11 +14,19 @@ import { UpdateCreditCardDto } from '../../interface/dto/update-credit-card.dto'
 
 export const FINANCE_REPOSITORY = 'FINANCE_REPOSITORY';
 
-export type BankAccountRecord = Prisma.BankAccountGetPayload<Record<string, never>>;
-export type CreditCardRecord = Prisma.CreditCardGetPayload<Record<string, never>>;
+export type BankAccountRecord = Prisma.BankAccountGetPayload<
+  Record<string, never>
+>;
+export type CreditCardRecord = Prisma.CreditCardGetPayload<
+  Record<string, never>
+>;
 export type CategoryRecord = Prisma.CategoryGetPayload<Record<string, never>>;
-export type CreditCardInvoiceRecord = Prisma.CreditCardInvoiceGetPayload<Record<string, never>>;
-export type InvoicePaymentRecord = Prisma.InvoicePaymentGetPayload<Record<string, never>>;
+export type CreditCardInvoiceRecord = Prisma.CreditCardInvoiceGetPayload<
+  Record<string, never>
+>;
+export type InvoicePaymentRecord = Prisma.InvoicePaymentGetPayload<
+  Record<string, never>
+>;
 
 export type TransactionWithRelations = Prisma.TransactionGetPayload<{
   include: {
@@ -29,11 +37,25 @@ export type TransactionWithRelations = Prisma.TransactionGetPayload<{
   };
 }>;
 
-export type CreditCardInvoiceWithPaymentOwner = Prisma.CreditCardInvoiceGetPayload<{
-  include: {
-    creditCard: true;
-  };
-}>;
+export type CreditCardFinancialSnapshot = {
+  limitCents: number;
+  clearedSpentCents: number;
+  paidCents: number;
+};
+
+export type BankAccountFinancialSnapshot = {
+  initialBalanceCents: number;
+  clearedIncomeCents: number;
+  clearedExpenseCents: number;
+  invoicePaymentsCents: number;
+};
+
+export type CreditCardInvoiceWithPaymentOwner =
+  Prisma.CreditCardInvoiceGetPayload<{
+    include: {
+      creditCard: true;
+    };
+  }>;
 
 export type CreditCardInvoiceListDetails = Prisma.CreditCardInvoiceGetPayload<{
   include: {
@@ -61,15 +83,41 @@ export type InvoicePaymentWithRelations = Prisma.InvoicePaymentGetPayload<{
 }>;
 
 export interface FinanceTransactionContext {
-  findActiveBankAccount(userId: number, id: number): Promise<BankAccountRecord | null>;
-  updateBankAccountBalance(id: number, currentBalanceCents: number): Promise<void>;
-  findActiveCreditCard(userId: number, id: number): Promise<CreditCardRecord | null>;
-  updateCreditCard(id: number, data: { availableLimitCents: number }): Promise<void>;
+  findActiveBankAccount(
+    userId: number,
+    id: number,
+  ): Promise<BankAccountRecord | null>;
+  updateBankAccountBalance(
+    id: number,
+    currentBalanceCents: number,
+  ): Promise<void>;
+  findActiveCreditCard(
+    userId: number,
+    id: number,
+  ): Promise<CreditCardRecord | null>;
+  updateCreditCard(
+    id: number,
+    data: { availableLimitCents: number },
+  ): Promise<void>;
+  findTransactionById(
+    userId: number,
+    id: number,
+  ): Promise<TransactionWithRelations | null>;
+  listTransactionsByIds(
+    userId: number,
+    ids: number[],
+  ): Promise<TransactionWithRelations[]>;
+  listTransactionsByInstallmentGroup(
+    userId: number,
+    installmentGroupId: string,
+  ): Promise<TransactionWithRelations[]>;
   findInvoiceByReference(
     creditCardId: number,
     referenceMonth: number,
     referenceYear: number,
   ): Promise<CreditCardInvoiceRecord | null>;
+  findInvoiceById(id: number): Promise<CreditCardInvoiceRecord | null>;
+  getInvoiceClearedTotal(invoiceId: number): Promise<number>;
   createInvoice(data: {
     creditCardId: number;
     referenceMonth: number;
@@ -82,7 +130,11 @@ export interface FinanceTransactionContext {
   }): Promise<CreditCardInvoiceRecord>;
   updateInvoice(
     id: number,
-    data: Partial<{ totalCents: number; paidCents: number; status: InvoiceStatus }>,
+    data: Partial<{
+      totalCents: number;
+      paidCents: number;
+      status: InvoiceStatus;
+    }>,
   ): Promise<void>;
   createTransaction(data: {
     userId: number;
@@ -98,7 +150,30 @@ export interface FinanceTransactionContext {
     competencyDate: Date | null;
     status: TransactionStatus;
     notes?: string;
+    installmentGroupId?: string;
+    installmentNumber?: number;
+    installmentCount?: number;
   }): Promise<TransactionWithRelations>;
+  updateTransaction(
+    id: number,
+    data: Partial<{
+      categoryId: number;
+      description: string;
+      amountCents: number;
+      transactionDate: Date;
+      competencyDate: Date | null;
+      status: TransactionStatus;
+      notes: string | null;
+      invoiceId: number | null;
+    }>,
+  ): Promise<TransactionWithRelations>;
+  deleteTransactions(ids: number[]): Promise<number>;
+  getBankAccountFinancialSnapshot(
+    id: number,
+  ): Promise<BankAccountFinancialSnapshot>;
+  getCreditCardFinancialSnapshot(
+    id: number,
+  ): Promise<CreditCardFinancialSnapshot>;
   findInvoiceForPayment(
     userId: number,
     invoiceId: number,
@@ -112,7 +187,10 @@ export interface FinanceTransactionContext {
 }
 
 export interface FinanceRepository {
-  createBankAccount(userId: number, dto: CreateBankAccountDto): Promise<BankAccountRecord>;
+  createBankAccount(
+    userId: number,
+    dto: CreateBankAccountDto,
+  ): Promise<BankAccountRecord>;
   listBankAccounts(userId: number): Promise<BankAccountRecord[]>;
   findBankAccount(
     userId: number,
@@ -123,7 +201,10 @@ export interface FinanceRepository {
     id: number,
     dto: UpdateBankAccountDto | { isActive: boolean },
   ): Promise<BankAccountRecord>;
-  createCreditCard(userId: number, dto: CreateCreditCardDto): Promise<CreditCardRecord>;
+  createCreditCard(
+    userId: number,
+    dto: CreateCreditCardDto,
+  ): Promise<CreditCardRecord>;
   listCreditCards(userId: number): Promise<CreditCardRecord[]>;
   findCreditCard(
     userId: number,
@@ -132,17 +213,30 @@ export interface FinanceRepository {
   ): Promise<CreditCardRecord | null>;
   updateCreditCard(
     id: number,
-    dto: UpdateCreditCardDto & { availableLimitCents?: number; isActive?: boolean },
+    dto: UpdateCreditCardDto & {
+      availableLimitCents?: number;
+      isActive?: boolean;
+    },
   ): Promise<CreditCardRecord>;
-  createCategory(userId: number, dto: CreateCategoryDto): Promise<CategoryRecord>;
+  createCategory(
+    userId: number,
+    dto: CreateCategoryDto,
+  ): Promise<CategoryRecord>;
   listCategories(userId: number): Promise<CategoryRecord[]>;
-  findCategory(userId: number, id: number, onlyActive?: boolean): Promise<CategoryRecord | null>;
+  findCategory(
+    userId: number,
+    id: number,
+    onlyActive?: boolean,
+  ): Promise<CategoryRecord | null>;
   updateCategory(
     id: number,
     dto: UpdateCategoryDto | { isActive: boolean },
   ): Promise<CategoryRecord>;
   listTransactions(userId: number): Promise<TransactionWithRelations[]>;
-  findTransaction(userId: number, id: number): Promise<TransactionWithRelations | null>;
+  findTransaction(
+    userId: number,
+    id: number,
+  ): Promise<TransactionWithRelations | null>;
   listCardInvoices(
     userId: number,
     creditCardId: number,
@@ -152,5 +246,7 @@ export interface FinanceRepository {
     creditCardId: number,
     invoiceId: number,
   ): Promise<CreditCardInvoiceDetails | null>;
-  runInTransaction<T>(callback: (tx: FinanceTransactionContext) => Promise<T>): Promise<T>;
+  runInTransaction<T>(
+    callback: (tx: FinanceTransactionContext) => Promise<T>,
+  ): Promise<T>;
 }

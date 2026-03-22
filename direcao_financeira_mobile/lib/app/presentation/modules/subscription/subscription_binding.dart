@@ -15,7 +15,8 @@ class SubscriptionBinding extends Bindings {
     }
     if (!Get.isRegistered<GetSubscriptionHistoryUseCase>()) {
       Get.lazyPut(
-        () => GetSubscriptionHistoryUseCase(Get.find<ISubscriptionRepository>()),
+        () =>
+            GetSubscriptionHistoryUseCase(Get.find<ISubscriptionRepository>()),
         fenix: true,
       );
     }
@@ -45,7 +46,39 @@ class SubscriptionBinding extends Bindings {
     }
     if (!Get.isRegistered<SyncStoredUserSubscriptionUseCase>()) {
       Get.lazyPut(
-        () => SyncStoredUserSubscriptionUseCase(Get.find<ISubscriptionRepository>()),
+        () => SyncStoredUserSubscriptionUseCase(
+          Get.find<ISubscriptionRepository>(),
+        ),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<IsStoreAvailableUseCase>()) {
+      Get.lazyPut(
+        () => IsStoreAvailableUseCase(Get.find<ISubscriptionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<GetStoreProductsUseCase>()) {
+      Get.lazyPut(
+        () => GetStoreProductsUseCase(Get.find<ISubscriptionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<BuyStoreProductUseCase>()) {
+      Get.lazyPut(
+        () => BuyStoreProductUseCase(Get.find<ISubscriptionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<RestorePurchasesUseCase>()) {
+      Get.lazyPut(
+        () => RestorePurchasesUseCase(Get.find<ISubscriptionRepository>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CompletePurchaseUseCase>()) {
+      Get.lazyPut(
+        () => CompletePurchaseUseCase(Get.find<ISubscriptionRepository>()),
         fenix: true,
       );
     }
@@ -54,12 +87,20 @@ class SubscriptionBinding extends Bindings {
       Get.lazyPut<SubscriptionController>(
         () => SubscriptionController(
           getMySubscriptionUseCase: Get.find<GetMySubscriptionUseCase>(),
-          getSubscriptionHistoryUseCase: Get.find<GetSubscriptionHistoryUseCase>(),
+          getSubscriptionHistoryUseCase:
+              Get.find<GetSubscriptionHistoryUseCase>(),
           getAvailablePlansUseCase: Get.find<GetAvailablePlansUseCase>(),
           changePlanUseCase: Get.find<ChangePlanUseCase>(),
           cancelSubscriptionUseCase: Get.find<CancelSubscriptionUseCase>(),
           renewSubscriptionUseCase: Get.find<RenewSubscriptionUseCase>(),
-          syncStoredUserSubscriptionUseCase: Get.find<SyncStoredUserSubscriptionUseCase>(),
+          syncStoredUserSubscriptionUseCase:
+              Get.find<SyncStoredUserSubscriptionUseCase>(),
+          isStoreAvailableUseCase: Get.find<IsStoreAvailableUseCase>(),
+          getStoreProductsUseCase: Get.find<GetStoreProductsUseCase>(),
+          buyStoreProductUseCase: Get.find<BuyStoreProductUseCase>(),
+          restorePurchasesUseCase: Get.find<RestorePurchasesUseCase>(),
+          completePurchaseUseCase: Get.find<CompletePurchaseUseCase>(),
+          subscriptionRepository: Get.find<ISubscriptionRepository>(),
         ),
       );
     }

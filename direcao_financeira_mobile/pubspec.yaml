@@ -45,6 +45,17 @@ dependencies:
   google_nav_bar: ^5.0.2
   dartz: ^0.10.1
   currency_text_input_formatter: ^2.3.0
+  socket_io_client: ^3.1.4
+  geolocator:
+  flutter_background_service:
+  flutter_background_service_android:
+  flutter_local_notifications:
+  sqflite:
+  path:
+  flutter_map:
+  latlong2:
+  in_app_purchase: ^3.2.3
+  in_app_purchase_android: ^0.4.0+8
 
 dev_dependencies:
   flutter_test:

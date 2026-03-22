@@ -3,12 +3,14 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app/core/location/location_tracking_service.dart';
 import 'app/core/theme/app_scroll_behavior.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/routes/app_pages.dart';
 import 'app/core/bindings/core_binding.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
   await initializeDateFormatting('pt_BR', null);
   
@@ -18,6 +20,8 @@ void main() async {
   final storage = GetStorage();
   final token = storage.read('token');
   final initialRoute = token != null ? AppRoutes.initial : AppRoutes.login;
+
+  await initializeLocationTrackingService(storage);
   
   final isDarkMode = storage.read<bool>('isDarkMode');
   final themeMode = isDarkMode == null ? ThemeMode.system : (isDarkMode ? ThemeMode.dark : ThemeMode.light);

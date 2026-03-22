@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../initial/initial_controller.dart';
 import '../home_controller.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 import '../../../../domain/entities/transaction_entity.dart';
@@ -14,7 +15,7 @@ class RecentTransactionsSection extends GetView<HomeController> {
     final dateFormat = DateFormat('dd/MM', 'pt_BR');
 
     return Obx(() {
-      final transacoes = controller.ultimasTransacoes;
+      final transacoes = controller.ultimasTransacoes.take(5).toList();
       final isVisible = controller.isBalanceVisible.value;
 
       return Container(
@@ -49,7 +50,7 @@ class RecentTransactionsSection extends GetView<HomeController> {
                       const SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          'Ultimas Transacoes',
+                          'Últimas transações',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: AppColors.royalBlue,
@@ -61,12 +62,19 @@ class RecentTransactionsSection extends GetView<HomeController> {
                     ],
                   ),
                 ),
-                Text(
-                  'Ver todas',
-                  style: TextStyle(
-                    color: AppColors.royalBlue.withValues(alpha: 0.7),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: () => Get.find<InitialController>().changeTab(1),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Ver todas',
+                      style: TextStyle(
+                        color: AppColors.royalBlue.withValues(alpha: 0.7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
               ],

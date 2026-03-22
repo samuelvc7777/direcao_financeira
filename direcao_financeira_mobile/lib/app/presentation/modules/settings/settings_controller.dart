@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/network/connection_controller.dart';
 import '../../../core/preferences/app_preferences.dart';
 import '../../../domain/entities/subscription_entity.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
@@ -184,6 +185,11 @@ class SettingsController extends GetxController {
       return;
     }
 
+    if (item.title == 'Configurar semaforo') {
+      Get.toNamed(AppRoutes.trafficLightSettings);
+      return;
+    }
+
     openPlaceholder(item.title);
   }
 
@@ -195,6 +201,9 @@ class SettingsController extends GetxController {
   }
 
   Future<void> logout() async {
+    try {
+      Get.find<ConnectionController>().disconnect();
+    } catch (_) {}
     await logoutUseCase();
     Get.offAllNamed(AppRoutes.login);
   }

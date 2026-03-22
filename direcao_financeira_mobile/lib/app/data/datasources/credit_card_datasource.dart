@@ -7,6 +7,7 @@ abstract class ICreditCardDataSource {
   Future<CreditCardModel> createCreditCard({
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -16,6 +17,7 @@ abstract class ICreditCardDataSource {
     required int id,
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -55,6 +57,7 @@ class CreditCardRemoteDataSource implements ICreditCardDataSource {
   Future<CreditCardModel> createCreditCard({
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -65,6 +68,7 @@ class CreditCardRemoteDataSource implements ICreditCardDataSource {
       data: {
         'name': name,
         'brand': brand,
+        'color': color,
         'limitCents': limitCents,
         'closingDay': closingDay,
         'dueDay': dueDay,
@@ -80,6 +84,7 @@ class CreditCardRemoteDataSource implements ICreditCardDataSource {
     required int id,
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -89,6 +94,7 @@ class CreditCardRemoteDataSource implements ICreditCardDataSource {
     final data = <String, dynamic>{
       'name': name,
       'brand': brand,
+      'color': color,
       'limitCents': limitCents,
       'closingDay': closingDay,
       'dueDay': dueDay,
@@ -105,10 +111,7 @@ class CreditCardRemoteDataSource implements ICreditCardDataSource {
 
   @override
   Future<void> deactivateCreditCard(int id) {
-    return dio.patch(
-      '/finance/credit-cards/$id',
-      data: {'isActive': false},
-    );
+    return dio.delete('/finance/credit-cards/$id');
   }
 
   @override

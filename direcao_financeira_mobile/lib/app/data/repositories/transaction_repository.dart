@@ -45,6 +45,7 @@ class TransactionRepository implements ITransactionRepository {
     required DateTime transactionDate,
     int? bankAccountId,
     int? creditCardId,
+    int? installmentCount,
   }) async {
     try {
       final transaction = await dataSource.createTransaction(
@@ -56,6 +57,7 @@ class TransactionRepository implements ITransactionRepository {
         transactionDate: transactionDate.toIso8601String(),
         bankAccountId: bankAccountId,
         creditCardId: creditCardId,
+        installmentCount: installmentCount,
       );
 
       return Right(transaction);
@@ -63,6 +65,51 @@ class TransactionRepository implements ITransactionRepository {
       return Left(ServerFailure(_extractMessage(e, 'Erro ao criar transacao.')));
     } catch (e) {
       return Left(ServerFailure('Erro inesperado ao criar transacao.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TransactionEntity>> updateTransaction(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    DateTime? transactionDate,
+    TransactionMutationScope? scope,
+  }) async {
+    try {
+      final transaction = await dataSource.updateTransaction(
+        id,
+        categoryId: categoryId,
+        description: description,
+        amountCents: amountCents,
+        transactionDate: transactionDate?.toIso8601String(),
+        scope: scope?.toApiValue(),
+      );
+      return Right(transaction);
+    } on DioException catch (e) {
+      return Left(
+        ServerFailure(_extractMessage(e, 'Erro ao atualizar transacao.')),
+      );
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado ao atualizar transacao.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteTransaction(
+    int id, {
+    TransactionMutationScope? scope,
+  }) async {
+    try {
+      await dataSource.deleteTransaction(id, scope: scope?.toApiValue());
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(
+        ServerFailure(_extractMessage(e, 'Erro ao excluir transacao.')),
+      );
+    } catch (e) {
+      return Left(ServerFailure('Erro inesperado ao excluir transacao.'));
     }
   }
 

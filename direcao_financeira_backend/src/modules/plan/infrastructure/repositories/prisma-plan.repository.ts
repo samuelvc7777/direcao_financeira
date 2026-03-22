@@ -21,7 +21,9 @@ export class PrismaPlanRepository implements PlanRepository {
       return await this.prisma.client.plan.create({ data });
     } catch (error: unknown) {
       if (isPrismaKnownError(error) && error.code === 'P2002') {
-        throw new ConflictException('Ja existe um plano com este nome ou codigo.');
+        throw new ConflictException(
+          'Ja existe um plano com este nome ou codigo.',
+        );
       }
       throw error;
     }
@@ -50,7 +52,9 @@ export class PrismaPlanRepository implements PlanRepository {
         throw new NotFoundException(`Plano com ID ${id} nao encontrado.`);
       }
       if (isPrismaKnownError(error) && error.code === 'P2002') {
-        throw new ConflictException('Ja existe um plano com este nome ou codigo.');
+        throw new ConflictException(
+          'Ja existe um plano com este nome ou codigo.',
+        );
       }
       throw error;
     }

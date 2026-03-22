@@ -9,6 +9,21 @@ import { ConflictException, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class FinanceRulesService {
+  assertInstallmentConfiguration(
+    assetType: AssetType,
+    installmentCount: number,
+  ) {
+    if (installmentCount <= 1) {
+      return;
+    }
+
+    if (assetType !== AssetType.CREDIT_CARD) {
+      throw new ConflictException(
+        'Parcelamento esta disponivel apenas para cartao de credito.',
+      );
+    }
+  }
+
   assertCategoryMatchesTransaction(
     transactionType: TransactionType,
     categoryType: CategoryType,
@@ -33,10 +48,14 @@ export class FinanceRulesService {
   }) {
     const bankAccountId =
       params.bankAccountId ??
-      (params.assetType === AssetType.BANK_ACCOUNT ? params.accountId : undefined);
+      (params.assetType === AssetType.BANK_ACCOUNT
+        ? params.accountId
+        : undefined);
     const creditCardId =
       params.creditCardId ??
-      (params.assetType === AssetType.CREDIT_CARD ? params.accountId : undefined);
+      (params.assetType === AssetType.CREDIT_CARD
+        ? params.accountId
+        : undefined);
     const hasBankAccount = bankAccountId !== undefined;
     const hasCreditCard = creditCardId !== undefined;
 
@@ -59,11 +78,23 @@ export class FinanceRulesService {
   }
 
   assertCreditCardExpenseOnly(assetType: AssetType, type: TransactionType) {
-    if (assetType === AssetType.CREDIT_CARD && type !== TransactionType.EXPENSE) {
+    if (
+      assetType === AssetType.CREDIT_CARD &&
+      type !== TransactionType.EXPENSE
+    ) {
       throw new ConflictException(
         'Cartao de credito aceita apenas transacoes de despesa nesta fase.',
       );
     }
+  }
+
+  splitInstallmentAmounts(totalAmountCents: number, installmentCount: number) {
+    const baseAmount = Math.floor(totalAmountCents / installmentCount);
+    const remainder = totalAmountCents % installmentCount;
+
+    return Array.from({ length: installmentCount }, (_, index) =>
+      index < remainder ? baseAmount + 1 : baseAmount,
+    );
   }
 
   calculateBankBalanceDelta(
@@ -86,7 +117,9 @@ export class FinanceRulesService {
 
   ensureCreditLimit(availableLimitCents: number, amountCents: number) {
     if (availableLimitCents < amountCents) {
-      throw new ConflictException('Limite disponivel insuficiente para esta compra.');
+      throw new ConflictException(
+        'Limite disponivel insuficiente para esta compra.',
+      );
     }
   }
 
@@ -102,7 +135,10 @@ export class FinanceRulesService {
     }
   }
 
-  ensureBankBalanceForInvoicePayment(balanceCents: number, paymentAmount: number) {
+  ensureBankBalanceForInvoicePayment(
+    balanceCents: number,
+    paymentAmount: number,
+  ) {
     if (balanceCents < paymentAmount) {
       throw new ConflictException('Saldo insuficiente para pagar a fatura.');
     }
@@ -129,7 +165,11 @@ export class FinanceRulesService {
     closingDay: number,
     dueDay: number,
   ) {
-    const closingDate = this.getMonthDate(referenceYear, referenceMonth - 1, closingDay);
+    const closingDate = this.getMonthDate(
+      referenceYear,
+      referenceMonth - 1,
+      closingDay,
+    );
     let dueMonth = referenceMonth;
     let dueYear = referenceYear;
 
@@ -166,6 +206,28 @@ export class FinanceRulesService {
     }
 
     return InvoiceStatus.OPEN;
+  }
+
+  calculateBankAccountCurrentBalance(params: {
+    initialBalanceCents: number;
+    clearedIncomeCents: number;
+    clearedExpenseCents: number;
+    invoicePaymentsCents: number;
+  }) {
+    return (
+      params.initialBalanceCents +
+      params.clearedIncomeCents -
+      params.clearedExpenseCents -
+      params.invoicePaymentsCents
+    );
+  }
+
+  calculateCreditCardAvailableLimit(params: {
+    limitCents: number;
+    clearedSpentCents: number;
+    paidCents: number;
+  }) {
+    return params.limitCents - params.clearedSpentCents + params.paidCents;
   }
 
   private getMonthDate(year: number, monthIndex: number, day: number) {

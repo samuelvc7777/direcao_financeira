@@ -13,7 +13,19 @@ abstract class ITransactionDataSource {
     required String transactionDate,
     int? bankAccountId,
     int? creditCardId,
+    int? installmentCount,
   });
+
+  Future<TransactionModel> updateTransaction(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    String? transactionDate,
+    String? scope,
+  });
+
+  Future<void> deleteTransaction(int id, {String? scope});
 }
 
 class TransactionRemoteDataSource implements ITransactionDataSource {
@@ -28,8 +40,8 @@ class TransactionRemoteDataSource implements ITransactionDataSource {
     final items = data is List
         ? data
         : data is Map<String, dynamic>
-            ? (data['data'] ?? data['transactions'] ?? [])
-            : [];
+        ? (data['data'] ?? data['transactions'] ?? [])
+        : [];
 
     if (items is! List) return [];
 
@@ -46,6 +58,7 @@ class TransactionRemoteDataSource implements ITransactionDataSource {
   }
 
   @override
+  @override
   Future<TransactionModel> createTransaction({
     required String type,
     required String assetType,
@@ -55,6 +68,7 @@ class TransactionRemoteDataSource implements ITransactionDataSource {
     required String transactionDate,
     int? bankAccountId,
     int? creditCardId,
+    int? installmentCount,
   }) async {
     final Map<String, dynamic> payload = {
       'type': type,
@@ -67,20 +81,45 @@ class TransactionRemoteDataSource implements ITransactionDataSource {
 
     if (bankAccountId != null) {
       payload['bankAccountId'] = bankAccountId;
-      payload['accountId'] = bankAccountId; // Envia accountId como fallback
     }
-    
     if (creditCardId != null) {
       payload['creditCardId'] = creditCardId;
-      payload['accountId'] = creditCardId; // Envia accountId como fallback
+    }
+    if (installmentCount != null && installmentCount > 1) {
+      payload['installmentCount'] = installmentCount;
     }
 
-    final response = await dio.post(
-      '/finance/transactions',
-      data: payload,
-    );
+    final response = await dio.post('/finance/transactions', data: payload);
 
     return _parseTransaction(response.data);
+  }
+
+  @override
+  Future<TransactionModel> updateTransaction(
+    int id, {
+    int? categoryId,
+    String? description,
+    int? amountCents,
+    String? transactionDate,
+    String? scope,
+  }) async {
+    final Map<String, dynamic> payload = {};
+    if (categoryId != null) payload['categoryId'] = categoryId;
+    if (description != null) payload['description'] = description;
+    if (amountCents != null) payload['amountCents'] = amountCents;
+    if (transactionDate != null) payload['transactionDate'] = transactionDate;
+    if (scope != null) payload['scope'] = scope;
+
+    final response = await dio.patch('/finance/transactions/$id', data: payload);
+    return _parseTransaction(response.data);
+  }
+
+  @override
+  Future<void> deleteTransaction(int id, {String? scope}) async {
+    await dio.delete(
+      '/finance/transactions/$id',
+      data: scope != null ? {'scope': scope} : null,
+    );
   }
 
   TransactionModel _parseTransaction(dynamic data) {

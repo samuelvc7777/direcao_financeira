@@ -16,7 +16,9 @@ export interface UserProfileOutput {
   subscriptions: UserSubscriptionSnapshot[];
 }
 
-export function toUserProfileOutput(user: UserWithSubscriptions): UserProfileOutput {
+export function toUserProfileOutput(
+  user: UserWithSubscriptions,
+): UserProfileOutput {
   const activeSubscription =
     user.subscriptions.find(
       (subscription) => subscription.status === SubscriptionStatus.ACTIVE,

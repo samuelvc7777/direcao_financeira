@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../../auth/interface/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/interface/decorators/current-user.decorator';
@@ -45,9 +39,8 @@ export class SubscriptionController {
 
   @Post('me/cancel')
   async cancelMySubscription(@CurrentUser() user: AuthenticatedUser) {
-    const subscription = await this.subscriptionService.cancelCurrentSubscription(
-      user.userId,
-    );
+    const subscription =
+      await this.subscriptionService.cancelCurrentSubscription(user.userId);
 
     return {
       message: 'Assinatura cancelada com sucesso.',

@@ -7,6 +7,7 @@ abstract class ICreditCardRepository {
   Future<Either<Failure, CreditCardEntity>> createCreditCard({
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
@@ -16,6 +17,7 @@ abstract class ICreditCardRepository {
     required int id,
     required String name,
     required String brand,
+    required String color,
     required int limitCents,
     required int closingDay,
     required int dueDay,
