@@ -58,6 +58,7 @@ import '../../domain/repositories/i_traffic_light_repository.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
 import '../../domain/usecases/costs_gains_settings_use_cases.dart';
+import '../../domain/usecases/ride_status_use_cases.dart';
 import '../config/app_environment.dart';
 import '../network/api_error_mapper.dart';
 import '../network/api_request_logger.dart';
@@ -270,6 +271,14 @@ class ProviderBinding extends Bindings {
       CreateDetectedRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
+    Get.put<FinishRideUseCase>(
+      FinishRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
+    Get.put<CancelRideUseCase>(
+      CancelRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
     Get.put<ITrafficLightRepository>(
       TrafficLightRepositoryImpl(localDataSource: Get.find()),
       permanent: true,
@@ -428,6 +437,14 @@ class ProviderBinding extends Bindings {
     );
     Get.put<CreateDetectedRideUseCase>(
       CreateDetectedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
+    Get.put<FinishRideUseCase>(
+      FinishRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
+    Get.put<CancelRideUseCase>(
+      CancelRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
     Get.put<ITrafficLightRepository>(

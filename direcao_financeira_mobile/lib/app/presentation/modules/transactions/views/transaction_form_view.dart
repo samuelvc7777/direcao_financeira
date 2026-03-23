@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/bank_account_entity.dart';
 import '../../../../domain/entities/category_entity.dart';
 import '../../../../domain/entities/transaction_entity.dart';
+import '../../../widgets/app_loading_indicator.dart';
 import '../transactions_controller.dart';
 
 class TransactionFormView extends GetView<TransactionsController> {
@@ -92,10 +93,9 @@ class TransactionFormView extends GetView<TransactionsController> {
       body: Obx(() {
         if (controller.isLoading.value) {
           final isExp = selectedType.value == TransactionType.expense;
-          return Center(
-            child: CircularProgressIndicator(
-              color: isExp ? AppColors.rose : AppColors.emerald,
-            ),
+          return AppLoadingScreen(
+            label: isEditing ? 'Carregando transacao' : 'Preparando formulario',
+            accentColor: isExp ? AppColors.rose : AppColors.emerald,
           );
         }
 

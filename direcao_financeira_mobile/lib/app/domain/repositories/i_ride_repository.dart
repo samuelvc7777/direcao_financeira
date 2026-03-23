@@ -13,4 +13,14 @@ abstract class IRideRepository {
   Future<Either<Failure, Unit>> createDetectedRide(
     DetectedRideDraftEntity ride,
   );
+
+  Future<Either<Failure, Unit>> finishRide({
+    required int rideId,
+    required String paymentMethod,
+  });
+
+  Future<Either<Failure, Unit>> cancelRide({
+    required int rideId,
+    required String cancelReason,
+  });
 }

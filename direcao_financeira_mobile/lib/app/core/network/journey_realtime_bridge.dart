@@ -6,7 +6,6 @@ import 'realtime_client.dart';
 abstract class JourneyRealtimeBridge {
   RxBool get isOnline;
   void bind({
-    required VoidCallback onShiftChanged,
     required VoidCallback onRideChanged,
   });
   void unbind();
@@ -16,13 +15,6 @@ class DefaultJourneyRealtimeBridge implements JourneyRealtimeBridge {
   DefaultJourneyRealtimeBridge({required this.realtimeClient});
 
   final RealtimeClient realtimeClient;
-
-  static const _shiftEvents = <String>[
-    'journey.shift.started',
-    'journey.shift.finished',
-    'journey.shift.paused',
-    'journey.shift.resumed',
-  ];
 
   static const _rideEvents = <String>[
     'journey.ride.created',
@@ -34,12 +26,8 @@ class DefaultJourneyRealtimeBridge implements JourneyRealtimeBridge {
 
   @override
   void bind({
-    required VoidCallback onShiftChanged,
     required VoidCallback onRideChanged,
   }) {
-    for (final event in _shiftEvents) {
-      realtimeClient.on(event, (_) => onShiftChanged());
-    }
     for (final event in _rideEvents) {
       realtimeClient.on(event, (_) => onRideChanged());
     }
@@ -47,9 +35,6 @@ class DefaultJourneyRealtimeBridge implements JourneyRealtimeBridge {
 
   @override
   void unbind() {
-    for (final event in _shiftEvents) {
-      realtimeClient.off(event);
-    }
     for (final event in _rideEvents) {
       realtimeClient.off(event);
     }

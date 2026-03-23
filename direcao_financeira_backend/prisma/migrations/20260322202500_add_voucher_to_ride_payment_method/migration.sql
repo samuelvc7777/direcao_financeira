@@ -1,0 +1,2 @@
+ALTER TYPE "public"."RidePaymentMethod"
+ADD VALUE IF NOT EXISTS 'VOUCHER';

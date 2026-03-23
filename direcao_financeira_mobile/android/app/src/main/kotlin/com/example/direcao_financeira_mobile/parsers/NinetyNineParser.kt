@@ -14,7 +14,7 @@ class NinetyNineParser {
         Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:[\\u2022·•]|\\.)\\s*perfil\\b", RegexOption.IGNORE_CASE)
     private val fallbackRatingRegex = Regex("\\b\\d(?:[.,]\\d{1,2})\\b")
     private val profileRegex =
-        Regex("Perfil\\s+[A-Za-zÀ-ÿ]+(?:\\s+[A-Za-zÀ-ÿ]+)?", RegexOption.IGNORE_CASE)
+        Regex("Perfil\\s+([A-Za-zÀ-ÿ]+(?:\\s+[A-Za-zÀ-ÿ]+)*)", RegexOption.IGNORE_CASE)
 
     fun isOfferScreen(rootNode: AccessibilityNodeInfo): Boolean {
         val hasMainPrice = findNodeByRegex(rootNode, priceRegex) != null
@@ -33,6 +33,8 @@ class NinetyNineParser {
         val statsMatches = findAllNodesByRegex(rootNode, statsRegex)
         val lines = collectVisibleTexts(rootNode)
         val rawText = lines.joinToString("\n")
+        val passengerName = extractPassengerName(lines)
+        val addresses = extractAddresses(lines, passengerName)
 
         return mapOf(
             "hasMainPrice" to (priceNode != null),
@@ -43,7 +45,9 @@ class NinetyNineParser {
             "paymentMethod" to (extractPaymentMethod(lines) ?: ""),
             "rating" to (extractRating(rawText, lines) ?: ""),
             "ridesCount" to (extractRidesCount(rawText, lines) ?: 0),
-            "profile" to (extractProfile(lines) ?: ""),
+            "passengerName" to (passengerName ?: ""),
+            "originAddress" to (addresses.first ?: ""),
+            "destinationAddress" to (addresses.second ?: ""),
             "sampleTexts" to lines.take(25),
         )
     }
@@ -51,9 +55,12 @@ class NinetyNineParser {
     fun parseOffer(rootNode: AccessibilityNodeInfo): Map<String, Any> {
         val lines = collectVisibleTexts(rootNode)
         val rawText = lines.joinToString("\n")
+        val passengerName = extractPassengerName(lines)
+        val addresses = extractAddresses(lines, passengerName)
 
         val data = mutableMapOf<String, Any>()
         data["app"] = "99"
+        data["platform_name"] = "99"
 
         val priceNode = findNodeByRegex(rootNode, priceRegex)
         data["valor_bruto"] = priceNode?.text?.toString() ?: "R$ 0,00"
@@ -86,10 +93,12 @@ class NinetyNineParser {
         data["minutos_total"] = totalMin
         data["avaliacao"] = extractRating(rawText, lines) ?: "5,00"
         data["corridas_total"] = extractRidesCount(rawText, lines) ?: 0
-        data["perfil_passageiro"] = extractProfile(lines) ?: ""
+        data["passenger_name"] = passengerName ?: ""
+        data["perfil_passageiro"] = passengerName ?: ""
+        data["origin_address"] = addresses.first ?: ""
+        data["destination_address"] = addresses.second ?: ""
         data["tipo_corrida"] = extractOfferType(lines) ?: ""
         data["forma_pagamento"] = extractPaymentMethod(lines) ?: ""
-        data["motorista"] = "99"
 
         return data
     }
@@ -98,6 +107,68 @@ class NinetyNineParser {
         return collectNonEmptyTexts(rootNode)
             .map { it.removePrefix("cd:").trim() }
             .filter { it.isNotEmpty() }
+            .distinct()
+    }
+
+    private fun extractPassengerName(lines: List<String>): String? {
+        return lines.firstNotNullOfOrNull { line ->
+            profileRegex.find(line)?.groupValues?.getOrNull(1)?.trim()
+        }?.takeIf { it.isNotBlank() }
+    }
+
+    private fun extractAddresses(
+        lines: List<String>,
+        passengerName: String?,
+    ): Pair<String?, String?> {
+        val candidates =
+            lines.filter { isAddressCandidate(it, passengerName) }
+                .distinct()
+
+        return candidates.getOrNull(0) to candidates.getOrNull(1)
+    }
+
+    private fun isAddressCandidate(
+        line: String,
+        passengerName: String?,
+    ): Boolean {
+        val trimmed = line.trim()
+        val normalized = normalizedText(trimmed)
+
+        if (trimmed.length < 6 || !trimmed.any { it.isLetter() }) {
+            return false
+        }
+
+        if (passengerName != null && normalized == normalizedText(passengerName)) {
+            return false
+        }
+
+        if (priceRegex.containsMatchIn(trimmed) || statsRegex.containsMatchIn(trimmed)) {
+            return false
+        }
+
+        val blockedTerms =
+            listOf(
+                "preco x",
+                "nao afeta a ta",
+                "perfil",
+                "corridas",
+                "aceitar",
+                "dinheiro",
+                "pix",
+                "cartao",
+                "entrega",
+                "negocia",
+                "km",
+                "min",
+                "r$",
+                "passageiro",
+            )
+
+        if (blockedTerms.any { normalized.contains(it) }) {
+            return false
+        }
+
+        return true
     }
 
     private fun extractRating(
@@ -134,11 +205,6 @@ class NinetyNineParser {
                 ?: rawText.lineSequence().firstOrNull { normalizedText(it).contains("corridas") }
 
         return corridasLine?.let { corridasLineRegex.find(it)?.groupValues?.get(2)?.toIntOrNull() }
-    }
-
-    private fun extractProfile(lines: List<String>): String? {
-        return lines.firstOrNull { profileRegex.containsMatchIn(it) }
-            ?.let { profileRegex.find(it)?.value?.trim() }
     }
 
     private fun extractOfferType(lines: List<String>): String? {

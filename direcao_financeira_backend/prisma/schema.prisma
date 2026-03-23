@@ -78,6 +78,7 @@ enum RidePaymentMethod {
   CARD
   CASH
   APP
+  VOUCHER
 }
 
 model User {
@@ -276,6 +277,7 @@ model Ride {
   userId             Int
   shiftId            Int?
   status             RideStatus        @default(PENDING)
+  platformName       String?
   paymentMethod      RidePaymentMethod
   grossValueCents    Int
   netProfitCents     Int
@@ -288,6 +290,7 @@ model Ride {
   destinationAddress String?
   stops              Json?
   passengerName      String?
+  cancelReason       String?
   user               User              @relation(fields: [userId], references: [id])
   shift              Shift?            @relation(fields: [shiftId], references: [id])
   createdAt          DateTime          @default(now())

@@ -90,7 +90,10 @@ class ScreenReaderService : AccessibilityService() {
         val targetNode = resolveTargetNode(sourceNode, rootNode)
 
         if (targetNode != null && moveSjParser.isOfferScreen(targetNode)) {
-            processOffer(moveSjParser.parseOffer(targetNode))
+            val offerData = moveSjParser.parseOffer(targetNode).toMutableMap()
+            offerData.putIfAbsent("app", "MoveSj")
+            offerData.putIfAbsent("platform_name", "MoveSj")
+            processOffer(offerData)
         }
     }
 
@@ -175,7 +178,7 @@ class ScreenReaderService : AccessibilityService() {
             val debugSnapshot = ninetyNineParser.buildDebugSnapshot(targetNode)
             val isOfferScreen = ninetyNineParser.isOfferScreen(targetNode)
             emitDebugLog(
-                "99 package=$packageName sourcePkg=$sourcePackage rootPkg=$rootPackage targetPkg=$targetPackage offer=$isOfferScreen price='${debugSnapshot["priceText"]}' stats=${debugSnapshot["statsCount"]} tipo='${debugSnapshot["offerType"]}' pagamento='${debugSnapshot["paymentMethod"]}' rating='${debugSnapshot["rating"]}' corridas=${debugSnapshot["ridesCount"]} perfil='${debugSnapshot["profile"]}'",
+                "99 package=$packageName sourcePkg=$sourcePackage rootPkg=$rootPackage targetPkg=$targetPackage offer=$isOfferScreen price='${debugSnapshot["priceText"]}' stats=${debugSnapshot["statsCount"]} tipo='${debugSnapshot["offerType"]}' pagamento='${debugSnapshot["paymentMethod"]}' rating='${debugSnapshot["rating"]}' corridas=${debugSnapshot["ridesCount"]} passageiro='${debugSnapshot["passengerName"]}' origem='${debugSnapshot["originAddress"]}' destino='${debugSnapshot["destinationAddress"]}'",
             )
             emitDebugLog("99 sampleTexts=${debugSnapshot["sampleTexts"]}")
 
@@ -225,9 +228,7 @@ class ScreenReaderService : AccessibilityService() {
             return
         }
 
-        if (offerData["valor_bruto"] == lastOfferData?.get("valor_bruto") &&
-            offerData["km_total"] == lastOfferData?.get("km_total")
-        ) {
+        if (buildOfferSignature(offerData) == buildOfferSignature(lastOfferData)) {
             return
         }
 
@@ -276,6 +277,22 @@ class ScreenReaderService : AccessibilityService() {
         val minTotal = (offerData["minutos_total"] as? Number)?.toInt() ?: 0
 
         return priceValue > 0.0 && (kmTotal > 0.0 || minTotal > 0)
+    }
+
+    private fun buildOfferSignature(offerData: Map<String, Any>?): String {
+        if (offerData == null) {
+            return ""
+        }
+
+        return listOf(
+            offerData["app"]?.toString().orEmpty(),
+            offerData["valor_bruto"]?.toString().orEmpty(),
+            offerData["km_total"]?.toString().orEmpty(),
+            offerData["minutos_total"]?.toString().orEmpty(),
+            offerData["passenger_name"]?.toString().orEmpty(),
+            offerData["origin_address"]?.toString().orEmpty(),
+            offerData["destination_address"]?.toString().orEmpty(),
+        ).joinToString("|")
     }
 
     private fun requestNinetyNineOcr(displayId: Int) {
@@ -340,7 +357,7 @@ class ScreenReaderService : AccessibilityService() {
 
                 val debugSnapshot = ninetyNineOcrParser.buildDebugSnapshot(visionText.text, lines)
                 emitDebugLog(
-                    "99 ocr price='${debugSnapshot["priceText"]}' stats=${debugSnapshot["statsCount"]} tipo='${debugSnapshot["offerType"]}' pagamento='${debugSnapshot["paymentMethod"]}' rating='${debugSnapshot["rating"]}' corridas=${debugSnapshot["ridesCount"]} perfil='${debugSnapshot["profile"]}'",
+                    "99 ocr price='${debugSnapshot["priceText"]}' stats=${debugSnapshot["statsCount"]} tipo='${debugSnapshot["offerType"]}' pagamento='${debugSnapshot["paymentMethod"]}' rating='${debugSnapshot["rating"]}' corridas=${debugSnapshot["ridesCount"]} passageiro='${debugSnapshot["passengerName"]}' origem='${debugSnapshot["originAddress"]}' destino='${debugSnapshot["destinationAddress"]}'",
                 )
                 emitDebugLog("99 ocr lines=${debugSnapshot["sampleLines"]}")
 

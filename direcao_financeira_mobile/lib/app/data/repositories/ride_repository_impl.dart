@@ -63,4 +63,42 @@ class RideRepositoryImpl implements IRideRepository {
       );
     }
   }
+
+  @override
+  Future<Either<Failure, Unit>> finishRide({
+    required int rideId,
+    required String paymentMethod,
+  }) async {
+    try {
+      await dataSource.finishRide(rideId: rideId, paymentMethod: paymentMethod);
+      return const Right(unit);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'RideRepositoryImpl.finishRide',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao finalizar corrida.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> cancelRide({
+    required int rideId,
+    required String cancelReason,
+  }) async {
+    try {
+      await dataSource.cancelRide(rideId: rideId, cancelReason: cancelReason);
+      return const Right(unit);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'RideRepositoryImpl.cancelRide',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao cancelar corrida.'),
+      );
+    }
+  }
 }

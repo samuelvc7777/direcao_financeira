@@ -14,6 +14,8 @@ class AccessibilityController extends GetxController
     implements AccessibilityService {
   AccessibilityController({required this.storage});
 
+  static const _duplicateRideWindow = Duration(seconds: 15);
+
   static const _platform = MethodChannel(
     'com.direcao_financeira/accessibility',
   );
@@ -22,6 +24,8 @@ class AccessibilityController extends GetxController
 
   final GetStorage storage;
   final lastRaceData = <String, dynamic>{}.obs;
+  String? _lastPersistedRideSignature;
+  DateTime? _lastPersistedRideAt;
   @override
   final isServiceEnabled = false.obs;
 
@@ -182,12 +186,20 @@ class AccessibilityController extends GetxController
       return;
     }
 
+    if (_isDuplicateRide(ride)) {
+      developer.log('Corrida detectada ignorada por dedupe local.');
+      return;
+    }
+
     final result = await Get.find<CreateDetectedRideUseCase>()(ride);
     result.fold(
       (failure) => developer.log(
         'Erro ao salvar corrida detectada no Supabase: ${failure.message}',
       ),
-      (_) => developer.log('Corrida detectada salva como PENDING.'),
+      (_) {
+        _rememberPersistedRide(ride);
+        developer.log('Corrida detectada salva como PENDING.');
+      },
     );
   }
 
@@ -195,20 +207,30 @@ class AccessibilityController extends GetxController
     final grossValueCents = _parseCurrencyToCents(data['valor_bruto']);
     final totalKm = _toDouble(data['km_total']);
     final totalMinutes = _toInt(data['minutos_total']);
+    final platformName = _resolvePlatformName(data);
 
     if (grossValueCents <= 0 || (totalKm <= 0 && totalMinutes <= 0)) {
       return null;
     }
 
     return DetectedRideDraftEntity(
+      platformName: platformName,
       paymentMethod: _mapPaymentMethod(data['forma_pagamento']),
       grossValueCents: grossValueCents,
       netProfitCents: 0,
       totalKm: totalKm,
       totalTimeSeconds: totalMinutes * 60,
-      passengerName: _resolvePassengerName(data),
-      originAddress: null,
-      destinationAddress: null,
+      gainPerKmCents: _calculateGainPerKmCents(
+        grossValueCents: grossValueCents,
+        totalKm: totalKm,
+      ),
+      gainPerHourCents: _calculateGainPerHourCents(
+        grossValueCents: grossValueCents,
+        totalMinutes: totalMinutes,
+      ),
+      passengerName: _resolvePassengerName(data, platformName: platformName),
+      originAddress: _resolveTextField(data['origin_address']),
+      destinationAddress: _resolveTextField(data['destination_address']),
     );
   }
 
@@ -248,6 +270,28 @@ class AccessibilityController extends GetxController
     return double.tryParse(text)?.round() ?? 0;
   }
 
+  int _calculateGainPerKmCents({
+    required int grossValueCents,
+    required double totalKm,
+  }) {
+    if (grossValueCents <= 0 || totalKm <= 0) {
+      return 0;
+    }
+
+    return (grossValueCents / totalKm).round();
+  }
+
+  int _calculateGainPerHourCents({
+    required int grossValueCents,
+    required int totalMinutes,
+  }) {
+    if (grossValueCents <= 0 || totalMinutes <= 0) {
+      return 0;
+    }
+
+    return ((grossValueCents * 60) / totalMinutes).round();
+  }
+
   String _mapPaymentMethod(dynamic rawValue) {
     final normalized = rawValue?.toString().trim().toLowerCase() ?? '';
 
@@ -264,23 +308,109 @@ class AccessibilityController extends GetxController
     return 'APP';
   }
 
-  String? _resolvePassengerName(Map<String, dynamic> data) {
+  String? _resolvePassengerName(
+    Map<String, dynamic> data, {
+    String? platformName,
+  }) {
+    final passengerName = _resolveTextField(data['passenger_name']);
+    if (_isValidPassengerName(passengerName, platformName: platformName)) {
+      return passengerName;
+    }
+
     final profile = data['perfil_passageiro']?.toString().trim();
-    if (profile != null && profile.isNotEmpty) {
+    if (_isValidPassengerName(profile, platformName: platformName)) {
       return profile;
     }
 
-    final driver = data['motorista']?.toString().trim();
-    if (driver == null || driver.isEmpty) {
+    return null;
+  }
+
+  String? _resolvePlatformName(Map<String, dynamic> data) {
+    final rawValue =
+        _resolveTextField(data['platform_name']) ??
+        _resolveTextField(data['app']);
+    if (rawValue == null) {
       return null;
     }
 
-    final lower = driver.toLowerCase();
-    if (lower == '99' || lower == 'movesj' || lower == 'motorista') {
+    final normalized = rawValue.toLowerCase();
+    if (normalized.contains('movesj') || normalized == 'move') {
+      return 'MoveSj';
+    }
+    if (normalized.contains('99')) {
+      return '99';
+    }
+
+    return rawValue;
+  }
+
+  String? _resolveTextField(dynamic rawValue) {
+    final text = rawValue?.toString().trim();
+    if (text == null || text.isEmpty) {
       return null;
     }
 
-    return driver;
+    return text;
+  }
+
+  bool _isValidPassengerName(String? value, {String? platformName}) {
+    if (value == null) {
+      return false;
+    }
+
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return false;
+    }
+
+    final blockedValues = <String>{
+      'move',
+      'movesj',
+      '99',
+      'app',
+      'passageiro',
+      'motorista',
+    };
+
+    if (blockedValues.contains(normalized)) {
+      return false;
+    }
+
+    if (platformName != null &&
+        normalized == platformName.trim().toLowerCase()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isDuplicateRide(DetectedRideDraftEntity ride) {
+    final signature = _buildRideSignature(ride);
+    final lastAt = _lastPersistedRideAt;
+
+    if (_lastPersistedRideSignature != signature || lastAt == null) {
+      return false;
+    }
+
+    return DateTime.now().difference(lastAt) <= _duplicateRideWindow;
+  }
+
+  void _rememberPersistedRide(DetectedRideDraftEntity ride) {
+    _lastPersistedRideSignature = _buildRideSignature(ride);
+    _lastPersistedRideAt = DateTime.now();
+  }
+
+  String _buildRideSignature(DetectedRideDraftEntity ride) {
+    return [
+      ride.paymentMethod,
+      ride.grossValueCents,
+      ride.platformName ?? '',
+      ride.totalKm.toStringAsFixed(2),
+      ride.totalTimeSeconds,
+      ride.passengerName ?? '',
+      ride.originAddress ?? '',
+      ride.destinationAddress ?? '',
+    ].join('|');
   }
 
   Future<void> checkServiceStatus() async {

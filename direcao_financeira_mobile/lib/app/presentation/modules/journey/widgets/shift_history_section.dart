@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../widgets/app_loading_indicator.dart';
 import '../journey_controller.dart';
 import 'shift_card.dart';
 
@@ -338,15 +339,10 @@ class ShiftHistorySection extends GetView<JourneyController> {
                     ? controller.startShift
                     : null,
                 icon: controller.isStartingShift.value
-                    ? SizedBox(
-                        width: Responsive.sp(context, 22).clamp(18.0, 24.0),
-                        height: Responsive.sp(context, 22).clamp(18.0, 24.0),
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
+                    ? const AppLoadingIndicator(
+                        size: AppLoadingSize.compact,
+                        accentColor: Colors.white,
+                        onDark: true,
                       )
                     : Icon(
                         Icons.play_arrow_rounded,
@@ -494,60 +490,43 @@ class ShiftHistorySection extends GetView<JourneyController> {
         SizedBox(height: Responsive.vp(context, 1.2).clamp(8.0, 14.0)),
 
         // Actions Row - adapts on compact widths to avoid clipped labels
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final useVerticalLayout = constraints.maxWidth < 360;
-
-            final pauseButton = Obx(
-              () => _buildSmallActionButton(
-                context,
-                onPressed: controller.canPauseOrResumeShift
-                    ? controller.pauseShift
-                    : null,
-                icon: controller.isPauseShiftLoading.value
-                    ? Icons.hourglass_top_rounded
-                    : controller.isShiftPaused
-                    ? Icons.play_arrow_rounded
-                    : Icons.pause_circle_outline,
-                label: controller.isShiftPaused ? 'Retomar' : 'Pausar',
-                color: const Color(0xFFF2994A),
+        // Actions Row - always horizontally aligned
+        Row(
+          children: [
+            Expanded(
+              child: Obx(
+                () => _buildSmallActionButton(
+                  context,
+                  onPressed: controller.canPauseOrResumeShift
+                      ? controller.pauseShift
+                      : null,
+                  icon: controller.isPauseShiftLoading.value
+                      ? Icons.hourglass_top_rounded
+                      : controller.isShiftPaused
+                      ? Icons.play_arrow_rounded
+                      : Icons.pause_circle_outline,
+                  label: controller.isShiftPaused ? 'Retomar' : 'Pausar',
+                  color: const Color(0xFFF2994A),
+                ),
               ),
-            );
-
-            final finishButton = Obx(
-              () => _buildSmallActionButton(
-                context,
-                onPressed: controller.canFinishShift
-                    ? controller.finishShift
-                    : null,
-                icon: controller.isFinishingShift.value
-                    ? Icons.hourglass_top_rounded
-                    : Icons.stop,
-                label: 'Parar',
-                color: const Color(0xFFEB5757),
+            ),
+            SizedBox(width: Responsive.hp(context, 2.5).clamp(8.0, 14.0)),
+            Expanded(
+              child: Obx(
+                () => _buildSmallActionButton(
+                  context,
+                  onPressed: controller.canFinishShift
+                      ? controller.finishShift
+                      : null,
+                  icon: controller.isFinishingShift.value
+                      ? Icons.hourglass_top_rounded
+                      : Icons.stop,
+                  label: 'Parar',
+                  color: const Color(0xFFEB5757),
+                ),
               ),
-            );
-
-            if (useVerticalLayout) {
-              return Column(
-                children: [
-                  pauseButton,
-                  SizedBox(
-                    height: Responsive.vp(context, 1.0).clamp(8.0, 12.0),
-                  ),
-                  finishButton,
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                Expanded(child: pauseButton),
-                SizedBox(width: Responsive.hp(context, 2.5).clamp(8.0, 14.0)),
-                Expanded(child: finishButton),
-              ],
-            );
-          },
+            ),
+          ],
         ),
         SizedBox(height: Responsive.vp(context, 1.2).clamp(8.0, 14.0)),
         _buildTrafficLightButton(context, compact: true),

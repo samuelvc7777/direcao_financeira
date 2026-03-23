@@ -7,6 +7,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../routes/app_pages.dart';
 import '../../widgets/app_month_selector.dart';
+import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'transactions_controller.dart';
 import 'widgets/transaction_type_selector_sheet.dart';
@@ -40,8 +41,9 @@ class TransactionsView extends GetView<TransactionsController> {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.violet),
+          return const AppLoadingScreen(
+            label: 'Carregando transacoes',
+            accentColor: AppColors.violet,
           );
         }
 

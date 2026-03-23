@@ -13,6 +13,7 @@ import 'package:direcao_financeira_mobile/app/domain/entities/active_shift_entit
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/detected_ride_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/plan_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_entity.dart';
@@ -366,6 +367,11 @@ class _FakeJourneyRepository implements IJourneyRepository {
 }
 
 class _FakeRideRepository implements IRideRepository {
+  @override
+  Future<Either<Failure, Unit>> createDetectedRide(
+    DetectedRideDraftEntity ride,
+  ) async => const Right(unit);
+
   @override
   Future<Either<Failure, List<RideEntity>>> getRides({
     String period = 'day',

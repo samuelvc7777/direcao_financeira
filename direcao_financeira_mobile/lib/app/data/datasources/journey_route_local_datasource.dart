@@ -13,6 +13,7 @@ abstract class IJourneyRouteLocalDataSource {
   Future<ShiftRouteModel?> appendPoint({
     required int localShiftId,
     required TrackedRoutePointModel point,
+    bool forceRecord = false,
   });
   Future<void> markRouteFinished({
     required int localShiftId,
@@ -37,6 +38,8 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
   static const _databaseName = 'journey_routes.db';
   static const _routesTable = 'shift_routes';
   static const _pointsTable = 'shift_route_points';
+  static const _minimumSavedPointDistanceMeters = 200.0;
+  static const _minimumSavedPointInterval = Duration(seconds: 30);
   static Database? _database;
 
   Future<Database> get _db async {
@@ -120,6 +123,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
   Future<ShiftRouteModel?> appendPoint({
     required int localShiftId,
     required TrackedRoutePointModel point,
+    bool forceRecord = false,
   }) async {
     if (point.accuracyMeters > 50) {
       return getRouteByLocalShiftId(localShiftId, includePoints: false);
@@ -153,22 +157,34 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
 
       final isSameCoordinate =
           lastLatitude == point.latitude && lastLongitude == point.longitude;
-      final isInsignificantMovement = incrementalDistance < 5;
       final isDuplicatedTimestamp =
           lastRecordedAt.toUtc() == point.recordedAt.toUtc();
 
-      if (isSameCoordinate || isInsignificantMovement || isDuplicatedTimestamp) {
+      if (isSameCoordinate || isDuplicatedTimestamp) {
         return getRouteByLocalShiftId(localShiftId, includePoints: false);
       }
 
-      await db.insert(_pointsTable, point.toDb(localShiftId));
+      final shouldPersistPoint =
+          forceRecord ||
+          await _shouldPersistPoint(
+            db: db,
+            localShiftId: localShiftId,
+            candidatePoint: point,
+          );
+
+      if (shouldPersistPoint) {
+        await db.insert(_pointsTable, point.toDb(localShiftId));
+      }
+
       await db.update(
         _routesTable,
         {
           'total_distance_meters':
               ((routeRow['total_distance_meters'] as num?)?.toDouble() ?? 0) +
               incrementalDistance,
-          'point_count': (routeRow['point_count'] as int? ?? 0) + 1,
+          'point_count':
+              (routeRow['point_count'] as int? ?? 0) +
+              (shouldPersistPoint ? 1 : 0),
           'last_latitude': point.latitude,
           'last_longitude': point.longitude,
           'last_recorded_at': point.recordedAt.toUtc().toIso8601String(),
@@ -198,6 +214,38 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     return getRouteByLocalShiftId(localShiftId, includePoints: false);
   }
 
+  Future<bool> _shouldPersistPoint({
+    required Database db,
+    required int localShiftId,
+    required TrackedRoutePointModel candidatePoint,
+  }) async {
+    final rows = await db.query(
+      _pointsTable,
+      where: 'local_shift_id = ?',
+      whereArgs: [localShiftId],
+      orderBy: 'recorded_at DESC',
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return true;
+    }
+
+    final lastSavedPoint = TrackedRoutePointModel.fromDb(rows.first);
+    final distanceFromLastSavedPoint = LocationMath.distanceInMeters(
+      startLatitude: lastSavedPoint.latitude,
+      startLongitude: lastSavedPoint.longitude,
+      endLatitude: candidatePoint.latitude,
+      endLongitude: candidatePoint.longitude,
+    );
+    final timeSinceLastSavedPoint = candidatePoint.recordedAt.difference(
+      lastSavedPoint.recordedAt,
+    );
+
+    return distanceFromLastSavedPoint >= _minimumSavedPointDistanceMeters ||
+        timeSinceLastSavedPoint >= _minimumSavedPointInterval;
+  }
+
   @override
   Future<void> markRouteFinished({
     required int localShiftId,
@@ -206,10 +254,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     final db = await _db;
     await db.update(
       _routesTable,
-      {
-        'ended_at': endedAt.toUtc().toIso8601String(),
-        'is_finished': 1,
-      },
+      {'ended_at': endedAt.toUtc().toIso8601String(), 'is_finished': 1},
       where: 'local_shift_id = ?',
       whereArgs: [localShiftId],
     );
@@ -223,9 +268,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     final db = await _db;
     await db.update(
       _routesTable,
-      {
-        'remote_shift_id': remoteShiftId,
-      },
+      {'remote_shift_id': remoteShiftId},
       where: 'local_shift_id = ?',
       whereArgs: [localShiftId],
     );

@@ -86,15 +86,27 @@ class JourneyController extends GetxController {
       return ridesList;
     }
 
-    var statusKey = 'FINISHED';
-    if (selectedRideStatusFilter.value == 'Pendentes') statusKey = 'PENDING';
-    if (selectedRideStatusFilter.value == 'Cancelados') statusKey = 'CANCELLED';
+    if (selectedRideStatusFilter.value == 'Pendentes') {
+      return ridesList.where((ride) => ride.status == 'PENDING').toList();
+    }
 
-    return ridesList.where((ride) => ride.status == statusKey).toList();
+    if (selectedRideStatusFilter.value == 'Cancelados') {
+      return ridesList
+          .where(
+            (ride) => ride.status == 'CANCELED' || ride.status == 'CANCELLED',
+          )
+          .toList();
+    }
+
+    return ridesList.where((ride) => ride.status == 'FINISHED').toList();
   }
 
   void changeRideStatusFilter(String filter) {
     selectedRideStatusFilter.value = filter;
+  }
+
+  void openRideDetails(RideEntity ride) {
+    Get.toNamed('/journey/ride-details', arguments: ride);
   }
 
   final totalShifts = '0'.obs;
@@ -198,13 +210,6 @@ class JourneyController extends GetxController {
       _handleTrackingStatusUpdated,
     );
     journeyRealtimeBridge.bind(
-      onShiftChanged: () {
-        refreshJourneyData(
-          silent: true,
-          includeRides: false,
-          showErrors: false,
-        );
-      },
       onRideChanged: () {
         refreshJourneyData(silent: true, showErrors: false);
       },

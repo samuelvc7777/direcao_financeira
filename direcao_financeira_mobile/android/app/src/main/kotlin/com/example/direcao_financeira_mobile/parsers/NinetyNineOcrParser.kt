@@ -13,23 +13,27 @@ class NinetyNineOcrParser {
         Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:[\\u2022·•]|\\.)\\s*perfil\\b", RegexOption.IGNORE_CASE)
     private val fallbackRatingRegex = Regex("\\b\\d(?:[.,]\\d{1,2})\\b")
     private val profileRegex =
-        Regex("Perfil\\s+[A-Za-zÀ-ÿ]+(?:\\s+[A-Za-zÀ-ÿ]+)?", RegexOption.IGNORE_CASE)
+        Regex("Perfil\\s+([A-Za-zÀ-ÿ]+(?:\\s+[A-Za-zÀ-ÿ]+)*)", RegexOption.IGNORE_CASE)
 
     fun buildDebugSnapshot(
         rawText: String,
         lines: List<String>,
     ): Map<String, Any> {
+        val passengerName = extractPassengerName(lines)
+        val addresses = extractAddresses(lines, passengerName)
+
         return mapOf(
             "priceText" to (priceRegex.find(rawText)?.value.orEmpty()),
             "statsCount" to statsRegex.findAll(rawText).count(),
             "hasPrecoX" to normalize(rawText).contains("preco x"),
             "hasNaoAfetaTA" to normalize(rawText).contains("nao afeta a ta"),
-            "hasPerfil" to (extractProfile(lines) != null),
+            "passengerName" to (passengerName ?: ""),
             "offerType" to (extractOfferType(lines) ?: ""),
             "paymentMethod" to (extractPaymentMethod(lines) ?: ""),
             "rating" to (extractRating(rawText, lines) ?: ""),
             "ridesCount" to (extractRidesCount(rawText, lines) ?: 0),
-            "profile" to (extractProfile(lines) ?: ""),
+            "originAddress" to (addresses.first ?: ""),
+            "destinationAddress" to (addresses.second ?: ""),
             "sampleLines" to lines.take(12),
         )
     }
@@ -63,18 +67,85 @@ class NinetyNineOcrParser {
             totalKm += match.groupValues[2].replace(",", ".").toDoubleOrNull() ?: 0.0
         }
 
+        val passengerName = extractPassengerName(lines)
+        val addresses = extractAddresses(lines, passengerName)
+
         return mutableMapOf<String, Any>().apply {
             put("app", "99")
+            put("platform_name", "99")
             put("valor_bruto", price)
             put("km_total", totalKm)
             put("minutos_total", totalMinutes)
             put("avaliacao", extractRating(rawText, lines) ?: "5,00")
             put("corridas_total", extractRidesCount(rawText, lines) ?: 0)
-            put("perfil_passageiro", extractProfile(lines) ?: "")
+            put("passenger_name", passengerName ?: "")
+            put("perfil_passageiro", passengerName ?: "")
+            put("origin_address", addresses.first ?: "")
+            put("destination_address", addresses.second ?: "")
             put("tipo_corrida", extractOfferType(lines) ?: "")
             put("forma_pagamento", extractPaymentMethod(lines) ?: "")
-            put("motorista", "99")
         }
+    }
+
+    private fun extractPassengerName(lines: List<String>): String? {
+        return lines.firstNotNullOfOrNull { line ->
+            profileRegex.find(line)?.groupValues?.getOrNull(1)?.trim()
+        }?.takeIf { it.isNotBlank() }
+    }
+
+    private fun extractAddresses(
+        lines: List<String>,
+        passengerName: String?,
+    ): Pair<String?, String?> {
+        val candidates =
+            lines.filter { isAddressCandidate(it, passengerName) }
+                .distinct()
+
+        return candidates.getOrNull(0) to candidates.getOrNull(1)
+    }
+
+    private fun isAddressCandidate(
+        line: String,
+        passengerName: String?,
+    ): Boolean {
+        val trimmed = line.trim()
+        val normalized = normalize(trimmed)
+
+        if (trimmed.length < 6 || !trimmed.any { it.isLetter() }) {
+            return false
+        }
+
+        if (passengerName != null && normalized == normalize(passengerName)) {
+            return false
+        }
+
+        if (priceRegex.containsMatchIn(trimmed) || statsRegex.containsMatchIn(trimmed)) {
+            return false
+        }
+
+        val blockedTerms =
+            listOf(
+                "preco x",
+                "nao afeta a ta",
+                "perfil",
+                "corridas",
+                "aceitar",
+                "dinheiro",
+                "pix",
+                "cartao",
+                "entrega",
+                "negocia",
+                "km",
+                "min",
+                "r$",
+                "passageiro",
+            )
+
+        if (blockedTerms.any { normalized.contains(it) }) {
+            return false
+        }
+
+        return true
     }
 
     private fun extractRating(
@@ -111,11 +182,6 @@ class NinetyNineOcrParser {
                 ?: rawText.lineSequence().firstOrNull { normalize(it).contains("corridas") }
 
         return corridasLine?.let { corridasLineRegex.find(it)?.groupValues?.get(2)?.toIntOrNull() }
-    }
-
-    private fun extractProfile(lines: List<String>): String? {
-        return lines.firstOrNull { profileRegex.containsMatchIn(it) }
-            ?.let { profileRegex.find(it)?.value?.trim() }
     }
 
     private fun extractOfferType(lines: List<String>): String? {

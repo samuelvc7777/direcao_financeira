@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
@@ -5,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../widgets/app_loading_indicator.dart';
 import '../../../../domain/entities/tracked_route_point_entity.dart';
 import '../shift_route_controller.dart';
 
@@ -15,7 +19,10 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
   Widget build(BuildContext context) {
     return Obx(() {
       if (controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
+        return const AppLoadingScreen(
+          label: 'Carregando rota do turno',
+          accentColor: AppColors.sky,
+        );
       }
 
       if (controller.errorMessage.value != null) {
@@ -52,103 +59,114 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Header Card ──────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.midnight,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.midnight,
+                    AppColors.midnight.withValues(alpha: 0.8),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: Colors.white.withValues(alpha: 0.05),
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    shift?.date ?? 'Turno',
-                    style: context.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.calendar_today_rounded,
+                          color: AppColors.royalBlue,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          shift?.date ?? 'Detalhes do Turno',
+                          style: context.textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
                       _MetricChip(
                         icon: Icons.route_rounded,
-                        label:
-                            '${route.totalDistanceKm.toStringAsFixed(1)} km rastreados',
+                        label: '${route.totalDistanceKm.toStringAsFixed(1)} km',
+                        subtitle: 'Rastreados',
+                        color: AppColors.royalBlue,
                       ),
                       _MetricChip(
-                        icon: Icons.pin_drop_outlined,
-                        label: '${route.pointCount} pontos',
+                        icon: Icons.pin_drop_rounded,
+                        label: '${route.pointCount}',
+                        subtitle: 'Pontos',
+                        color: AppColors.emerald,
                       ),
                       _MetricChip(
-                        icon: Icons.access_time_rounded,
-                        label:
-                            '${_formatTime(route.startedAt)} - ${_formatTime(route.endedAt)}',
+                        icon: Icons.schedule_rounded,
+                        label: '${_formatTime(route.startedAt)} - ${_formatTime(route.endedAt)}',
+                        subtitle: 'Tempo total',
+                        color: AppColors.amber,
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            
+            const SizedBox(height: 24),
+            
+            // ── Área do Mapa ──────────────────────────────────────
             Container(
-              height: 360,
+              height: 420,
               decoration: BoxDecoration(
-                color: AppColors.midnight,
-                borderRadius: BorderRadius.circular(24),
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: Colors.white.withValues(alpha: 0.08),
+                  width: 1.5,
                 ),
               ),
               clipBehavior: Clip.antiAlias,
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: center,
-                  initialZoom: 14,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName:
-                        'com.example.direcao_financeira_mobile',
-                  ),
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: polylinePoints,
-                        strokeWidth: 5,
-                        color: AppColors.electricCyan,
-                      ),
-                    ],
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: polylinePoints.first,
-                        width: 42,
-                        height: 42,
-                        child: const _RouteMarker(
-                          color: AppColors.emerald,
-                          icon: Icons.play_arrow_rounded,
-                        ),
-                      ),
-                      Marker(
-                        point: polylinePoints.last,
-                        width: 42,
-                        height: 42,
-                        child: const _RouteMarker(
-                          color: AppColors.rose,
-                          icon: Icons.stop_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              child: _MapCanvas(
+                rawPoints: polylinePoints,
+                center: center,
+                isFullScreen: false,
               ),
             ),
           ],
@@ -158,13 +176,23 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
   }
 
   LatLng _calculateCenter(List<TrackedRoutePointEntity> points) {
-    final latitude =
-        points.fold<double>(0, (sum, point) => sum + point.latitude) /
-        points.length;
-    final longitude =
-        points.fold<double>(0, (sum, point) => sum + point.longitude) /
-        points.length;
-    return LatLng(latitude, longitude);
+    if (points.isEmpty) return const LatLng(0, 0);
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (var point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLng(
+      (minLat + maxLat) / 2,
+      (minLng + maxLng) / 2,
+    );
   }
 
   String _formatTime(DateTime value) {
@@ -174,34 +202,308 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
   }
 }
 
+// ── Smart Map Canvas (Garante que a linha passe pelas ruas da malha) ─────────────────────────
+
+class _MapCanvas extends StatefulWidget {
+  final List<LatLng> rawPoints;
+  final LatLng center;
+  final bool isFullScreen;
+
+  const _MapCanvas({
+    required this.rawPoints,
+    required this.center,
+    this.isFullScreen = false,
+  });
+
+  @override
+  State<_MapCanvas> createState() => _MapCanvasState();
+}
+
+class _MapCanvasState extends State<_MapCanvas> {
+  List<LatLng> _displayPoints = [];
+  bool _isLoadingRoute = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayPoints = widget.rawPoints.toList();
+    _fetchRoadSnappedRoute();
+  }
+  
+  // Utiliza a OSRM API grátis para traçar a linha realística (curvas, formato da rua)
+  Future<void> _fetchRoadSnappedRoute() async {
+    if (widget.rawPoints.length < 2) {
+      setState(() => _isLoadingRoute = false);
+      return;
+    }
+
+    try {
+      // OSRM não suporta muitas coordenadas de uma vez, vamos amostrar no máximo 25 pontos guia
+      final sampled = <LatLng>[];
+      int step = (widget.rawPoints.length / 25).ceil();
+      if (step < 1) step = 1;
+      
+      for (int i = 0; i < widget.rawPoints.length; i += step) {
+        sampled.add(widget.rawPoints[i]);
+      }
+      if (sampled.last != widget.rawPoints.last) {
+        sampled.add(widget.rawPoints.last);
+      }
+
+      final coords = sampled.map((p) => '${p.longitude},${p.latitude}').join(';');
+      final url = Uri.parse('https://router.project-osrm.org/route/v1/driving/$coords?geometries=geojson&overview=full');
+
+      final request = await HttpClient().getUrl(url);
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final responseBody = await response.transform(utf8.decoder).join();
+        final data = json.decode(responseBody);
+        
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final geometry = routes.first['geometry'];
+          final coordinates = geometry['coordinates'] as List;
+          
+          final snappedPoints = coordinates
+              .map((c) => LatLng(c[1] as double, c[0] as double))
+              .toList();
+
+          if (mounted) {
+            setState(() {
+              _displayPoints = snappedPoints;
+              _isLoadingRoute = false;
+            });
+            return;
+          }
+        }
+      }
+    } catch (_) {
+      // Em caso de falha de conexão (offline), cai no catch e usa os pontos retos.
+    }
+    
+    // Fallback: usar pontos em linha reta mesmo
+    if (mounted) {
+      setState(() => _isLoadingRoute = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        FlutterMap(
+          options: MapOptions(
+            initialCenter: widget.center, 
+            initialZoom: 14.5,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+              userAgentPackageName: 'com.example.direcao_financeira_mobile',
+            ),
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: _displayPoints,
+                  strokeWidth: 6,
+                  color: AppColors.royalBlue,
+                  borderStrokeWidth: 2,
+                  borderColor: AppColors.midnight.withValues(alpha: 0.3),
+                  strokeJoin: StrokeJoin.round,
+                  strokeCap: StrokeCap.round,
+                ),
+              ],
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: widget.rawPoints.first,
+                  width: 60,
+                  height: 60,
+                  child: const _ModernMarker(
+                    color: AppColors.emerald,
+                    icon: Icons.play_arrow_rounded,
+                  ),
+                ),
+                Marker(
+                  point: widget.rawPoints.last,
+                  width: 60,
+                  height: 60,
+                  child: const _ModernMarker(
+                    color: AppColors.rose,
+                    icon: Icons.stop_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        
+        // Indicador de "Desenhando rua" (opcional)
+        if (_isLoadingRoute && !widget.isFullScreen)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.midnight.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 14, 
+                        height: 14, 
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2, 
+                          color: AppColors.royalBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ajustando ao traçado...',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        
+        // Botões de interface (FullScreen ou Close)
+        Positioned(
+          top: widget.isFullScreen ? MediaQuery.of(context).padding.top + 16 : 16,
+          right: widget.isFullScreen ? null : 16,
+          left: widget.isFullScreen ? 16 : null,
+          child: Material(
+            color: AppColors.midnight.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                if (widget.isFullScreen) {
+                  Get.back();
+                } else {
+                  Get.to(
+                    () => _FullScreenMapPage(
+                      rawPoints: widget.rawPoints,
+                      center: widget.center,
+                    ),
+                    transition: Transition.fadeIn,
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(
+                  widget.isFullScreen ? Icons.close_rounded : Icons.fullscreen_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Widget FullScreenMapPage ─────────────────────────
+
+class _FullScreenMapPage extends StatelessWidget {
+  final List<LatLng> rawPoints;
+  final LatLng center;
+
+  const _FullScreenMapPage({
+    required this.rawPoints,
+    required this.center,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: _MapCanvas(
+        rawPoints: rawPoints,
+        center: center,
+        isFullScreen: true,
+      ),
+    );
+  }
+}
+
+// ── Widgets Extras ─────────────────────────
+
 class _MetricChip extends StatelessWidget {
   const _MetricChip({
     required this.icon,
     required this.label,
+    required this.subtitle,
+    required this.color,
   });
 
   final IconData icon;
   final String label;
+  final String subtitle;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.02)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.electricCyan, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -209,8 +511,8 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-class _RouteMarker extends StatelessWidget {
-  const _RouteMarker({
+class _ModernMarker extends StatelessWidget {
+  const _ModernMarker({
     required this.color,
     required this.icon,
   });
@@ -220,19 +522,44 @@ class _RouteMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.4),
+                blurRadius: 12,
+                spreadRadius: 2,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white,
+              width: 2.5,
+            ),
           ),
-        ],
-      ),
-      child: Icon(icon, color: Colors.white, size: 22),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+        // Seta indicando para baixo (pino)
+        Container(
+          width: 2,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -254,25 +581,40 @@ class _ShiftRouteState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white54, size: 48),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.midnight.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white.withValues(alpha: 0.3), size: 48),
+            ),
+            const SizedBox(height: 24),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.textTheme.titleMedium?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
             ),
             if (actionLabel != null && onPressed != null) ...[
-              const SizedBox(height: 18),
-              ElevatedButton(
-                onPressed: onPressed,
-                child: Text(actionLabel!),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: onPressed, 
+                icon: const Icon(Icons.refresh_rounded, size: 20),
+                label: Text(actionLabel!),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ],
           ],

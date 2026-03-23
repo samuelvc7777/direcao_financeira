@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_loading_indicator.dart';
 import 'journey_controller.dart';
 import 'widgets/journey_status_banner.dart';
 import 'widgets/shift_history_section.dart';
@@ -134,8 +135,8 @@ class JourneyView extends GetView<JourneyController> {
                           final horizontalPadding = width < 360
                               ? 8.0
                               : width < 430
-                                  ? 12.0
-                                  : 16.0;
+                              ? 12.0
+                              : 16.0;
 
                           return Center(
                             child: ConstrainedBox(
@@ -149,7 +150,8 @@ class JourneyView extends GetView<JourneyController> {
                                       horizontal: horizontalPadding,
                                     ),
                                     child: const Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         SizedBox(height: 8),
                                         ShiftHistorySection(),
@@ -163,7 +165,8 @@ class JourneyView extends GetView<JourneyController> {
                                       horizontal: horizontalPadding,
                                     ),
                                     child: const Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         SizedBox(height: 8),
                                         RidesListSection(),
@@ -180,7 +183,10 @@ class JourneyView extends GetView<JourneyController> {
                       if (controller.isLoading.value)
                         const Align(
                           alignment: Alignment.topCenter,
-                          child: LinearProgressIndicator(minHeight: 3),
+                          child: AppLoadingBanner(
+                            label: 'Atualizando jornada',
+                            accentColor: AppColors.royalBlue,
+                          ),
                         ),
                     ],
                   ),
@@ -193,5 +199,3 @@ class JourneyView extends GetView<JourneyController> {
     );
   }
 }
-
-

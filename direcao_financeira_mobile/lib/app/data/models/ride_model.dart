@@ -9,8 +9,11 @@ class RideModel extends RideEntity {
     required super.date,
     required super.time,
     required super.origin,
+    required super.destination,
     required super.passenger,
     required super.durationMinutes,
+    required super.gainPerKmCents,
+    required super.gainPerHourCents,
   });
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
@@ -27,19 +30,25 @@ class RideModel extends RideEntity {
       } catch (_) {}
     }
 
-    final int durationSeconds = json['totalTime'] as int? ?? 0;
+    final durationSeconds = json['totalTime'] as int? ?? 0;
+    final platformName = (json['platformName'] as String?)?.trim();
 
     return RideModel(
       id: json['id'] as int,
       status: json['status'] as String? ?? 'PENDING',
-      appName:
-          'Uber', // Temporary static as backend does not have platform name yet, or derive from tags if available.
+      appName: platformName != null && platformName.isNotEmpty
+          ? platformName
+          : 'App',
       grossValueCents: json['grossValueCents'] as int? ?? 0,
       date: formattedDate,
       time: formattedTime,
       origin: json['originAddress'] as String? ?? 'Origem não informada',
+      destination:
+          json['destinationAddress'] as String? ?? 'Destino não informado',
       passenger: json['passengerName'] as String? ?? 'Não informado',
       durationMinutes: durationSeconds ~/ 60,
+      gainPerKmCents: json['gainPerKmCents'] as int? ?? 0,
+      gainPerHourCents: json['gainPerHourCents'] as int? ?? 0,
     );
   }
 }

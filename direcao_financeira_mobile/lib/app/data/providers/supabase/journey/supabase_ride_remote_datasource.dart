@@ -48,16 +48,57 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
     await client.from(SupabaseTableNames.rides).insert({
       'userId': userId,
       'status': 'PENDING',
+      'platformName': ride.platformName,
       'paymentMethod': ride.paymentMethod,
       'grossValueCents': ride.grossValueCents,
       'netProfitCents': ride.netProfitCents,
       'totalKm': ride.totalKm,
       'totalTime': ride.totalTimeSeconds,
+      'gainPerKmCents': ride.gainPerKmCents,
+      'gainPerHourCents': ride.gainPerHourCents,
       'passengerName': ride.passengerName,
       'originAddress': ride.originAddress,
       'destinationAddress': ride.destinationAddress,
       'createdAt': now,
       'updatedAt': now,
     });
+  }
+
+  @override
+  Future<void> finishRide({
+    required int rideId,
+    required String paymentMethod,
+  }) async {
+    final userId = await userScope.getCurrentUserId();
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    await client
+        .from(SupabaseTableNames.rides)
+        .update({
+          'status': 'FINISHED',
+          'paymentMethod': paymentMethod,
+          'updatedAt': now,
+        })
+        .eq('id', rideId)
+        .eq('userId', userId);
+  }
+
+  @override
+  Future<void> cancelRide({
+    required int rideId,
+    required String cancelReason,
+  }) async {
+    final userId = await userScope.getCurrentUserId();
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    await client
+        .from(SupabaseTableNames.rides)
+        .update({
+          'status': 'CANCELED',
+          'cancelReason': cancelReason,
+          'updatedAt': now,
+        })
+        .eq('id', rideId)
+        .eq('userId', userId);
   }
 }

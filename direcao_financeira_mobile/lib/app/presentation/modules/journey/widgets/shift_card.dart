@@ -134,7 +134,7 @@ class ShiftCard extends StatelessWidget {
                     Icon(Icons.timer_outlined, color: AppColors.royalBlue, size: Responsive.sp(context, 16).clamp(14.0, 18.0)),
                     SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
                     Text(
-                      'Duração: ${shift.duration}',
+                      'Tempo total: ${shift.duration}',
                       style: TextStyle(
                         color: AppColors.royalBlue, 
                         fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0), 

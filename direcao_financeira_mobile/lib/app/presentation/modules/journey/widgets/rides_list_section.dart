@@ -10,10 +10,14 @@ class RidesListSection extends GetView<JourneyController> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0)),
+      margin: EdgeInsets.symmetric(
+        vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+      ),
       decoration: BoxDecoration(
         color: AppColors.midnight,
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 24).clamp(20.0, 28.0)),
+        borderRadius: BorderRadius.circular(
+          Responsive.sp(context, 24).clamp(20.0, 28.0),
+        ),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.05),
           width: 1,
@@ -24,7 +28,9 @@ class RidesListSection extends GetView<JourneyController> {
         children: [
           // Header
           Padding(
-            padding: EdgeInsets.all(Responsive.sp(context, 20).clamp(16.0, 24.0)),
+            padding: EdgeInsets.all(
+              Responsive.sp(context, 20).clamp(16.0, 24.0),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -32,10 +38,14 @@ class RidesListSection extends GetView<JourneyController> {
                   child: Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(Responsive.sp(context, 10).clamp(8.0, 12.0)),
+                        padding: EdgeInsets.all(
+                          Responsive.sp(context, 10).clamp(8.0, 12.0),
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.royalBlue,
-                          borderRadius: BorderRadius.circular(Responsive.sp(context, 16).clamp(12.0, 20.0)),
+                          borderRadius: BorderRadius.circular(
+                            Responsive.sp(context, 16).clamp(12.0, 20.0),
+                          ),
                         ),
                         child: Icon(
                           Icons.directions_car,
@@ -43,7 +53,9 @@ class RidesListSection extends GetView<JourneyController> {
                           size: Responsive.sp(context, 24).clamp(20.0, 28.0),
                         ),
                       ),
-                      SizedBox(width: Responsive.hp(context, 4.0).clamp(12.0, 20.0)),
+                      SizedBox(
+                        width: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
+                      ),
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +65,10 @@ class RidesListSection extends GetView<JourneyController> {
                               style: context.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
-                                fontSize: Responsive.sp(context, 20).clamp(18.0, 22.0),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  20,
+                                ).clamp(18.0, 22.0),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -62,7 +77,10 @@ class RidesListSection extends GetView<JourneyController> {
                               'Período atual',
                               style: context.textTheme.bodyMedium?.copyWith(
                                 color: AppColors.textSecondaryDark,
-                                fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  14,
+                                ).clamp(12.0, 16.0),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -76,7 +94,11 @@ class RidesListSection extends GetView<JourneyController> {
                 Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.bar_chart, color: Colors.white54, size: Responsive.sp(context, 24).clamp(20.0, 28.0)),
+                      icon: Icon(
+                        Icons.bar_chart,
+                        color: Colors.white54,
+                        size: Responsive.sp(context, 24).clamp(20.0, 28.0),
+                      ),
                       onPressed: () {
                         Get.toNamed('/journey/metrics');
                       },
@@ -105,29 +127,50 @@ class RidesListSection extends GetView<JourneyController> {
                           controller.setCustomRange(picked.start, picked.end);
                         }
                       },
-                      borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(8.0, 16.0)),
+                      borderRadius: BorderRadius.circular(
+                        Responsive.sp(context, 12).clamp(8.0, 16.0),
+                      ),
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: Responsive.hp(context, 3.0).clamp(10.0, 14.0),
-                          vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+                          horizontal: Responsive.hp(
+                            context,
+                            3.0,
+                          ).clamp(10.0, 14.0),
+                          vertical: Responsive.vp(
+                            context,
+                            1.0,
+                          ).clamp(6.0, 10.0),
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(8.0, 16.0)),
+                          borderRadius: BorderRadius.circular(
+                            Responsive.sp(context, 12).clamp(8.0, 16.0),
+                          ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.calendar_today,
-                              size: Responsive.sp(context, 16).clamp(14.0, 18.0),
+                              size: Responsive.sp(
+                                context,
+                                16,
+                              ).clamp(14.0, 18.0),
                               color: Colors.white54,
                             ),
-                            SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
+                            SizedBox(
+                              width: Responsive.hp(
+                                context,
+                                2.0,
+                              ).clamp(6.0, 10.0),
+                            ),
                             Text(
                               'Filtrar',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  14,
+                                ).clamp(12.0, 16.0),
                               ),
                             ),
                           ],
@@ -142,12 +185,18 @@ class RidesListSection extends GetView<JourneyController> {
 
           // Filters Tab
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0)),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
+            ),
             child: Container(
-              padding: EdgeInsets.all(Responsive.sp(context, 4).clamp(2.0, 6.0)),
+              padding: EdgeInsets.all(
+                Responsive.sp(context, 4).clamp(2.0, 6.0),
+              ),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(Responsive.sp(context, 16).clamp(12.0, 20.0)),
+                borderRadius: BorderRadius.circular(
+                  Responsive.sp(context, 16).clamp(12.0, 20.0),
+                ),
               ),
               child: Obx(
                 () => Row(
@@ -192,7 +241,9 @@ class RidesListSection extends GetView<JourneyController> {
 
           // List Count
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: Responsive.hp(context, 5.0).clamp(16.0, 24.0)),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.hp(context, 5.0).clamp(16.0, 24.0),
+            ),
             child: Obx(
               () => Container(
                 padding: EdgeInsets.symmetric(
@@ -201,7 +252,9 @@ class RidesListSection extends GetView<JourneyController> {
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.royalBlue.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(8.0, 16.0)),
+                  borderRadius: BorderRadius.circular(
+                    Responsive.sp(context, 12).clamp(8.0, 16.0),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -211,7 +264,9 @@ class RidesListSection extends GetView<JourneyController> {
                       size: Responsive.sp(context, 14).clamp(12.0, 16.0),
                       color: AppColors.royalBlue,
                     ),
-                    SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
+                    SizedBox(
+                      width: Responsive.hp(context, 2.0).clamp(6.0, 10.0),
+                    ),
                     Text(
                       '${controller.filteredRidesList.length} corridas',
                       style: TextStyle(
@@ -233,12 +288,15 @@ class RidesListSection extends GetView<JourneyController> {
             final list = controller.filteredRidesList;
             if (list.isEmpty) {
               return Padding(
-                padding: EdgeInsets.all(Responsive.sp(context, 32.0).clamp(24.0, 40.0)),
+                padding: EdgeInsets.all(
+                  Responsive.sp(context, 32.0).clamp(24.0, 40.0),
+                ),
                 child: Center(
                   child: Column(
                     children: [
                       Text(
-                        controller.ridesError.value ?? 'Nenhuma corrida encontrada',
+                        controller.ridesError.value ??
+                            'Nenhuma corrida encontrada',
                         style: const TextStyle(color: Colors.white54),
                         textAlign: TextAlign.center,
                       ),
@@ -260,171 +318,319 @@ class RidesListSection extends GetView<JourneyController> {
               itemCount: list.length,
               itemBuilder: (context, index) {
                 final ride = list[index];
-                return Container(
-                  margin: EdgeInsets.symmetric(
-                    horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
-                    vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+                final statusColor = ride.status == 'PENDING'
+                    ? AppColors.amber
+                    : ride.status == 'FINISHED'
+                        ? AppColors.emerald
+                        : AppColors.rose;
+                final statusIcon = ride.status == 'PENDING'
+                    ? Icons.hourglass_empty
+                    : ride.status == 'FINISHED'
+                        ? Icons.check_circle_outline
+                        : Icons.cancel_outlined;
+
+
+                return InkWell(
+                  onTap: () => controller.openRideDetails(ride),
+                  borderRadius: BorderRadius.circular(
+                    Responsive.sp(context, 20).clamp(16.0, 24.0),
                   ),
-                  padding: EdgeInsets.all(Responsive.sp(context, 16).clamp(12.0, 20.0)),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(Responsive.sp(context, 20).clamp(16.0, 24.0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(Responsive.sp(context, 8).clamp(6.0, 10.0)),
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(8.0, 16.0)),
-                                ),
-                                child: Icon(
-                                  Icons.directions_car,
-                                  size: Responsive.sp(context, 24).clamp(20.0, 28.0),
-                                  color: ride.appName.toLowerCase() == 'uber'
-                                      ? Colors.white
-                                      : AppColors.amber,
-                                ),
-                              ),
-                              SizedBox(width: Responsive.hp(context, 3.0).clamp(10.0, 14.0)),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    ride.appName,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: Responsive.sp(context, 16).clamp(14.0, 18.0),
+                  child: Container(
+                    margin: EdgeInsets.symmetric(
+                      horizontal: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
+                      vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+                    ),
+                    padding: EdgeInsets.all(
+                      Responsive.sp(context, 16).clamp(12.0, 20.0),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(
+                        Responsive.sp(context, 20).clamp(16.0, 24.0),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(
+                                    Responsive.sp(context, 8).clamp(6.0, 10.0),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black,
+                                    borderRadius: BorderRadius.circular(
+                                      Responsive.sp(
+                                        context,
+                                        12,
+                                      ).clamp(8.0, 16.0),
                                     ),
                                   ),
-                                  Text(
-                                    '${ride.date} às ${ride.time}',
-                                    style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: Responsive.sp(context, 12).clamp(10.0, 14.0),
-                                    ),
+                                  child: Icon(
+                                    Icons.directions_car,
+                                    size: Responsive.sp(
+                                      context,
+                                      24,
+                                    ).clamp(20.0, 28.0),
+                                    color: ride.appName.toLowerCase() == 'uber'
+                                        ? Colors.white
+                                        : AppColors.amber,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                controller.formatCurrency(ride.grossValueCents),
-                                style: TextStyle(
-                                  color: AppColors.emerald,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: Responsive.sp(context, 16).clamp(14.0, 18.0),
                                 ),
-                              ),
-                              SizedBox(height: Responsive.vp(context, 0.5).clamp(2.0, 6.0)),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: Responsive.hp(context, 2.0).clamp(6.0, 10.0),
-                                  vertical: Responsive.vp(context, 0.2).clamp(2.0, 4.0),
+                                SizedBox(
+                                  width: Responsive.hp(
+                                    context,
+                                    3.0,
+                                  ).clamp(10.0, 14.0),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(Responsive.sp(context, 8).clamp(6.0, 10.0)),
-                                ),
-                                child: Row(
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      Icons.sync_alt,
-                                      size: Responsive.sp(context, 10).clamp(8.0, 12.0),
-                                      color: Colors.white54,
-                                    ),
-                                    SizedBox(width: Responsive.hp(context, 1.0).clamp(4.0, 6.0)),
                                     Text(
-                                      ride.status == 'PENDING'
-                                          ? 'Pendente'
-                                          : ride.status == 'FINISHED'
-                                          ? 'Finalizada'
-                                          : 'Cancelada',
+                                      ride.appName,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: Responsive.sp(
+                                          context,
+                                          16,
+                                        ).clamp(14.0, 18.0),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${ride.date} às ${ride.time}',
                                       style: TextStyle(
                                         color: Colors.white54,
-                                        fontSize: Responsive.sp(context, 10).clamp(8.0, 12.0),
+                                        fontSize: Responsive.sp(
+                                          context,
+                                          12,
+                                        ).clamp(10.0, 14.0),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: Responsive.vp(context, 2.0).clamp(12.0, 20.0)),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: Responsive.sp(context, 16).clamp(14.0, 18.0),
-                            color: Colors.white54,
-                          ),
-                          SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
-                          Expanded(
-                            child: Text(
-                              ride.origin,
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: Responsive.vp(context, 1.0).clamp(6.0, 10.0)),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.person,
-                                size: Responsive.sp(context, 16).clamp(14.0, 18.0),
-                                color: Colors.white54,
-                              ),
-                              SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
-                              Text(
-                                ride.passenger,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  controller.formatCurrency(
+                                    ride.grossValueCents,
+                                  ),
+                                  style: TextStyle(
+                                    color: AppColors.emerald,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: Responsive.sp(
+                                      context,
+                                      16,
+                                    ).clamp(14.0, 18.0),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: Responsive.vp(
+                                    context,
+                                    0.5,
+                                  ).clamp(2.0, 6.0),
+                                ),
+                                 Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: Responsive.hp(
+                                      context,
+                                      2.0,
+                                    ).clamp(6.0, 10.0),
+                                    vertical: Responsive.vp(
+                                      context,
+                                      0.2,
+                                    ).clamp(2.0, 4.0),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(
+                                      Responsive.sp(
+                                        context,
+                                        8,
+                                      ).clamp(6.0, 10.0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        statusIcon,
+                                        size: Responsive.sp(
+                                          context,
+                                          10,
+                                        ).clamp(8.0, 12.0),
+                                        color: statusColor,
+                                      ),
+                                      SizedBox(
+                                        width: Responsive.hp(
+                                          context,
+                                          1.0,
+                                        ).clamp(4.0, 6.0),
+                                      ),
+                                      Text(
+                                        ride.status == 'PENDING'
+                                            ? 'Pendente'
+                                            : ride.status == 'FINISHED'
+                                            ? 'Finalizada'
+                                            : 'Cancelada',
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: Responsive.sp(
+                                            context,
+                                            10,
+                                          ).clamp(8.0, 12.0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                          height: Responsive.vp(context, 2.0).clamp(12.0, 20.0),
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: Responsive.sp(
+                                context,
+                                16,
+                              ).clamp(14.0, 18.0),
+                              color: Colors.white54,
+                            ),
+                            SizedBox(
+                              width: Responsive.hp(
+                                context,
+                                2.0,
+                              ).clamp(6.0, 10.0),
+                            ),
+                            Expanded(
+                              child: Text(
+                                ride.origin,
                                 style: TextStyle(
                                   color: Colors.white70,
-                                  fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                                  fontSize: Responsive.sp(
+                                    context,
+                                    14,
+                                  ).clamp(12.0, 16.0),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                size: Responsive.sp(context, 16).clamp(14.0, 18.0),
-                                color: Colors.white54,
-                              ),
-                              SizedBox(width: Responsive.hp(context, 1.0).clamp(4.0, 6.0)),
-                              Text(
-                                '${ride.durationMinutes}min',
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                          height: Responsive.vp(context, 0.8).clamp(4.0, 8.0),
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.flag,
+                              size: Responsive.sp(
+                                context,
+                                16,
+                              ).clamp(14.0, 18.0),
+                              color: Colors.white54,
+                            ),
+                            SizedBox(
+                              width: Responsive.hp(
+                                context,
+                                2.0,
+                              ).clamp(6.0, 10.0),
+                            ),
+                            Expanded(
+                              child: Text(
+                                ride.destination,
                                 style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                                  color: Colors.white70,
+                                  fontSize: Responsive.sp(
+                                    context,
+                                    14,
+                                  ).clamp(12.0, 16.0),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                          height: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.person,
+                                  size: Responsive.sp(
+                                    context,
+                                    16,
+                                  ).clamp(14.0, 18.0),
+                                  color: Colors.white54,
+                                ),
+                                SizedBox(
+                                  width: Responsive.hp(
+                                    context,
+                                    2.0,
+                                  ).clamp(6.0, 10.0),
+                                ),
+                                Text(
+                                  ride.passenger,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: Responsive.sp(
+                                      context,
+                                      14,
+                                    ).clamp(12.0, 16.0),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  size: Responsive.sp(
+                                    context,
+                                    16,
+                                  ).clamp(14.0, 18.0),
+                                  color: Colors.white54,
+                                ),
+                                SizedBox(
+                                  width: Responsive.hp(
+                                    context,
+                                    1.0,
+                                  ).clamp(4.0, 6.0),
+                                ),
+                                Text(
+                                  '${ride.durationMinutes}min',
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: Responsive.sp(
+                                      context,
+                                      14,
+                                    ).clamp(12.0, 16.0),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -447,12 +653,16 @@ class RidesListSection extends GetView<JourneyController> {
       child: GestureDetector(
         onTap: () => controller.changeRideStatusFilter(title),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1.5).clamp(8.0, 14.0)),
+          padding: EdgeInsets.symmetric(
+            vertical: Responsive.vp(context, 1.5).clamp(8.0, 14.0),
+          ),
           decoration: BoxDecoration(
             color: isSelected
                 ? selectedColor.withValues(alpha: 0.2)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(Responsive.sp(context, 12).clamp(10.0, 14.0)),
+            borderRadius: BorderRadius.circular(
+              Responsive.sp(context, 12).clamp(10.0, 14.0),
+            ),
           ),
           child: Column(
             children: [
@@ -479,5 +689,3 @@ class RidesListSection extends GetView<JourneyController> {
     );
   }
 }
-
-

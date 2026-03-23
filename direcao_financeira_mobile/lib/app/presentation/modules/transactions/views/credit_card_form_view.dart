@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/credit_card_entity.dart';
 import '../../../../domain/entities/category_entity.dart';
 import '../../../../domain/entities/transaction_entity.dart';
+import '../../../widgets/app_loading_indicator.dart';
 import '../transactions_controller.dart';
 
 class CreditCardFormView extends GetView<TransactionsController> {
@@ -91,8 +92,9 @@ class CreditCardFormView extends GetView<TransactionsController> {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.violet),
+          return const AppLoadingScreen(
+            label: 'Carregando compra',
+            accentColor: AppColors.violet,
           );
         }
 

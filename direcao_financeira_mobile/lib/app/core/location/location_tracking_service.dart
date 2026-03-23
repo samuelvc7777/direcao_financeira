@@ -15,6 +15,8 @@ import '../../data/models/tracked_route_point_model.dart';
 const _journeyActiveShiftKey = 'journey_local_active_shift';
 const _notificationChannelId = 'journey_location_tracking';
 const _notificationId = 4812;
+const _minimumTrackedSpeedKmH = 10.0;
+const _minimumTrackedSpeedMetersPerSecond = _minimumTrackedSpeedKmH / 3.6;
 
 Future<void> initializeLocationTrackingService(GetStorage storage) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +43,9 @@ Future<void> initializeLocationTrackingService(GetStorage storage) async {
   await restoreLocationTrackingServiceFromStorage(storage);
 }
 
-Future<void> restoreLocationTrackingServiceFromStorage(GetStorage storage) async {
+Future<void> restoreLocationTrackingServiceFromStorage(
+  GetStorage storage,
+) async {
   final rawShift = storage.read(_journeyActiveShiftKey);
   if (rawShift is! Map) {
     await LocationTrackingService.stopTracking(markFinished: false);
@@ -174,7 +178,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     if (service is AndroidServiceInstance) {
       final distanceKm =
           ((payload['totalDistanceMeters'] as num?)?.toDouble() ?? 0) / 1000;
-      final content = payload['issueMessage'] as String? ??
+      final content =
+          payload['issueMessage'] as String? ??
           '${distanceKm.toStringAsFixed(1)} km monitorados';
       await service.setForegroundNotificationInfo(
         title: 'Turno em andamento',
@@ -219,33 +224,45 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     );
 
     final locationSettings = _buildLocationSettings();
-    positionSubscription = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen(
-      (position) async {
-        final updatedRoute = await routeDataSource.appendPoint(
-          localShiftId: currentLocalShiftId!,
-          point: TrackedRoutePointModel(
-            latitude: position.latitude,
-            longitude: position.longitude,
-            accuracyMeters: position.accuracy,
-            recordedAt: position.timestamp.toLocal(),
-          ),
-        );
+    positionSubscription =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (position) async {
+            if (position.speed < _minimumTrackedSpeedMetersPerSecond) {
+              final currentRoute = await routeDataSource.getRouteByLocalShiftId(
+                currentLocalShiftId!,
+                includePoints: false,
+              );
 
-        await emitStatus(
-          isTrackingActive: true,
-          totalDistanceMeters: updatedRoute?.totalDistanceMeters ?? 0,
+              await emitStatus(
+                isTrackingActive: true,
+                totalDistanceMeters: currentRoute?.totalDistanceMeters ?? 0,
+              );
+              return;
+            }
+
+            final updatedRoute = await routeDataSource.appendPoint(
+              localShiftId: currentLocalShiftId!,
+              point: TrackedRoutePointModel(
+                latitude: position.latitude,
+                longitude: position.longitude,
+                accuracyMeters: position.accuracy,
+                recordedAt: position.timestamp.toLocal(),
+              ),
+            );
+
+            await emitStatus(
+              isTrackingActive: true,
+              totalDistanceMeters: updatedRoute?.totalDistanceMeters ?? 0,
+            );
+          },
+          onError: (error) async {
+            await emitStatus(
+              issueMessage:
+                  'Nao foi possivel continuar rastreando a localizacao do turno.',
+              isTrackingActive: false,
+            );
+          },
         );
-      },
-      onError: (error) async {
-        await emitStatus(
-          issueMessage:
-              'Nao foi possivel continuar rastreando a localizacao do turno.',
-          isTrackingActive: false,
-        );
-      },
-    );
 
     await emitStatus(isTrackingActive: true);
   }
@@ -300,6 +317,22 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
         : DateTime.now();
 
     if (markFinished && currentLocalShiftId != null && endedAt != null) {
+      try {
+        final finalPosition = await Geolocator.getCurrentPosition(
+          locationSettings: _buildLocationSettings(),
+        );
+        await routeDataSource.appendPoint(
+          localShiftId: currentLocalShiftId!,
+          point: TrackedRoutePointModel(
+            latitude: finalPosition.latitude,
+            longitude: finalPosition.longitude,
+            accuracyMeters: finalPosition.accuracy,
+            recordedAt: finalPosition.timestamp.toLocal(),
+          ),
+          forceRecord: true,
+        );
+      } catch (_) {}
+
       await routeDataSource.markRouteFinished(
         localShiftId: currentLocalShiftId!,
         endedAt: endedAt,
@@ -337,7 +370,8 @@ Future<Map<String, dynamic>> _buildTrackingStatusPayload({
   final totalDistanceMeters =
       overrideTotalDistanceMeters ?? route?.totalDistanceMeters ?? 0;
 
-  final computedIssueMessage = issueMessage ??
+  final computedIssueMessage =
+      issueMessage ??
       _buildTrackingIssueMessage(
         serviceEnabled: serviceEnabled,
         hasForegroundPermission: hasForegroundPermission,
@@ -391,7 +425,7 @@ LocationSettings _buildLocationSettings() {
     return AndroidSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 25,
-      intervalDuration: const Duration(seconds: 20),
+      intervalDuration: const Duration(seconds: 5),
       forceLocationManager: false,
     );
   }

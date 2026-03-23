@@ -74,20 +74,25 @@ class FloatingOverlay(
                 .toDoubleOrNull() ?: 0.0
         val kmTotal = (data["km_total"] as? Number)?.toDouble() ?: 0.0
         val minTotal = (data["minutos_total"] as? Number)?.toInt() ?: 0
-        val motorista = data["motorista"]?.toString()?.takeIf { it.isNotBlank() } ?: "99"
+        val appName =
+            data["platform_name"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: data["app"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: "App"
+        val passengerName =
+            data["passenger_name"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: data["perfil_passageiro"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: "Passageiro"
         val avaliacao = data["avaliacao"]?.toString()?.takeIf { it.isNotBlank() } ?: "5,00"
         val corridasTotal = (data["corridas_total"] as? Number)?.toInt() ?: 0
-        val perfilPassageiro = data["perfil_passageiro"]?.toString()?.takeIf { it.isNotBlank() }
         val tipoCorrida = data["tipo_corrida"]?.toString()?.takeIf { it.isNotBlank() }
         val formaPagamento = data["forma_pagamento"]?.toString()?.takeIf { it.isNotBlank() }
-
         val ganhoKm = if (kmTotal > 0) valorBruto / kmTotal else 0.0
         val ganhoHora = if (minTotal > 0) (valorBruto / minTotal) * 60 else 0.0
 
         val title =
             listOfNotNull(tipoCorrida, formaPagamento).takeIf { it.isNotEmpty() }
                 ?.joinToString(" | ")
-                ?: motorista
+                ?: appName
 
         card.addView(
             TextView(context).apply {
@@ -99,11 +104,11 @@ class FloatingOverlay(
         )
 
         val metaParts = mutableListOf<String>()
+        metaParts.add(passengerName)
         metaParts.add(avaliacao.replace("\u2605", ""))
         if (corridasTotal > 0) {
             metaParts.add("$corridasTotal corridas")
         }
-        perfilPassageiro?.let(metaParts::add)
 
         if (metaParts.isNotEmpty()) {
             card.addView(
@@ -164,7 +169,7 @@ class FloatingOverlay(
                 gravity = Gravity.CENTER_VERTICAL
             }
 
-        footer.addView(createBadge(motorista))
+        footer.addView(createBadge(appName))
 
         footer.addView(
             if (sidePosition) {

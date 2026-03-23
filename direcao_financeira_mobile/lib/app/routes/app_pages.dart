@@ -25,6 +25,7 @@ import '../presentation/modules/journey/journey_view.dart';
 import '../presentation/modules/journey/journey_binding.dart';
 import '../presentation/modules/journey/operational_metrics_view.dart';
 import '../presentation/modules/journey/daily_statistics_view.dart';
+import '../presentation/modules/journey/ride_details_view.dart';
 import '../presentation/modules/journey/shift_route_binding.dart';
 import '../presentation/modules/journey/shift_route_view.dart';
 import '../presentation/modules/traffic_light_settings/traffic_light_settings_view.dart';
@@ -52,6 +53,7 @@ class AppRoutes {
   static const String journeyMetrics = '/journey/metrics';
   static const String shiftMetrics = '/journey/shift-metrics';
   static const String shiftRoute = '/journey/shift-route';
+  static const String journeyRideDetails = '/journey/ride-details';
   static const String trafficLightSettings = '/traffic-light-settings';
   static const String costsGainsSettings = '/costs-gains-settings';
   static const String costsGainsWizard = '/costs-gains-wizard';
@@ -91,6 +93,12 @@ class AppPages {
       name: AppRoutes.shiftRoute,
       page: () => const ShiftRouteView(),
       binding: ShiftRouteBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.journeyRideDetails,
+      page: () => const RideDetailsView(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

@@ -213,7 +213,10 @@ RideEntity buildRide() {
     date: '10/01/2026',
     time: '08:30',
     origin: 'Centro',
+    destination: 'Aeroporto',
     passenger: 'Joao',
     durationMinutes: 20,
+    gainPerKmCents: 640,
+    gainPerHourCents: 9600,
   );
 }
