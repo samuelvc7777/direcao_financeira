@@ -11,8 +11,10 @@ import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/entities/active_shift_entity.dart';
 import '../../../domain/entities/costs_gains_settings_entity.dart';
 import '../../../domain/entities/location_tracking_status_entity.dart';
+import '../../../domain/entities/online_hourly_projection_entity.dart';
 import '../../../domain/entities/ride_entity.dart';
 import '../../../domain/entities/shift_entity.dart';
+import '../../../domain/services/online_hourly_projection_calculator.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
@@ -103,9 +105,8 @@ class JourneyController extends GetxController {
   final ridesHistoryTotalCount = 0.obs;
   final paymentMethodFinishedRidesCount = 0.obs;
 
-  List<RideEntity> get filteredRidesList => ridesList
-      .where(_matchesSelectedRideStatus)
-      .toList(growable: false);
+  List<RideEntity> get filteredRidesList =>
+      ridesList.where(_matchesSelectedRideStatus).toList(growable: false);
   int get filteredRidesCount => filteredRidesList.length;
   int get mappedPaymentMethodCount =>
       paymentMethodSummary.fold(0, (total, item) => total + item.count);
@@ -466,6 +467,44 @@ class JourneyController extends GetxController {
       km += currentKm.value.floorToDouble();
     }
     return km;
+  }
+
+  int get onlineAnalysisTotalTimeSeconds {
+    var seconds = _statisticsTotalTimeBaseSeconds;
+    if (_shouldUseLiveJourneyTime) {
+      seconds += _statisticsLiveElapsedSeconds;
+    }
+    return seconds;
+  }
+
+  int get operationalGrossEarningsPerOnlineHourCents =>
+      OnlineHourlyProjectionCalculator.calculateHourlyCents(
+        earningsCents: operationalGrossEarningsCents,
+        onlineTimeSeconds: onlineAnalysisTotalTimeSeconds,
+      );
+
+  int get operationalCostsPerOnlineHourCents =>
+      OnlineHourlyProjectionCalculator.calculateHourlyCents(
+        earningsCents: operationalTotalCostsCents,
+        onlineTimeSeconds: onlineAnalysisTotalTimeSeconds,
+      );
+
+  int get operationalNetEarningsPerOnlineHourCents =>
+      OnlineHourlyProjectionCalculator.calculateHourlyCents(
+        earningsCents: operationalNetEarningsCents,
+        onlineTimeSeconds: onlineAnalysisTotalTimeSeconds,
+      );
+
+  OnlineHourlyProjectionEntity projectGrossOnlineHourlyWithRide({
+    required int offeredRideEarningsCents,
+    required int offeredRideDurationSeconds,
+  }) {
+    return OnlineHourlyProjectionCalculator.project(
+      historicalEarningsCents: operationalGrossEarningsCents,
+      historicalOnlineTimeSeconds: onlineAnalysisTotalTimeSeconds,
+      offeredRideEarningsCents: offeredRideEarningsCents,
+      offeredRideDurationSeconds: offeredRideDurationSeconds,
+    );
   }
 
   String get operationalCostBreakdownLabel {

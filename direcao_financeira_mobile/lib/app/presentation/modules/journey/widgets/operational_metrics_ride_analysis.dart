@@ -103,7 +103,9 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
             child: Text(
               'MÃ©dias por ${partes.join(' e ')} â€” amostra pequena, valores estimados',
               style: TextStyle(
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.5,
+                ),
                 fontSize: 10,
                 height: 1.3,
               ),
@@ -167,7 +169,9 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
               child: Text(
                 subtitle,
                 style: TextStyle(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                  color: context.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.55,
+                  ),
                   fontSize: 11,
                 ),
               ),
@@ -199,13 +203,17 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.07),
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.07,
+              ),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.timer_off_outlined,
               size: 20,
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.45),
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.45,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -217,14 +225,18 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                   'Nenhum turno registrado neste perÃ­odo',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.65,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'As mÃ©dias por viagem, hora e km dependem do tempo de turno registrado pelo timer.',
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.45,
+                    ),
                     height: 1.4,
                     fontSize: 12,
                   ),
@@ -268,7 +280,11 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(icon, color: context.theme.colorScheme.onSurface, size: iconSize),
+                Icon(
+                  icon,
+                  color: context.theme.colorScheme.onSurface,
+                  size: iconSize,
+                ),
                 SizedBox(height: gapLarge),
                 Flexible(
                   child: FittedBox(
@@ -292,7 +308,9 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                     child: Text(
                       label,
                       style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.82),
+                        color: context.theme.colorScheme.onSurface.withValues(
+                          alpha: 0.82,
+                        ),
                         fontSize: labelSize,
                       ),
                       textAlign: TextAlign.center,
@@ -312,7 +330,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
   Widget build(BuildContext context) {
     return Obx(() {
       final semDados = controller.totalRides.value == 0;
-      final totalTempoAnalise = controller.rideAnalysisTotalTimeSeconds;
+      final totalTempoAnalise = controller.onlineAnalysisTotalTimeSeconds;
       final totalKmAnalise = controller.rideAnalysisTotalKm;
       final semHoras = totalTempoAnalise < 60;
       final semKm = totalKmAnalise < 1;
@@ -330,7 +348,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                   Text(
                     'AnÃ¡lise por corrida',
                     style: TextStyle(
-                  color: context.theme.colorScheme.onSurface,
+                      color: context.theme.colorScheme.onSurface,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -339,7 +357,9 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                   Text(
                     'MÃ©dias por corrida com base no bruto e no combustÃ­vel por km rodado',
                     style: TextStyle(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.5,
+                      ),
                       fontSize: 11,
                     ),
                   ),

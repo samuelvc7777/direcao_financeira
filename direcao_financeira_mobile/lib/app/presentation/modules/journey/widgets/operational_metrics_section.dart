@@ -441,7 +441,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                       Icons.schedule,
                       'Horas',
                       () => controller.formatDuration(
-                        controller.ridesTotalTime.value,
+                        controller.onlineAnalysisTotalTimeSeconds,
                       ),
                       AppColors.electricCyan,
                     ),
@@ -518,11 +518,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                       Icons.schedule,
                       'por hora',
                       () => controller.formatCurrency(
-                        controller.ridesTotalTime.value > 0
-                            ? (controller.grossEarningsCents.value /
-                                      (controller.ridesTotalTime.value / 3600))
-                                  .round()
-                            : 0,
+                        controller.operationalGrossEarningsPerOnlineHourCents,
                       ),
                       AppColors.royalBlue,
                     ),
@@ -605,11 +601,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                       Icons.schedule,
                       'por hora',
                       () => controller.formatCurrency(
-                        controller.ridesTotalTime.value > 0
-                            ? (controller.totalCostsCents.value /
-                                      (controller.ridesTotalTime.value / 3600))
-                                  .round()
-                            : 0,
+                        controller.operationalCostsPerOnlineHourCents,
                       ),
                       AppColors.rose,
                     ),
@@ -690,11 +682,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                       Icons.schedule,
                       'por hora',
                       () => controller.formatCurrency(
-                        controller.ridesTotalTime.value > 0
-                            ? (controller.netEarningsCents.value /
-                                      (controller.ridesTotalTime.value / 3600))
-                                  .round()
-                            : 0,
+                        controller.operationalNetEarningsPerOnlineHourCents,
                       ),
                       AppColors.emerald,
                       iconColor: Colors.white,
@@ -752,7 +740,9 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                       border: Border.all(
                         color: controller.isPaymentMethodSectionExpanded.value
                             ? AppColors.royalBlue.withValues(alpha: 0.3)
-                            : context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                            : context.theme.colorScheme.onSurface.withValues(
+                                alpha: 0.08,
+                              ),
                         width: 1,
                       ),
                     ),
@@ -784,7 +774,8 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                                     Text(
                                       'Formas de pagamento',
                                       style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface,
+                                        color:
+                                            context.theme.colorScheme.onSurface,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
@@ -795,7 +786,11 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                                         '${controller.totalRides.value} corridas concluidas',
                                         softWrap: true,
                                         style: TextStyle(
-                                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          color: context
+                                              .theme
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                           fontWeight: FontWeight.w500,
                                           fontSize: 12.5,
                                         ),
@@ -812,7 +807,8 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.04),
+                            color: context.theme.colorScheme.onSurface
+                                .withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Center(
