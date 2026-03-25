@@ -49,23 +49,23 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HOME-01 | Unmapped | Pending |
-| HOME-02 | Unmapped | Pending |
-| HOME-03 | Unmapped | Pending |
-| HOME-04 | Unmapped | Pending |
-| HOME-05 | Unmapped | Pending |
-| HOME-06 | Unmapped | Pending |
-| HOME-07 | Unmapped | Pending |
-| HOME-08 | Unmapped | Pending |
-| HOME-09 | Unmapped | Pending |
-| HOME-10 | Unmapped | Pending |
-| HOME-11 | Unmapped | Pending |
+| HOME-01 | Phase 5 | Pending |
+| HOME-02 | Phase 5 | Pending |
+| HOME-03 | Phase 5 | Pending |
+| HOME-04 | Phase 6 | Pending |
+| HOME-05 | Phase 6 | Pending |
+| HOME-06 | Phase 6 | Pending |
+| HOME-07 | Phase 6 | Pending |
+| HOME-08 | Phase 6 | Pending |
+| HOME-09 | Phase 7 | Pending |
+| HOME-10 | Phase 7 | Pending |
+| HOME-11 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after milestone v1.1 definition*
+*Last updated: 2026-03-25 after roadmap mapping*

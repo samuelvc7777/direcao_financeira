@@ -1,122 +1,87 @@
-# Roadmap: Refatoracao da Tela de Turnos
+# Roadmap: v1.1 Home ativa com graficos reais
 
 **Created:** 2026-03-25
-**Project:** Refatoracao da Tela de Turnos
-**Phases:** 4
-**v1 requirements:** 16
+**Project:** Direcao Financeira
+**Milestone:** v1.1 Home ativa com graficos reais
+**Phases:** 3
+**v1 requirements:** 11
 
 ## Overview
 
-Esta roadmap organiza a refatoracao da tela de turnos em fases pequenas e seguras, preservando comportamento funcional enquanto reduz acoplamento no modulo `journey`.
+Esta roadmap pertence ao milestone `v1.1 Home ativa com graficos reais` e continua a numeracao do milestone anterior, encerrado na fase 4. O foco deste ciclo e apenas ativar o grafico ja existente da home com dados reais do Supabase, incluindo estados de loading, vazio, erro e comportamento funcional completo sem regressao nos demais blocos da tela.
+
+## Historical Context
+
+O milestone anterior foi concluido na fase 4 com a refatoracao da tela de turnos. Esse historico permanece relevante como contexto arquitetural, mas a execucao atual passa a seguir as fases 5 a 7 abaixo.
 
 ## Phases
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 1 | Mapear limites e contratos | Definir claramente o que sai do `JourneyController` e quais fronteiras passam a existir | ARCH-01, ARCH-02, ARCH-03 | 4 |
-| 2 | Extrair orquestracao operacional | Tirar do controller o que for ciclo de vida de turno, tracking, sync e integracoes operacionais | JORN-01, JORN-02, JORN-04, OPER-01, OPER-02 | 5 |
-| 3 | Reorganizar estado da feature e presentation | Deixar view e widgets mais limpos, com estado de tela mais previsivel e componentes menores | JORN-03, OPER-03, PRES-01, PRES-02, PRES-03 | 5 |
-| 4 | Blindar com testes e validacao | Fechar a refatoracao com testes prioritarios e validacao dos contratos novos | QUAL-01, QUAL-02, QUAL-03 | 4 |
+- [ ] **Phase 5: Integracao real do grafico** - Conectar o bloco existente da home ao Supabase e remover dependencia de dados mockados.
+- [ ] **Phase 6: Estados funcionais e atualizacao por periodo** - Garantir loading, vazio, erro e atualizacao correta do grafico ao trocar o mes.
+- [ ] **Phase 7: Blindagem e nao regressao da home** - Fechar o fluxo com testabilidade adequada, cobertura automatizada e protecao dos demais blocos da home.
 
 ## Phase Details
 
-### Phase 1: Mapear limites e contratos
+### Phase 5: Integracao real do grafico
+**Goal**: O grafico ja existente da home passa a consumir dados reais do Supabase para o mes selecionado, sem depender de dados hardcoded ou placeholders fixos.
+**Depends on**: Phase 4
+**Requirements**: HOME-01, HOME-02, HOME-03
+**Success Criteria** (what must be TRUE):
+1. Ao abrir a home, o grafico carrega dados reais vindos do Supabase.
+2. O conteudo exibido pelo grafico corresponde ao mes atualmente selecionado na home.
+3. O bloco do grafico deixa de exibir valores mockados ou placeholders fixos originados do `HomeController`.
+**Plans**: TBD
+**UI hint**: yes
 
-**Goal:** Definir a arquitetura alvo da jornada, explicitar fronteiras internas e estabelecer quais responsabilidades deixam de pertencer ao `JourneyController`.
+### Phase 6: Estados funcionais e atualizacao por periodo
+**Goal**: O bloco do grafico responde corretamente aos estados reais de carregamento e aos cenarios de sucesso, vazio e erro sem quebrar a experiencia da home.
+**Depends on**: Phase 5
+**Requirements**: HOME-04, HOME-05, HOME-06, HOME-07, HOME-08
+**Success Criteria** (what must be TRUE):
+1. Quando existem dados validos, o grafico renderiza categorias, percentuais e total de saidas de forma coerente com o periodo selecionado.
+2. Quando o usuario troca o mes na home, o bloco do grafico atualiza para o novo periodo sem exigir reabertura da tela.
+3. Durante o carregamento real, a home exibe um estado de loading compreensivel no lugar do grafico.
+4. Quando nao existem dados para o periodo, a home exibe um estado vazio claro e utilizavel no bloco do grafico.
+5. Quando ocorre falha ao buscar ou transformar os dados, a home exibe um estado de erro claro sem quebrar a tela.
+**Plans**: TBD
+**UI hint**: yes
 
-**Requirements:** ARCH-01, ARCH-02, ARCH-03
+### Phase 7: Blindagem e nao regressao da home
+**Goal**: A integracao real do grafico fica sustentavel na arquitetura atual, com cobertura automatizada dos cenarios criticos e sem regressao funcional nos demais blocos da home.
+**Depends on**: Phase 6
+**Requirements**: HOME-09, HOME-10, HOME-11
+**Success Criteria** (what must be TRUE):
+1. Os demais blocos existentes da home continuam carregando e funcionando enquanto o grafico usa dados reais.
+2. A integracao do grafico pode ser validada em camadas adequadas, sem concentrar toda a regra no widget.
+3. Existem testes automatizados cobrindo os cenarios de sucesso, vazio e erro do bloco do grafico.
+**Plans**: TBD
+**UI hint**: yes
 
-**Success criteria:**
-1. Existe definicao clara das responsabilidades que permanecem no controller principal e das que serao extraidas.
-2. Os novos limites respeitam a estrutura `presentation/domain/data/core`.
-3. Os contratos propostos nao quebram a compatibilidade entre providers `nest` e `supabase`.
-4. A sequencia de implementacao das extracoes fica clara para fases posteriores.
+## Progress
 
-**UI hint:** no
-
-### Phase 2: Extrair orquestracao operacional
-
-**Goal:** Mover logica operacional critica para componentes menores sem alterar a experiencia funcional do usuario na operacao do turno.
-
-**Requirements:** JORN-01, JORN-02, JORN-04, OPER-01, OPER-02
-
-**Success criteria:**
-1. O ciclo de vida de turno deixa de ficar concentrado no `JourneyController`.
-2. Tracking, sincronizacao e integracoes operacionais passam a ter pontos de orquestracao menores e mais testaveis.
-3. Fluxos offline e sincronizacao posterior continuam preservados.
-4. Tratamento de falhas operacionais continua consistente para o usuario.
-5. A feature segue funcional com os providers atuais.
-
-**UI hint:** no
-
-### Phase 3: Reorganizar estado da feature e presentation
-
-**Goal:** Deixar a composicao da tela mais previsivel, mantendo `JourneyView` enxuta e distribuindo melhor o estado da feature.
-
-**Requirements:** JORN-03, OPER-03, PRES-01, PRES-02, PRES-03
-
-**Success criteria:**
-1. `JourneyView` continua como estrutura macro, sem concentrar regra de negocio.
-2. Widgets da pasta `journey/widgets` permanecem ou ficam mais organizados e especializados.
-3. O estado exposto para UI fica mais claro e menos dependente de um controller monolitico.
-4. Fluxos de rota do turno e detalhes de corrida continuam acessiveis pelos caminhos existentes.
-5. Atualizacao de metricas e secoes visuais continua coerente com o estado da jornada.
-
-**UI hint:** yes
-
-### Phase 4: Blindar com testes e validacao
-
-**Goal:** Garantir que a nova estrutura e segura para evolucao futura, com testes nos fluxos mais criticos.
-
-**Requirements:** QUAL-01, QUAL-02, QUAL-03
-
-**Status:** Completed (2026-03-25)
-
-**Plans:** 2 plans
-
-Plans:
-- [x] 04-01-PLAN.md - Blindar contratos e fluxos criticos com testes automatizados
-- [x] 04-02-PLAN.md - Fechar a fase com validacao final e criterio de saida
-
-**Success criteria:**
-1. Existem testes cobrindo contratos e fluxos criticos da jornada refatorada.
-2. Os componentes extraidos podem ser validados isoladamente.
-3. O risco de regressao na tela de turnos fica menor do que no estado inicial.
-4. A base fica pronta para novas funcionalidades sem reintroduzir o mesmo acoplamento.
-
-**UI hint:** no
-
-## Final Status
-
-Milestone concluido em 2026-03-25.
-
-Resumo do fechamento:
-- Fase 2 extraiu a orquestracao operacional para coordenadores dedicados
-- Fase 3 reorganizou o estado de presentation em blocos mais previsiveis
-- Fase 4 ampliou testes criticos da jornada e fechou com validacao final e relatorio de risco residual
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 5. Integracao real do grafico | 0/0 | Not started | - |
+| 6. Estados funcionais e atualizacao por periodo | 0/0 | Not started | - |
+| 7. Blindagem e nao regressao da home | 0/0 | Not started | - |
 
 ## Requirement Mapping
 
 | Requirement | Phase |
 |-------------|-------|
-| ARCH-01 | Phase 1 |
-| ARCH-02 | Phase 1 |
-| ARCH-03 | Phase 1 |
-| JORN-01 | Phase 2 |
-| JORN-02 | Phase 2 |
-| JORN-03 | Phase 3 |
-| JORN-04 | Phase 2 |
-| OPER-01 | Phase 2 |
-| OPER-02 | Phase 2 |
-| OPER-03 | Phase 3 |
-| PRES-01 | Phase 3 |
-| PRES-02 | Phase 3 |
-| PRES-03 | Phase 3 |
-| QUAL-01 | Phase 4 |
-| QUAL-02 | Phase 4 |
-| QUAL-03 | Phase 4 |
+| HOME-01 | Phase 5 |
+| HOME-02 | Phase 5 |
+| HOME-03 | Phase 5 |
+| HOME-04 | Phase 6 |
+| HOME-05 | Phase 6 |
+| HOME-06 | Phase 6 |
+| HOME-07 | Phase 6 |
+| HOME-08 | Phase 6 |
+| HOME-09 | Phase 7 |
+| HOME-10 | Phase 7 |
+| HOME-11 | Phase 7 |
 
-**Coverage:** 16/16 requirements mapped
+**Coverage:** 11/11 requirements mapped
 
 ---
-*Last updated: 2026-03-25 after initial roadmap creation*
+*Last updated: 2026-03-25 after roadmap creation for milestone v1.1*
