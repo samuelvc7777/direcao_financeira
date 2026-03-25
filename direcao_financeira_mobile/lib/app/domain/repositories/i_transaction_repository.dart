@@ -3,7 +3,9 @@ import '../../core/errors/failures.dart';
 import '../entities/transaction_entity.dart';
 
 abstract class ITransactionRepository {
-  Future<Either<Failure, List<TransactionEntity>>> getTransactions();
+  Future<Either<Failure, List<TransactionEntity>>> getTransactions({
+    required DateTime referenceMonth,
+  });
   Future<Either<Failure, TransactionEntity>> getTransaction(int id);
   Future<Either<Failure, TransactionEntity>> createTransaction({
     required TransactionType type,

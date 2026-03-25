@@ -175,7 +175,9 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
   }
 
   @override
-  Future<List<TransactionModel>> getTransactions() async {
+  Future<List<TransactionModel>> getTransactions({
+    required DateTime referenceMonth,
+  }) async {
     if (error != null) {
       throw error!;
     }
@@ -392,7 +394,9 @@ void main() {
     });
 
     test('sucesso retorna transacoes', () async {
-      final result = await repository.getTransactions();
+      final result = await repository.getTransactions(
+        referenceMonth: DateTime(2026, 3),
+      );
       expect(result.isRight(), isTrue);
     });
 
@@ -403,7 +407,9 @@ void main() {
         path: '/finance/transactions',
       );
 
-      final result = await repository.getTransactions();
+      final result = await repository.getTransactions(
+        referenceMonth: DateTime(2026, 3),
+      );
 
       expect(
         result.swap().getOrElse(() => ServerFailure('x')).message,
@@ -418,7 +424,9 @@ void main() {
         path: '/finance/transactions',
       );
 
-      final result = await repository.getTransactions();
+      final result = await repository.getTransactions(
+        referenceMonth: DateTime(2026, 3),
+      );
 
       expect(
         result.swap().getOrElse(() => ServerFailure('x')).message,
@@ -429,7 +437,9 @@ void main() {
     test('falha inesperada usa fallback inesperado', () async {
       dataSource.error = Exception('erro inesperado');
 
-      final result = await repository.getTransactions();
+      final result = await repository.getTransactions(
+        referenceMonth: DateTime(2026, 3),
+      );
 
       expect(
         result.swap().getOrElse(() => ServerFailure('x')).message,

@@ -2,7 +2,9 @@ import '../../domain/entities/transaction_entity.dart';
 import '../models/transaction_model.dart';
 
 abstract class ITransactionDataSource {
-  Future<List<TransactionModel>> getTransactions();
+  Future<List<TransactionModel>> getTransactions({
+    required DateTime referenceMonth,
+  });
   Future<TransactionModel> getTransaction(int id);
   Future<TransactionModel> createTransaction({
     required TransactionType type,

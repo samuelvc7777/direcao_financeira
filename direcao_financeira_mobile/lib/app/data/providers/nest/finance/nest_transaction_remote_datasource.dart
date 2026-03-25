@@ -11,8 +11,21 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
   final Dio dio;
 
   @override
-  Future<List<TransactionModel>> getTransactions() async {
-    final response = await dio.get('/finance/transactions');
+  Future<List<TransactionModel>> getTransactions({
+    required DateTime referenceMonth,
+  }) async {
+    final startOfMonth = DateTime(referenceMonth.year, referenceMonth.month);
+    final startOfNextMonth = DateTime(
+      referenceMonth.year,
+      referenceMonth.month + 1,
+    );
+    final response = await dio.get(
+      '/finance/transactions',
+      queryParameters: {
+        'startDate': startOfMonth.toIso8601String(),
+        'endDate': startOfNextMonth.toIso8601String(),
+      },
+    );
     final data = response.data;
     final items = data is List
         ? data
@@ -28,6 +41,11 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
         .whereType<Map>()
         .map(
           (item) => TransactionModel.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .where(
+          (item) =>
+              !item.transactionDate.isBefore(startOfMonth) &&
+              item.transactionDate.isBefore(startOfNextMonth),
         )
         .toList();
   }

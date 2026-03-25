@@ -9,7 +9,7 @@ class _SpySupabaseTransactionQueryGateway
 
   @override
   Future<List<Map<String, dynamic>>> fetchTransactionsForMonth({
-    required String userId,
+    required int userId,
     required DateTime startOfMonthUtc,
     required DateTime startOfNextMonthUtc,
   }) async {
@@ -42,7 +42,7 @@ class _SpySupabaseTransactionQueryGateway
 
 class _FakeUserScope implements SupabaseTransactionUserScope {
   @override
-  Future<String> getCurrentUserId() async => 'user-123';
+  Future<int> getCurrentUserId() async => 123;
 }
 
 void main() {

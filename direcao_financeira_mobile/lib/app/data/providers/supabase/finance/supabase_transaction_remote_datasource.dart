@@ -7,28 +7,72 @@ import '../../../models/transaction_model.dart';
 import '../shared/supabase_table_names.dart';
 import '../shared/supabase_user_scope.dart';
 
-class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
-  SupabaseTransactionRemoteDataSource({required this.client})
-    : userScope = SupabaseUserScope(client: client);
+abstract class SupabaseTransactionUserScope {
+  Future<int> getCurrentUserId();
+}
 
-  final SupabaseClient client;
-  final SupabaseUserScope userScope;
+abstract class SupabaseTransactionQueryGateway {
+  Future<List<Map<String, dynamic>>> fetchTransactionsForMonth({
+    required int userId,
+    required DateTime startOfMonthUtc,
+    required DateTime startOfNextMonthUtc,
+  });
+
+  Future<List<TransactionModel>> enrichTransactions(
+    List<Map<String, dynamic>> rows,
+  );
+}
+
+class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
+  SupabaseTransactionRemoteDataSource({required SupabaseClient client})
+    : this._(
+        client: client,
+        userScope: _SupabaseTransactionUserScopeAdapter(
+          scope: SupabaseUserScope(client: client),
+        ),
+        queryGateway: _SupabaseTransactionQueryGateway(client: client),
+      );
+
+  SupabaseTransactionRemoteDataSource.forTest({
+    required this.queryGateway,
+    required this.userScope,
+  }) : client = null;
+
+  SupabaseTransactionRemoteDataSource._({
+    required this.client,
+    required this.userScope,
+    required this.queryGateway,
+  });
+
+  final SupabaseClient? client;
+  final SupabaseTransactionUserScope userScope;
+  final SupabaseTransactionQueryGateway queryGateway;
 
   @override
-  Future<List<TransactionModel>> getTransactions() async {
+  Future<List<TransactionModel>> getTransactions({
+    required DateTime referenceMonth,
+  }) async {
     final userId = await userScope.getCurrentUserId();
-    final rows = await client
-        .from(SupabaseTableNames.transactions)
-        .select()
-        .eq('userId', userId)
-        .order('transactionDate', ascending: false);
+    final startOfMonthUtc = DateTime.utc(
+      referenceMonth.year,
+      referenceMonth.month,
+    );
+    final startOfNextMonthUtc = DateTime.utc(
+      referenceMonth.year,
+      referenceMonth.month + 1,
+    );
+    final rows = await queryGateway.fetchTransactionsForMonth(
+      userId: userId,
+      startOfMonthUtc: startOfMonthUtc,
+      startOfNextMonthUtc: startOfNextMonthUtc,
+    );
 
-    return _enrichTransactions(_toRowList(rows));
+    return queryGateway.enrichTransactions(rows);
   }
 
   @override
   Future<TransactionModel> getTransaction(int id) async {
-    final row = await client
+    final row = await client!
         .from(SupabaseTableNames.transactions)
         .select()
         .eq('id', id)
@@ -97,7 +141,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
       payload.add(entry);
     }
 
-    final inserted = await client
+    final inserted = await client!
         .from(SupabaseTableNames.transactions)
         .insert(payload)
         .select();
@@ -146,7 +190,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         if (amountCents != null) {
           recalculatedPayload['amountCents'] = amountCents;
         }
-        await client
+        await client!
             .from(SupabaseTableNames.transactions)
             .update(recalculatedPayload)
             .eq('id', row['id']);
@@ -168,7 +212,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
       payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
 
       for (final row in rowsToUpdate) {
-        await client
+        await client!
             .from(SupabaseTableNames.transactions)
             .update(payload)
             .eq('id', row['id']);
@@ -187,14 +231,14 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     final rowsToDelete = await _resolveRowsForScope(baseRow, scope);
     final ids = rowsToDelete.map((row) => row['id'] as int).toList();
 
-    await client
+    await client!
         .from(SupabaseTableNames.transactions)
         .delete()
         .inFilter('id', ids);
   }
 
   Future<Map<String, dynamic>> _getTransactionRow(int id) async {
-    final row = await client
+    final row = await client!
         .from(SupabaseTableNames.transactions)
         .select()
         .eq('id', id)
@@ -212,7 +256,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
       return [baseRow];
     }
 
-    final groupRows = await client
+    final groupRows = await client!
         .from(SupabaseTableNames.transactions)
         .select()
         .eq('installmentGroupId', baseRow['installmentGroupId'])
@@ -249,7 +293,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     final creditCardsById = <int, Map<String, dynamic>>{};
 
     if (categoryIds.isNotEmpty) {
-      final rawCategories = await client
+      final rawCategories = await client!
           .from(SupabaseTableNames.categories)
           .select('id,name,color,icon')
           .inFilter('id', categoryIds);
@@ -260,7 +304,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     }
 
     if (bankAccountIds.isNotEmpty) {
-      final rawAccounts = await client
+      final rawAccounts = await client!
           .from(SupabaseTableNames.bankAccounts)
           .select('id,name')
           .inFilter('id', bankAccountIds);
@@ -271,7 +315,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     }
 
     if (creditCardIds.isNotEmpty) {
-      final rawCards = await client
+      final rawCards = await client!
           .from(SupabaseTableNames.creditCards)
           .select('id,name')
           .inFilter('id', creditCardIds);
@@ -297,5 +341,49 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     }
 
     return data.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+}
+
+class _SupabaseTransactionUserScopeAdapter
+    implements SupabaseTransactionUserScope {
+  _SupabaseTransactionUserScopeAdapter({required this.scope});
+
+  final SupabaseUserScope scope;
+
+  @override
+  Future<int> getCurrentUserId() => scope.getCurrentUserId();
+}
+
+class _SupabaseTransactionQueryGateway
+    implements SupabaseTransactionQueryGateway {
+  _SupabaseTransactionQueryGateway({required this.client});
+
+  final SupabaseClient client;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchTransactionsForMonth({
+    required int userId,
+    required DateTime startOfMonthUtc,
+    required DateTime startOfNextMonthUtc,
+  }) async {
+    final rows = await client
+        .from(SupabaseTableNames.transactions)
+        .select()
+        .eq('userId', userId)
+        .gte('transactionDate', startOfMonthUtc.toIso8601String())
+        .lt('transactionDate', startOfNextMonthUtc.toIso8601String())
+        .order('transactionDate', ascending: false);
+
+    return rows
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
+  @override
+  Future<List<TransactionModel>> enrichTransactions(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    final datasource = SupabaseTransactionRemoteDataSource(client: client);
+    return datasource._enrichTransactions(rows);
   }
 }

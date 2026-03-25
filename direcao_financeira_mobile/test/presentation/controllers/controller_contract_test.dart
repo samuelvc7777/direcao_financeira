@@ -235,8 +235,9 @@ class _FakeTransactionRepository implements ITransactionRepository {
       Right(transactions.first);
 
   @override
-  Future<Either<Failure, List<TransactionEntity>>> getTransactions() async =>
-      Right(transactions);
+  Future<Either<Failure, List<TransactionEntity>>> getTransactions({
+    required DateTime referenceMonth,
+  }) async => Right(transactions);
 
   @override
   Future<Either<Failure, TransactionEntity>> updateTransaction(

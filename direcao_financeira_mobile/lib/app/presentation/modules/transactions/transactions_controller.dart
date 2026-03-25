@@ -93,7 +93,7 @@ class TransactionsController extends GetxController {
     final categoriesFuture = getCategoriesUseCase();
     final bankAccountsFuture = getBankAccountsUseCase();
     final creditCardsFuture = getCreditCardsUseCase();
-    final transactionsFuture = getTransactionsUseCase();
+    final transactionsFuture = getTransactionsUseCase(selectedMonth.value);
 
     final categoriesResult = await categoriesFuture;
     final bankAccountsResult = await bankAccountsFuture;

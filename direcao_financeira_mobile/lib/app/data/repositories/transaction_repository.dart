@@ -20,9 +20,13 @@ class TransactionRepository implements ITransactionRepository {
   final ApiRequestLogger apiRequestLogger;
 
   @override
-  Future<Either<Failure, List<TransactionEntity>>> getTransactions() async {
+  Future<Either<Failure, List<TransactionEntity>>> getTransactions({
+    required DateTime referenceMonth,
+  }) async {
     try {
-      final items = await dataSource.getTransactions();
+      final items = await dataSource.getTransactions(
+        referenceMonth: referenceMonth,
+      );
       return Right(items);
     } on DioException catch (e) {
       apiRequestLogger.logRepositoryFailure(

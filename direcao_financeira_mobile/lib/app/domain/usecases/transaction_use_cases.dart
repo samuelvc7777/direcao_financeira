@@ -13,8 +13,10 @@ class GetTransactionsUseCase {
   final ITransactionRepository repository;
   GetTransactionsUseCase(this.repository);
 
-  Future<Either<Failure, List<TransactionEntity>>> call() async {
-    return await repository.getTransactions();
+  Future<Either<Failure, List<TransactionEntity>>> call(
+    DateTime referenceMonth,
+  ) async {
+    return await repository.getTransactions(referenceMonth: referenceMonth);
   }
 }
 
