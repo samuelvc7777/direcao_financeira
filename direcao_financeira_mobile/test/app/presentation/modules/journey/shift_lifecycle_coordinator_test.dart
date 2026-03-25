@@ -143,6 +143,90 @@ void main() {
       expect(feedbacks.single, contains('gps desligado'));
     });
 
+    test(
+      'bloqueia inicio e oferece abrir ajustes quando tracking nao pode ficar completo',
+      () async {
+        repository.readinessResult = const Right(
+          LocationTrackingStatusEntity(
+            isTrackingActive: false,
+            isLocationServiceEnabled: true,
+            hasForegroundPermission: true,
+            hasBackgroundPermission: false,
+            isPreciseLocation: true,
+            isPaused: false,
+            totalDistanceMeters: 0,
+            idleTimeSeconds: 0,
+          ),
+        );
+        LocationTrackingStatusEntity? resolvedStatus;
+        LocationTrackingStatusEntity? openedStatus;
+        var askedToOpenSettings = 0;
+
+        final started = await coordinator.startShift(
+          onTrackingStatusResolved: (status) => resolvedStatus = status,
+          askToOpenTrackingSettings: (_) async {
+            askedToOpenSettings++;
+            return true;
+          },
+          openTrackingSettings: (status, {showFollowUpWarning = true}) async {
+            openedStatus = status;
+            expect(showFollowUpWarning, isFalse);
+          },
+          showSuccess: (message) => feedbacks.add(message),
+          showError: (title, message) => feedbacks.add('$title:$message'),
+          normalizeErrorMessage: (message) => message,
+        );
+
+        expect(started, isFalse);
+        expect(resolvedStatus, isNotNull);
+        expect(resolvedStatus!.canTrackFully, isFalse);
+        expect(askedToOpenSettings, 1);
+        expect(openedStatus, isNotNull);
+        expect(feedbacks, isEmpty);
+      },
+    );
+
+    test('pausa turno com mensagem de sucesso correta', () async {
+      final completed = await coordinator.pauseOrResumeShift(
+        isPaused: false,
+        showSuccess: (message) => feedbacks.add(message),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+        normalizeErrorMessage: (message) => message,
+      );
+
+      expect(completed, isTrue);
+      expect(feedbacks.single, 'Turno pausado com sucesso.');
+    });
+
+    test('retoma turno com mensagem de sucesso correta', () async {
+      final completed = await coordinator.pauseOrResumeShift(
+        isPaused: true,
+        showSuccess: (message) => feedbacks.add(message),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+        normalizeErrorMessage: (message) => message,
+      );
+
+      expect(completed, isTrue);
+      expect(feedbacks.single, 'Turno retomado com sucesso.');
+    });
+
+    test('normaliza falha ao pausar turno', () async {
+      repository.pauseResult = Left(ServerFailure('socketexception'));
+
+      final completed = await coordinator.pauseOrResumeShift(
+        isPaused: false,
+        showSuccess: (message) => feedbacks.add(message),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+        normalizeErrorMessage: (message) => 'normalizado: $message',
+      );
+
+      expect(completed, isFalse);
+      expect(
+        feedbacks.single,
+        'Nao foi possivel pausar o turno:normalizado: socketexception',
+      );
+    });
+
     test('finaliza turno retornando resultado sincronizado', () async {
       final result = await coordinator.finishShift(
         showSuccess: (message) => feedbacks.add(message),
@@ -154,6 +238,26 @@ void main() {
       expect(result, isNotNull);
       expect(result!.synced, isTrue);
       expect(feedbacks.single, 'Turno finalizado e sincronizado com sucesso.');
+    });
+
+    test('finaliza turno offline e informa sincronizacao pendente', () async {
+      repository.finishResult = const Right(
+        FinishShiftResultEntity(synced: false, pendingSyncCount: 1),
+      );
+
+      final result = await coordinator.finishShift(
+        showSuccess: (message) => feedbacks.add(message),
+        showWarning: (title, message) => feedbacks.add('$title:$message'),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+        normalizeErrorMessage: (message) => message,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.synced, isFalse);
+      expect(
+        feedbacks.single,
+        'Turno salvo no aparelho:O turno foi finalizado localmente e sera sincronizado quando a internet voltar.',
+      );
     });
   });
 }

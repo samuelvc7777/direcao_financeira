@@ -99,9 +99,11 @@ class _FakeJourneyRealtimeBridge implements JourneyRealtimeBridge {
 
   VoidCallback? onRideChanged;
   bool unbound = false;
+  var bindCalls = 0;
 
   @override
   void bind({required VoidCallback onRideChanged}) {
+    bindCalls++;
     this.onRideChanged = onRideChanged;
   }
 
@@ -136,6 +138,8 @@ class _FakeAccessibilityService implements AccessibilityService {
 class _FakeAppBubbleService implements AppBubbleService {
   bool bubbleRunning = false;
   bool permissionGranted = true;
+  bool openedOverlaySettings = false;
+  Object? startBubbleError;
 
   @override
   Future<bool> isBubbleRunning() async => bubbleRunning;
@@ -144,10 +148,15 @@ class _FakeAppBubbleService implements AppBubbleService {
   Future<bool> isOverlayPermissionGranted() async => permissionGranted;
 
   @override
-  Future<void> openOverlayPermissionSettings() async {}
+  Future<void> openOverlayPermissionSettings() async {
+    openedOverlaySettings = true;
+  }
 
   @override
   Future<void> startBubble() async {
+    if (startBubbleError != null) {
+      throw startBubbleError!;
+    }
     bubbleRunning = true;
   }
 
@@ -197,6 +206,82 @@ void main() {
       expect(synced, 2);
     });
 
+    test('faz fallback quando tracking status e sincronizacao falham', () async {
+      repository.trackingStatusResult = Left(ServerFailure('offline'));
+      repository.syncResult = Left(ServerFailure('offline'));
+
+      final status = await coordinator.loadTrackingStatus();
+      final synced = await coordinator.syncPendingShifts();
+
+      expect(status, isNull);
+      expect(synced, 0);
+    });
+
+    test('bind conecta observers, stream e callback de corrida sem vazar apos unbind', () async {
+      final connectionChanges = <bool>[];
+      final accessibilityChanges = <bool>[];
+      final trackingChanges = <LocationTrackingStatusEntity>[];
+      var rideChanges = 0;
+
+      coordinator.bind(
+        onConnectionChanged: (isOnlineNow) async {
+          connectionChanges.add(isOnlineNow);
+        },
+        onTrackingStatusChanged: trackingChanges.add,
+        onRideChanged: () => rideChanges++,
+        onAccessibilityChanged: accessibilityChanges.add,
+      );
+
+      expect(bridge.bindCalls, 1);
+
+      bridge.isOnline.value = false;
+      accessibilityService.isServiceEnabled.value = false;
+      await Future<void>.delayed(Duration.zero);
+
+      repository.trackingController.add(
+        const LocationTrackingStatusEntity(
+          isTrackingActive: false,
+          isLocationServiceEnabled: true,
+          hasForegroundPermission: true,
+          hasBackgroundPermission: true,
+          isPreciseLocation: true,
+          isPaused: true,
+          totalDistanceMeters: 250,
+          idleTimeSeconds: 20,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      bridge.onRideChanged?.call();
+      expect(connectionChanges, [false]);
+      expect(accessibilityChanges, [false]);
+      expect(trackingChanges.single.totalDistanceMeters, 250);
+      expect(rideChanges, 1);
+
+      await coordinator.unbind();
+      expect(bridge.unbound, isTrue);
+
+      bridge.isOnline.value = true;
+      accessibilityService.isServiceEnabled.value = true;
+      repository.trackingController.add(
+        const LocationTrackingStatusEntity(
+          isTrackingActive: true,
+          isLocationServiceEnabled: true,
+          hasForegroundPermission: true,
+          hasBackgroundPermission: true,
+          isPreciseLocation: true,
+          isPaused: false,
+          totalDistanceMeters: 500,
+          idleTimeSeconds: 0,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(connectionChanges, [false]);
+      expect(accessibilityChanges, [false]);
+      expect(trackingChanges, hasLength(1));
+    });
+
     test('toggleAssistant ativa e desativa o overlay', () async {
       final feedbacks = <String>[];
 
@@ -222,6 +307,54 @@ void main() {
       );
 
       expect(appBubbleService.bubbleRunning, isFalse);
+    });
+
+    test('toggleAssistant avisa quando permissao de overlay esta negada', () async {
+      final feedbacks = <String>[];
+      final busyStates = <bool>[];
+      final assistantStates = <bool>[];
+      appBubbleService.permissionGranted = false;
+
+      await coordinator.toggleAssistant(
+        isAssistantActive: false,
+        onAssistantStateChanged: assistantStates.add,
+        onBusyStateChanged: busyStates.add,
+        showSuccess: (title, message) => feedbacks.add('$title:$message'),
+        showWarning: (title, message) => feedbacks.add('$title:$message'),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+      );
+
+      expect(appBubbleService.openedOverlaySettings, isTrue);
+      expect(assistantStates, isEmpty);
+      expect(busyStates, [true, false]);
+      expect(
+        feedbacks.single,
+        'Permissao necessaria:Libere a permissao de sobreposicao para ativar o Assistente.',
+      );
+    });
+
+    test('toggleAssistant informa erro quando inicializacao falha', () async {
+      final feedbacks = <String>[];
+      final busyStates = <bool>[];
+      final assistantStates = <bool>[];
+      appBubbleService.startBubbleError = StateError('falha');
+
+      await coordinator.toggleAssistant(
+        isAssistantActive: false,
+        onAssistantStateChanged: assistantStates.add,
+        onBusyStateChanged: busyStates.add,
+        showSuccess: (title, message) => feedbacks.add('$title:$message'),
+        showWarning: (title, message) => feedbacks.add('$title:$message'),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+      );
+
+      expect(appBubbleService.bubbleRunning, isFalse);
+      expect(assistantStates, isEmpty);
+      expect(busyStates, [true, false]);
+      expect(
+        feedbacks.single,
+        'Nao foi possivel ativar:Falhou ao iniciar o Assistente neste momento.',
+      );
     });
   });
 }
