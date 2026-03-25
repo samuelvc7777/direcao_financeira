@@ -57,6 +57,7 @@ import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import '../../support/test_entities.dart';
+import 'support/journey_controller_test_builders.dart';
 
 class _FakeAuthRepository implements IAuthRepository {
   UserEntity? storedUser;
@@ -321,6 +322,11 @@ class _FakeJourneyRepository implements IJourneyRepository {
   LocationTrackingStatusEntity trackingStatus = buildTrackingStatus();
   final StreamController<LocationTrackingStatusEntity> trackingController =
       StreamController<LocationTrackingStatusEntity>.broadcast();
+  Either<Failure, ActiveShiftEntity?>? activeShiftResult;
+  Either<Failure, JourneyStatisticsEntity>? statisticsResult;
+  Either<Failure, LocationTrackingStatusEntity>? trackingStatusResult;
+  Either<Failure, PagedResultEntity<ShiftEntity>>? shiftHistoryResult;
+  Either<Failure, int>? syncPendingShiftsResult;
 
   @override
   Future<Either<Failure, LocationTrackingStatusEntity>>
@@ -332,18 +338,18 @@ class _FakeJourneyRepository implements IJourneyRepository {
 
   @override
   Future<Either<Failure, ActiveShiftEntity?>> getActiveShift() async =>
-      Right(activeShift);
+      activeShiftResult ?? Right(activeShift);
 
   @override
   Future<Either<Failure, JourneyStatisticsEntity>> getDailyStatistics({
     String filter = 'day',
     String? date,
     String? endDate,
-  }) async => Right(buildJourneyStatistics());
+  }) async => statisticsResult ?? Right(buildJourneyStatistics());
 
   @override
   Future<Either<Failure, LocationTrackingStatusEntity>>
-  getLocationTrackingStatus() async => Right(trackingStatus);
+  getLocationTrackingStatus() async => trackingStatusResult ?? Right(trackingStatus);
 
   @override
   Future<Either<Failure, ShiftRouteEntity>> getShiftRoute({
@@ -358,14 +364,16 @@ class _FakeJourneyRepository implements IJourneyRepository {
     String? endDate,
     int offset = 0,
     int limit = 20,
-  }) async => Right(
-    PagedResultEntity(
-      items: [buildShift()],
-      totalCount: 1,
-      offset: offset,
-      limit: limit,
-    ),
-  );
+  }) async =>
+      shiftHistoryResult ??
+      Right(
+        PagedResultEntity(
+          items: [buildShift()],
+          totalCount: 1,
+          offset: offset,
+          limit: limit,
+        ),
+      );
 
   @override
   Future<Either<Failure, void>> pauseShift() async => const Right(null);
@@ -374,7 +382,8 @@ class _FakeJourneyRepository implements IJourneyRepository {
   Future<Either<Failure, void>> resumeShift() async => const Right(null);
 
   @override
-  Future<Either<Failure, int>> syncPendingShifts() async => const Right(0);
+  Future<Either<Failure, int>> syncPendingShifts() async =>
+      syncPendingShiftsResult ?? const Right(0);
 
   @override
   Future<Either<Failure, void>> startShift() async => const Right(null);
@@ -389,6 +398,15 @@ class _FakeJourneyRepository implements IJourneyRepository {
 }
 
 class _FakeRideRepository implements IRideRepository {
+  Either<Failure, PagedResultEntity<RideEntity>> ridesResult = Right(
+    PagedResultEntity(
+      items: [buildRide()],
+      totalCount: 1,
+      offset: 0,
+      limit: 20,
+    ),
+  );
+
   @override
   Future<Either<Failure, Unit>> createDetectedRide(
     DetectedRideDraftEntity ride,
@@ -402,14 +420,7 @@ class _FakeRideRepository implements IRideRepository {
     String? status,
     int offset = 0,
     int limit = 20,
-  }) async => Right(
-    PagedResultEntity(
-      items: [buildRide()],
-      totalCount: 1,
-      offset: offset,
-      limit: limit,
-    ),
-  );
+  }) async => ridesResult;
 
   @override
   Future<Either<Failure, Unit>> finishRide({
@@ -488,11 +499,20 @@ class _FakeJourneyRealtimeBridge implements JourneyRealtimeBridge {
   @override
   final RxBool isOnline = true.obs;
 
-  @override
-  void bind({required VoidCallback onRideChanged}) {}
+  VoidCallback? boundOnRideChanged;
+  var bindCalls = 0;
+  var unbindCalls = 0;
 
   @override
-  void unbind() {}
+  void bind({required VoidCallback onRideChanged}) {
+    bindCalls++;
+    boundOnRideChanged = onRideChanged;
+  }
+
+  @override
+  void unbind() {
+    unbindCalls++;
+  }
 }
 
 class _FakeAppBubbleService implements AppBubbleService {
@@ -975,6 +995,242 @@ void main() {
 
       expect(controller.totalTime.value, '01:01:30');
       expect(controller.averageTime.value, '00:30:45');
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController expoe blocos de presentation para historico e corridas',
+    () async {
+      final journeyRepository = _FakeJourneyRepository();
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      final historyState = controller.historySectionState;
+      final ridesState = controller.ridesSectionState;
+      final summary = controller.operationalSummaryData;
+      final paymentMethods = controller.paymentMethodsSectionState;
+
+      expect(historyState.totalCount, 1);
+      expect(historyState.loadedCount, 1);
+      expect(ridesState.totalVisibleCount, 1);
+      expect(ridesState.visibleCount, 1);
+      expect(summary.totalRides, 1);
+      expect(paymentMethods.totalFinishedRides, 1);
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController sincroniza pendencias na reconexao e preserva banner derivado',
+    () async {
+      final journeyRepository = _FakeJourneyRepository()
+        ..shiftHistoryResult = Right(
+          PagedResultEntity(
+            items: [
+              buildJourneyShiftVariant(index: 1, isPendingSync: true),
+              buildJourneyShiftVariant(index: 2, isPendingSync: true),
+            ],
+            totalCount: 2,
+            offset: 0,
+            limit: 20,
+          ),
+        )
+        ..syncPendingShiftsResult = const Right(0)
+        ..trackingStatusResult = Right(buildTrackingStatus());
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.pendingShiftSyncCount.value, 2);
+      expect(
+        controller.bannerMessage,
+        'Existem 2 turnos pendentes de sincronizacao com o servidor.',
+      );
+
+      journeyRealtimeBridge.isOnline.value = false;
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        controller.bannerMessage,
+        'Voce esta offline. O turno continua funcionando no aparelho e sera sincronizado quando a internet voltar.',
+      );
+
+      journeyRepository.shiftHistoryResult = Right(
+        PagedResultEntity(
+          items: [buildJourneyShiftVariant(index: 3, isPendingSync: false)],
+          totalCount: 1,
+          offset: 0,
+          limit: 20,
+        ),
+      );
+      journeyRealtimeBridge.isOnline.value = true;
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.pendingShiftSyncCount.value, 0);
+      expect(controller.bannerMessage, isNull);
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController expone banner de tracking e erro normalizado dos blocos de carga',
+    () async {
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = buildActiveShift()
+        ..activeShiftResult = Right(buildActiveShift())
+        ..trackingStatus = buildJourneyTrackingIssue(
+          issueMessage: 'Permita localizacao em segundo plano.',
+        )
+        ..trackingStatusResult = Right(
+          buildJourneyTrackingIssue(
+            issueMessage: 'Permita localizacao em segundo plano.',
+          ),
+        );
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.canOpenTrackingSettings, isTrue);
+      expect(
+        controller.bannerMessage,
+        'Permita localizacao em segundo plano.',
+      );
+
+      journeyRepository.shiftHistoryResult = Left(
+        ServerFailure('socketexception'),
+      );
+      await controller.refreshJourneyData(showErrors: false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        controller.historyError.value,
+        'Nao foi possivel carregar o historico de turnos. Verifique sua conexao e tente novamente.',
+      );
+      expect(
+        controller.bannerMessage,
+        'Permita localizacao em segundo plano.',
+      );
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController preserva filtros de corridas e metricas derivadas usadas na presentation',
+    () async {
+      final journeyRepository = _FakeJourneyRepository()
+        ..statisticsResult = Right(
+          buildJourneyStatisticsVariant(
+            totalRides: 3,
+            grossEarningsCents: 15000,
+            totalCostsCents: 4500,
+          ),
+        );
+      final rideRepository = _FakeRideRepository()
+        ..ridesResult = Right(
+          PagedResultEntity(
+            items: [
+              buildJourneyRideVariant(
+                id: 1,
+                status: 'FINISHED',
+                paymentMethod: 'pix',
+                grossValueCents: 5000,
+              ),
+              buildJourneyRideVariant(
+                id: 2,
+                status: 'FINISHED',
+                paymentMethod: 'dinheiro',
+                grossValueCents: 4500,
+              ),
+              buildJourneyRideVariant(
+                id: 3,
+                status: 'PENDING',
+                paymentMethod: null,
+                grossValueCents: 0,
+              ),
+            ],
+            totalCount: 3,
+            offset: 0,
+            limit: 100,
+          ),
+        );
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      final summary = controller.operationalSummaryData;
+      final paymentMethods = controller.paymentMethodsSectionState;
+
+      expect(summary.grossEarningsCents, 15000);
+      expect(summary.totalCostsCents, 4500);
+      expect(summary.netEarningsCents, 10500);
+      expect(summary.totalRides, 3);
+      expect(paymentMethods.totalFinishedRides, 2);
+      expect(paymentMethods.mappedCount, 2);
+      expect(paymentMethods.hasUnmappedRides, isFalse);
+
+      controller.changeRideStatusFilter('Pendentes');
+      final ridesState = controller.ridesSectionState;
+      expect(ridesState.selectedStatusFilter, 'Pendentes');
+      expect(ridesState.totalVisibleCount, 1);
+      expect(ridesState.visibleCount, 1);
+      expect(ridesState.visibleRides.single.status, 'PENDING');
 
       controller.onClose();
       await journeyRepository.dispose();
