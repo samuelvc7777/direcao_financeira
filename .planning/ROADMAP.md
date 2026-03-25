@@ -70,11 +70,13 @@ Esta roadmap organiza a refatoracao da tela de turnos em fases pequenas e segura
 
 **Requirements:** QUAL-01, QUAL-02, QUAL-03
 
+**Status:** Completed (2026-03-25)
+
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md - Blindar contratos e fluxos criticos com testes automatizados
-- [ ] 04-02-PLAN.md - Fechar a fase com validacao final e criterio de saida
+- [x] 04-01-PLAN.md - Blindar contratos e fluxos criticos com testes automatizados
+- [x] 04-02-PLAN.md - Fechar a fase com validacao final e criterio de saida
 
 **Success criteria:**
 1. Existem testes cobrindo contratos e fluxos criticos da jornada refatorada.
@@ -83,6 +85,15 @@ Plans:
 4. A base fica pronta para novas funcionalidades sem reintroduzir o mesmo acoplamento.
 
 **UI hint:** no
+
+## Final Status
+
+Milestone concluido em 2026-03-25.
+
+Resumo do fechamento:
+- Fase 2 extraiu a orquestracao operacional para coordenadores dedicados
+- Fase 3 reorganizou o estado de presentation em blocos mais previsiveis
+- Fase 4 ampliou testes criticos da jornada e fechou com validacao final e relatorio de risco residual
 
 ## Requirement Mapping
 
