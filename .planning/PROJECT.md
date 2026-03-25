@@ -10,6 +10,15 @@ O trabalho e voltado para o time que mantem o app Flutter e precisa continuar ev
 
 A tela de turnos deve continuar funcionando para o usuario final enquanto a arquitetura interna fica clara o suficiente para evoluir novas funcionalidades sem concentrar tudo no `JourneyController`.
 
+## Current Milestone: v1.1 Home ativa com graficos reais
+
+**Goal:** ativar o grafico ja existente na home com dados reais vindos do Supabase, incluindo estados de loading, vazio, erro e comportamento funcional para uso real.
+
+**Target features:**
+- Conectar o grafico existente da home a uma fonte real no Supabase
+- Substituir dados mockados, placeholders ou estados estaticos por dados reais
+- Garantir comportamento utilizavel para sucesso, vazio e erro no carregamento do grafico
+
 ## Requirements
 
 ### Validated
@@ -22,12 +31,10 @@ A tela de turnos deve continuar funcionando para o usuario final enquanto a arqu
 
 ### Active
 
-- [ ] Separar responsabilidades hoje concentradas no `JourneyController`
-- [ ] Manter a `JourneyView` como composicao macro, evitando empurrar regra para widgets
-- [ ] Extrair logica operacional para componentes menores quando fizer sentido
-- [ ] Preservar o comportamento atual percebido pelo usuario
-- [ ] Melhorar a testabilidade do modulo de turnos
-- [ ] Preparar a base para novas funcionalidades sem degradar manutencao
+- [ ] Ativar o grafico ja existente na home com dados reais vindos do Supabase
+- [ ] Remover dependencia de dados mockados ou placeholders no bloco de grafico da home
+- [ ] Tratar corretamente estados de loading, vazio e erro para o grafico da home
+- [ ] Deixar o bloco principal de grafico da home pronto para uso funcional real
 
 ### Out of Scope
 
@@ -42,6 +49,8 @@ O repositorio e um monorepo com mobile Flutter, backend NestJS, admin web e land
 
 O mapeamento da codebase em `.planning/codebase/` mostrou que o maior ponto de acoplamento esta em `direcao_financeira_mobile/lib/app/presentation/modules/journey/journey_controller.dart`, enquanto a `JourneyView` ja aponta para um caminho melhor de composicao com widgets menores. O projeto ja usa interfaces de repositorio e bindings por provider, o que favorece refatoracoes graduais sem reescrever tudo.
 
+Com o milestone anterior encerrado, o proximo ciclo muda o foco para a home do app. A intencao imediata e tornar funcional o grafico que ja existe nessa tela, conectando-o aos dados reais do Supabase e cobrindo os estados necessarios para uso real.
+
 ## Constraints
 
 - **Tech stack**: Flutter + GetX + arquitetura em camadas atual — manter consistencia com o projeto existente
@@ -49,6 +58,8 @@ O mapeamento da codebase em `.planning/codebase/` mostrou que o maior ponto de a
 - **Comportamento**: Fluxos atuais de turno, corridas, metricas, rota e tracking nao podem quebrar — proteger experiencia do usuario final
 - **Escopo**: Prioridade e refatoracao incremental — reduzir risco e permitir validacao por etapas
 - **Qualidade**: Testabilidade deve melhorar durante a refatoracao — sem depender apenas de verificacao manual
+- **Fonte de dados**: O grafico da home deve consumir dados reais do Supabase — sem criar fonte paralela desnecessaria
+- **Escopo do milestone**: O foco atual e o grafico ja existente da home — filtros avancados e outros blocos da home ficam fora por enquanto
 
 ## Key Decisions
 
@@ -58,6 +69,9 @@ O mapeamento da codebase em `.planning/codebase/` mostrou que o maior ponto de a
 | Manter `JourneyView` como casca de composicao macro | Preserva legibilidade visual e evita mover regra de negocio para UI | — Pending |
 | Priorizar extracao de responsabilidades do `JourneyController` antes de novas features | Esse e o maior gargalo tecnico identificado no mapa da codebase | — Pending |
 | Preservar providers e comportamento funcional enquanto a arquitetura interna muda | Refatoracao sem equivalencia funcional nao atende o objetivo do projeto | — Pending |
+| Abrir o milestone v1.1 focado na home, nao em novas mudancas na jornada | O milestone anterior estabilizou a base da jornada e agora o proximo ganho visivel esta na home | ✓ Good |
+| Ativar primeiro o grafico que ja existe usando Supabase | Reaproveita a estrutura atual da home e entrega valor funcional sem ampliar escopo cedo demais | — Pending |
+| Tratar loading, vazio e erro no mesmo milestone | O usuario quer o bloco funcional por completo, nao apenas conectado a dados reais | — Pending |
 
 ## Evolution
 
@@ -77,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after initialization*
+*Last updated: 2026-03-25 after milestone v1.1 kickoff*
