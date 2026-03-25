@@ -47,6 +47,8 @@ import 'package:direcao_financeira_mobile/app/presentation/modules/credit_cards/
 import 'package:direcao_financeira_mobile/app/presentation/modules/home/home_controller.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/home/home_tab_navigation.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/journey/journey_controller.dart';
+import 'package:direcao_financeira_mobile/app/presentation/modules/journey/journey_runtime_coordinator.dart';
+import 'package:direcao_financeira_mobile/app/presentation/modules/journey/shift_lifecycle_coordinator.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/subscription/subscription_controller.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/transactions/transactions_controller.dart';
 import 'package:flutter/material.dart';
@@ -510,6 +512,43 @@ class _FakeAppBubbleService implements AppBubbleService {
   Future<void> stopBubble() async {}
 }
 
+JourneyController _buildJourneyController({
+  required _FakeJourneyRepository journeyRepository,
+  required _FakeRideRepository rideRepository,
+  required _FakeAccessibilityService accessibilityService,
+  required _FakeJourneyRealtimeBridge journeyRealtimeBridge,
+  required _FakeAppBubbleService appBubbleService,
+}) {
+  return JourneyController(
+    getActiveShift: GetActiveShiftUseCase(journeyRepository),
+    getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
+    getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
+    getRidesUseCase: GetRidesUseCase(rideRepository),
+    getCostsGainsSettings: null,
+    shiftLifecycleCoordinator: ShiftLifecycleCoordinator(
+      startShiftUseCase: StartShiftUseCase(journeyRepository),
+      pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
+      resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
+      finishShiftUseCase: FinishShiftUseCase(journeyRepository),
+      ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
+        journeyRepository,
+      ),
+    ),
+    runtimeCoordinator: JourneyRuntimeCoordinator(
+      journeyRealtimeBridge: journeyRealtimeBridge,
+      getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
+        journeyRepository,
+      ),
+      watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
+        journeyRepository,
+      ),
+      syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
+      accessibilityService: accessibilityService,
+      appBubbleService: appBubbleService,
+    ),
+  );
+}
+
 void main() {
   setUpAll(() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -751,29 +790,12 @@ void main() {
       final accessibilityService = _FakeAccessibilityService();
       final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
       final appBubbleService = _FakeAppBubbleService();
-      final controller = JourneyController(
-        getActiveShift: GetActiveShiftUseCase(journeyRepository),
-        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
-        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
-        startShiftUseCase: StartShiftUseCase(journeyRepository),
-        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
-        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
-        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
-        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
-        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
-          journeyRepository,
-        ),
-        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        getRidesUseCase: GetRidesUseCase(rideRepository),
-        getCostsGainsSettings: null,
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
         journeyRealtimeBridge: journeyRealtimeBridge,
         appBubbleService: appBubbleService,
-        accessibilityService: accessibilityService,
       );
 
       controller.onInit();
@@ -799,29 +821,12 @@ void main() {
       final accessibilityService = _FakeAccessibilityService();
       final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
       final appBubbleService = _FakeAppBubbleService();
-      final controller = JourneyController(
-        getActiveShift: GetActiveShiftUseCase(journeyRepository),
-        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
-        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
-        startShiftUseCase: StartShiftUseCase(journeyRepository),
-        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
-        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
-        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
-        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
-        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
-          journeyRepository,
-        ),
-        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        getRidesUseCase: GetRidesUseCase(rideRepository),
-        getCostsGainsSettings: null,
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
         journeyRealtimeBridge: journeyRealtimeBridge,
         appBubbleService: appBubbleService,
-        accessibilityService: accessibilityService,
       );
 
       controller.onInit();
@@ -879,29 +884,12 @@ void main() {
       final accessibilityService = _FakeAccessibilityService();
       final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
       final appBubbleService = _FakeAppBubbleService();
-      final controller = JourneyController(
-        getActiveShift: GetActiveShiftUseCase(journeyRepository),
-        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
-        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
-        startShiftUseCase: StartShiftUseCase(journeyRepository),
-        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
-        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
-        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
-        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
-        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
-          journeyRepository,
-        ),
-        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        getRidesUseCase: GetRidesUseCase(rideRepository),
-        getCostsGainsSettings: null,
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
         journeyRealtimeBridge: journeyRealtimeBridge,
         appBubbleService: appBubbleService,
-        accessibilityService: accessibilityService,
       );
 
       controller.onInit();
@@ -963,29 +951,12 @@ void main() {
       final accessibilityService = _FakeAccessibilityService();
       final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
       final appBubbleService = _FakeAppBubbleService();
-      final controller = JourneyController(
-        getActiveShift: GetActiveShiftUseCase(journeyRepository),
-        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
-        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
-        startShiftUseCase: StartShiftUseCase(journeyRepository),
-        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
-        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
-        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
-        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
-        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
-          journeyRepository,
-        ),
-        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
-          journeyRepository,
-        ),
-        getRidesUseCase: GetRidesUseCase(rideRepository),
-        getCostsGainsSettings: null,
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
         journeyRealtimeBridge: journeyRealtimeBridge,
         appBubbleService: appBubbleService,
-        accessibilityService: accessibilityService,
       );
 
       controller.onInit();

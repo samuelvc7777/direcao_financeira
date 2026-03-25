@@ -1,12 +1,12 @@
 import 'package:get/get.dart';
 
-import '../../../core/app_bubble/app_bubble_service.dart';
-import '../../../core/accessibility/accessibility_service.dart';
 import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
 import 'journey_controller.dart';
+import 'journey_runtime_coordinator.dart';
+import 'shift_lifecycle_coordinator.dart';
 
 class JourneyBinding extends Bindings {
   @override
@@ -31,27 +31,37 @@ class JourneyBinding extends Bindings {
     Get.lazyPut(() => WatchLocationTrackingStatusUseCase(Get.find()));
     Get.lazyPut(() => GetShiftRouteUseCase(Get.find()));
     Get.lazyPut(() => GetRidesUseCase(Get.find()));
+    Get.lazyPut(
+      () => ShiftLifecycleCoordinator(
+        startShiftUseCase: Get.find(),
+        pauseShiftUseCase: Get.find(),
+        resumeShiftUseCase: Get.find(),
+        finishShiftUseCase: Get.find(),
+        ensureReadyForShiftStartUseCase: Get.find(),
+      ),
+    );
+    Get.lazyPut(
+      () => JourneyRuntimeCoordinator(
+        journeyRealtimeBridge: Get.find(),
+        getLocationTrackingStatusUseCase: Get.find(),
+        watchLocationTrackingStatusUseCase: Get.find(),
+        syncPendingJourneyUseCase: Get.find(),
+        accessibilityService: Get.find(),
+        appBubbleService: Get.find(),
+      ),
+    );
 
     Get.lazyPut<JourneyController>(
       () => JourneyController(
         getActiveShift: Get.find(),
         getDailyStatistics: Get.find(),
         getShiftHistory: Get.find(),
-        startShiftUseCase: Get.find(),
-        pauseShiftUseCase: Get.find(),
-        resumeShiftUseCase: Get.find(),
-        finishShiftUseCase: Get.find(),
-        syncPendingJourneyUseCase: Get.find(),
-        ensureReadyForShiftStartUseCase: Get.find(),
-        getLocationTrackingStatusUseCase: Get.find(),
-        watchLocationTrackingStatusUseCase: Get.find(),
         getRidesUseCase: Get.find(),
         getCostsGainsSettings: Get.isRegistered<GetCostsGainsSettingsUseCase>()
             ? Get.find<GetCostsGainsSettingsUseCase>()
             : null,
-        journeyRealtimeBridge: Get.find<JourneyRealtimeBridge>(),
-        appBubbleService: Get.find<AppBubbleService>(),
-        accessibilityService: Get.find<AccessibilityService>(),
+        shiftLifecycleCoordinator: Get.find(),
+        runtimeCoordinator: Get.find(),
       ),
     );
   }

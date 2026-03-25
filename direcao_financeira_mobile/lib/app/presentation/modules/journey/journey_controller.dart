@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
-import '../../../core/app_bubble/app_bubble_service.dart';
-import '../../../core/accessibility/accessibility_service.dart';
 import '../../../core/feedback/app_snackbar.dart';
-import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/entities/active_shift_entity.dart';
 import '../../../domain/entities/costs_gains_settings_entity.dart';
 import '../../../domain/entities/location_tracking_status_entity.dart';
@@ -18,7 +15,9 @@ import '../../../domain/services/online_hourly_projection_calculator.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
+import 'journey_runtime_coordinator.dart';
 import 'journey_statistics_display_data.dart';
+import 'shift_lifecycle_coordinator.dart';
 
 class JourneyController extends GetxController {
   static const int _historyPageSize = 20;
@@ -26,37 +25,19 @@ class JourneyController extends GetxController {
   final GetActiveShiftUseCase getActiveShift;
   final GetDailyStatisticsUseCase getDailyStatistics;
   final GetShiftHistoryUseCase getShiftHistory;
-  final StartShiftUseCase startShiftUseCase;
-  final PauseShiftUseCase pauseShiftUseCase;
-  final ResumeShiftUseCase resumeShiftUseCase;
-  final FinishShiftUseCase finishShiftUseCase;
-  final SyncPendingJourneyUseCase syncPendingJourneyUseCase;
-  final EnsureReadyForShiftStartUseCase ensureReadyForShiftStartUseCase;
-  final GetLocationTrackingStatusUseCase getLocationTrackingStatusUseCase;
-  final WatchLocationTrackingStatusUseCase watchLocationTrackingStatusUseCase;
   final GetRidesUseCase getRidesUseCase;
   final GetCostsGainsSettingsUseCase? getCostsGainsSettings;
-  final JourneyRealtimeBridge journeyRealtimeBridge;
-  final AppBubbleService appBubbleService;
-  final AccessibilityService accessibilityService;
+  final ShiftLifecycleCoordinator shiftLifecycleCoordinator;
+  final JourneyRuntimeCoordinator runtimeCoordinator;
 
   JourneyController({
     required this.getActiveShift,
     required this.getDailyStatistics,
     required this.getShiftHistory,
-    required this.startShiftUseCase,
-    required this.pauseShiftUseCase,
-    required this.resumeShiftUseCase,
-    required this.finishShiftUseCase,
-    required this.syncPendingJourneyUseCase,
-    required this.ensureReadyForShiftStartUseCase,
-    required this.getLocationTrackingStatusUseCase,
-    required this.watchLocationTrackingStatusUseCase,
     required this.getRidesUseCase,
     required this.getCostsGainsSettings,
-    required this.journeyRealtimeBridge,
-    required this.appBubbleService,
-    required this.accessibilityService,
+    required this.shiftLifecycleCoordinator,
+    required this.runtimeCoordinator,
   });
 
   final isLoading = false.obs;
@@ -77,10 +58,7 @@ class JourneyController extends GetxController {
   final ridesError = RxnString();
 
   Timer? _timer;
-  Worker? _accessibilityWorker;
-  Worker? _connectionWorker;
   Worker? _journeyMetricsWorker;
-  StreamSubscription<LocationTrackingStatusEntity>? _trackingStatusSubscription;
   final elapsedSeconds = 0.obs;
   final startTimeStr = '--:--'.obs;
   final currentKm = 0.0.obs;
@@ -156,9 +134,9 @@ class JourneyController extends GetxController {
 
   bool get hasActiveShift => activeShift.value != null;
   bool get isAccessibilityServiceEnabled =>
-      accessibilityService.isServiceEnabled.value;
+      runtimeCoordinator.accessibilityService.isServiceEnabled.value;
   String get status => hasActiveShift ? 'Ativo' : 'Inativo';
-  bool get isOnline => journeyRealtimeBridge.isOnline.value;
+  bool get isOnline => runtimeCoordinator.journeyRealtimeBridge.isOnline.value;
   bool get canRetry =>
       activeShiftError.value != null ||
       metricsError.value != null ||
@@ -222,15 +200,7 @@ class JourneyController extends GetxController {
   void onInit() {
     super.onInit();
     isTrafficLightActive.value =
-        accessibilityService.persistedTrafficLightActive;
-    _accessibilityWorker = ever<bool>(
-      accessibilityService.isServiceEnabled,
-      _handleAccessibilityStatusChanged,
-    );
-    _connectionWorker = ever<bool>(
-      journeyRealtimeBridge.isOnline,
-      _handleConnectionStatusChanged,
-    );
+        runtimeCoordinator.accessibilityService.persistedTrafficLightActive;
     _journeyMetricsWorker = everAll([
       activeShift,
       currentKm,
@@ -242,27 +212,26 @@ class JourneyController extends GetxController {
       customEndDate,
       totalShiftDrivenKm,
     ], (_) => _syncDisplayedJourneyMetrics());
-    _trackingStatusSubscription = watchLocationTrackingStatusUseCase().listen(
-      _handleTrackingStatusUpdated,
-    );
-    journeyRealtimeBridge.bind(
+    runtimeCoordinator.bind(
+      onConnectionChanged: _handleConnectionStatusChanged,
+      onTrackingStatusChanged: _handleTrackingStatusUpdated,
       onRideChanged: () {
         refreshJourneyData(silent: true, showErrors: false);
       },
+      onAccessibilityChanged: _handleAccessibilityStatusChanged,
     );
     refreshJourneyData(showErrors: false);
     _loadTrackingStatus();
-    _loadAssistantStatus();
+    runtimeCoordinator.loadAssistantStatus(
+      onAssistantStateChanged: (isActive) => isAssistantActive.value = isActive,
+    );
   }
 
   @override
   void onClose() {
-    journeyRealtimeBridge.unbind();
+    runtimeCoordinator.unbind();
     _timer?.cancel();
-    _accessibilityWorker?.dispose();
-    _connectionWorker?.dispose();
     _journeyMetricsWorker?.dispose();
-    _trackingStatusSubscription?.cancel();
     super.onClose();
   }
 
@@ -607,46 +576,54 @@ class JourneyController extends GetxController {
 
   Future<void> startShift() async {
     isStartingShift.value = true;
-
-    final isLocationReady = await _ensureLocationReadyForShiftStart();
-    if (!isLocationReady) {
-      isStartingShift.value = false;
-      return;
-    }
-
-    final result = await startShiftUseCase();
-    result.fold(
-      (failure) => _showActionError('iniciar o turno', failure.message),
-      (_) async {
-        _showSuccess('Turno iniciado com sucesso.');
-        await refreshJourneyData(silent: true);
-        await _loadTrackingStatus();
-      },
+    final started = await shiftLifecycleCoordinator.startShift(
+      onTrackingStatusResolved: (status) => trackingStatus.value = status,
+      askToOpenTrackingSettings: _showStartShiftLocationDialog,
+      openTrackingSettings: (
+        status, {
+        bool showFollowUpWarning = true,
+      }) => _openTrackingSettings(
+        status: status,
+        showFollowUpWarning: showFollowUpWarning,
+      ),
+      showSuccess: _showSuccess,
+      showError: _showError,
+      normalizeErrorMessage: _normalizeErrorMessage,
     );
+    if (started) {
+      await refreshJourneyData(silent: true);
+      await _loadTrackingStatus();
+    }
     isStartingShift.value = false;
   }
 
   Future<void> pauseShift() async {
-    await _togglePauseResumeShift();
+    isPauseShiftLoading.value = true;
+    final completed = await shiftLifecycleCoordinator.pauseOrResumeShift(
+      isPaused: isShiftPaused,
+      showSuccess: _showSuccess,
+      showError: _showError,
+      normalizeErrorMessage: _normalizeErrorMessage,
+    );
+    if (completed) {
+      await refreshJourneyData(silent: true, includeRides: false);
+      await _loadTrackingStatus();
+    }
+    isPauseShiftLoading.value = false;
   }
 
   Future<void> finishShift() async {
     isFinishingShift.value = true;
-    final result = await finishShiftUseCase();
-    result.fold((failure) => _showActionError('parar o turno', failure.message), (
-      finishResult,
-    ) async {
-      if (finishResult.synced) {
-        _showSuccess('Turno finalizado e sincronizado com sucesso.');
-      } else {
-        _showWarning(
-          'Turno salvo no aparelho',
-          'O turno foi finalizado localmente e sera sincronizado quando a internet voltar.',
-        );
-      }
+    final result = await shiftLifecycleCoordinator.finishShift(
+      showSuccess: _showSuccess,
+      showWarning: _showWarning,
+      showError: _showError,
+      normalizeErrorMessage: _normalizeErrorMessage,
+    );
+    if (result != null) {
       await refreshJourneyData(silent: true);
       await _loadTrackingStatus();
-    });
+    }
     isFinishingShift.value = false;
   }
 
@@ -692,7 +669,7 @@ class JourneyController extends GetxController {
       (shift) {
         activeShiftError.value = null;
         activeShift.value = shift;
-        accessibilityService.setJourneyActive(shift != null);
+        runtimeCoordinator.accessibilityService.setJourneyActive(shift != null);
         _syncActiveShiftPresentation(shift);
       },
     );
@@ -1002,104 +979,29 @@ class JourneyController extends GetxController {
     return total < 0 ? 0 : total;
   }
 
-  Future<void> _togglePauseResumeShift() async {
-    isPauseShiftLoading.value = true;
-    final isPaused = isShiftPaused;
-    final result = isPaused
-        ? await resumeShiftUseCase()
-        : await pauseShiftUseCase();
-
-    result.fold(
-      (failure) => _showActionError(
-        isPaused ? 'retomar o turno' : 'pausar o turno',
-        failure.message,
-      ),
-      (_) async {
-        _showSuccess(
-          isPaused
-              ? 'Turno retomado com sucesso.'
-              : 'Turno pausado com sucesso.',
-        );
-        await refreshJourneyData(silent: true, includeRides: false);
-        await _loadTrackingStatus();
-      },
-    );
-
-    isPauseShiftLoading.value = false;
-  }
-
   Future<void> _handleConnectionStatusChanged(bool isOnlineNow) async {
     if (!isOnlineNow) {
       return;
     }
 
-    final syncedCount = await _syncPendingShifts(showFeedback: true);
+    final syncedCount = await runtimeCoordinator.syncPendingShifts();
+    if (syncedCount > 0) {
+      _showSuccess(
+        syncedCount == 1
+            ? '1 turno pendente foi sincronizado.'
+            : '$syncedCount turnos pendentes foram sincronizados.',
+      );
+    }
     if (syncedCount > 0 || pendingShiftSyncCount.value > 0) {
       await refreshJourneyData(silent: true, showErrors: false);
     }
   }
 
   Future<void> _loadTrackingStatus() async {
-    final result = await getLocationTrackingStatusUseCase();
-    result.fold((_) {}, _handleTrackingStatusUpdated);
-  }
-
-  Future<bool> _ensureLocationReadyForShiftStart() async {
-    String? failureMessage;
-    LocationTrackingStatusEntity? status;
-
-    final result = await ensureReadyForShiftStartUseCase();
-    result.fold(
-      (failure) => failureMessage = failure.message,
-      (resolvedStatus) => status = resolvedStatus,
-    );
-
-    if (failureMessage != null) {
-      _showActionError('validar a localizacao', failureMessage!);
-      return false;
+    final status = await runtimeCoordinator.loadTrackingStatus();
+    if (status != null) {
+      _handleTrackingStatusUpdated(status);
     }
-
-    if (status == null) {
-      _showError(
-        'Erro',
-        'Nao foi possivel validar a localizacao para iniciar o turno.',
-      );
-      return false;
-    }
-
-    trackingStatus.value = status;
-    if (status!.canTrackFully) {
-      return true;
-    }
-
-    final shouldOpenSettings = await _showStartShiftLocationDialog(status!);
-    if (shouldOpenSettings == true) {
-      await _openTrackingSettings(status: status!, showFollowUpWarning: false);
-    }
-
-    return false;
-  }
-
-  Future<int> _syncPendingShifts({required bool showFeedback}) async {
-    final result = await syncPendingJourneyUseCase();
-    return result.fold(
-      (failure) {
-        debugPrint(
-          '[JourneyController] Falha ao sincronizar turnos pendentes: ${failure.message}',
-        );
-        return 0;
-      },
-      (syncedCount) {
-        if (syncedCount > 0 && showFeedback) {
-          _showSuccess(
-            syncedCount == 1
-                ? '1 turno pendente foi sincronizado.'
-                : '$syncedCount turnos pendentes foram sincronizados.',
-          );
-        }
-        return syncedCount;
-      },
-    );
   }
 
   void _handleLoadFailure({
@@ -1376,10 +1278,6 @@ class JourneyController extends GetxController {
     }
   }
 
-  void _showActionError(String action, String message) {
-    _showError('Nao foi possivel $action', _normalizeErrorMessage(message));
-  }
-
   Future<bool?> _showStartShiftLocationDialog(
     LocationTrackingStatusEntity status,
   ) {
@@ -1523,9 +1421,9 @@ class JourneyController extends GetxController {
   }
 
   Future<void> toggleTrafficLight() async {
-    if (accessibilityService.isServiceEnabled.value) {
+    if (runtimeCoordinator.accessibilityService.isServiceEnabled.value) {
       isTrafficLightActive.value = !isTrafficLightActive.value;
-      await accessibilityService.setTrafficLightActive(
+      await runtimeCoordinator.accessibilityService.setTrafficLightActive(
         isTrafficLightActive.value,
       );
       if (!isTrafficLightActive.value) {
@@ -1537,14 +1435,15 @@ class JourneyController extends GetxController {
     if (isTrafficLightActive.value) {
       isTrafficLightActive.value = false;
       isWaitingAccessibilityActivation.value = false;
-      await accessibilityService.setTrafficLightActive(false);
+      await runtimeCoordinator.accessibilityService.setTrafficLightActive(false);
       return;
     }
 
     final shouldOpenSettings = await _showAccessibilityDialog();
     if (shouldOpenSettings == true) {
       isWaitingAccessibilityActivation.value = true;
-      await accessibilityService.requestAccessibilityPermission();
+      await runtimeCoordinator.accessibilityService
+          .requestAccessibilityPermission();
     }
   }
 
@@ -1552,7 +1451,7 @@ class JourneyController extends GetxController {
     if (isEnabled && isWaitingAccessibilityActivation.value) {
       isTrafficLightActive.value = true;
       isWaitingAccessibilityActivation.value = false;
-      accessibilityService.setTrafficLightActive(true);
+      runtimeCoordinator.accessibilityService.setTrafficLightActive(true);
       AppSnackbar.show(
         'Semaforo ativado',
         'A acessibilidade foi habilitada e o semaforo ja esta pronto para uso.',
@@ -1561,7 +1460,8 @@ class JourneyController extends GetxController {
       return;
     }
 
-    if (isEnabled && accessibilityService.persistedTrafficLightActive) {
+    if (isEnabled &&
+        runtimeCoordinator.accessibilityService.persistedTrafficLightActive) {
       isTrafficLightActive.value = true;
     }
   }
@@ -1592,53 +1492,31 @@ class JourneyController extends GetxController {
     toggleTrafficLight();
   }
 
-  Future<void> _loadAssistantStatus() async {
-    isAssistantActive.value = await appBubbleService.isBubbleRunning();
-  }
-
   Future<void> toggleAssistant() async {
     if (isAssistantBusy.value) return;
-
-    isAssistantBusy.value = true;
-    try {
-      if (isAssistantActive.value) {
-        await appBubbleService.stopBubble();
-        isAssistantActive.value = false;
-        AppSnackbar.show(
-          'Assistente desativado',
-          'O balão da Direção Financeira foi removido da tela.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        return;
-      }
-
-      final hasPermission = await appBubbleService.isOverlayPermissionGranted();
-      if (!hasPermission) {
-        await appBubbleService.openOverlayPermissionSettings();
-        AppSnackbar.show(
-          'Permissão necessária',
-          'Libere a permissão de sobreposição para ativar o Assistente.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        return;
-      }
-
-      await appBubbleService.startBubble();
-      isAssistantActive.value = true;
-      AppSnackbar.show(
-        'Assistente ativado',
-        'A logo já está visível sobre outros apps.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } catch (_) {
-      AppSnackbar.show(
-        'Não foi possível ativar',
-        'Falhou ao iniciar o Assistente neste momento.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      isAssistantBusy.value = false;
-    }
+    await runtimeCoordinator.toggleAssistant(
+      isAssistantActive: isAssistantActive.value,
+      onAssistantStateChanged: (isActive) => isAssistantActive.value = isActive,
+      onBusyStateChanged: (isBusy) => isAssistantBusy.value = isBusy,
+      showSuccess: (title, message) =>
+          _showSnackbar(
+            title: title,
+            message: message,
+            backgroundColor: const Color(0xFF03A696),
+          ),
+      showWarning: (title, message) =>
+          _showSnackbar(
+            title: title,
+            message: message,
+            backgroundColor: Colors.orangeAccent,
+          ),
+      showError: (title, message) =>
+          _showSnackbar(
+            title: title,
+            message: message,
+            backgroundColor: Colors.redAccent,
+          ),
+    );
   }
 }
 
