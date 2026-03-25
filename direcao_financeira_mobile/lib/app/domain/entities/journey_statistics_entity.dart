@@ -22,6 +22,7 @@ class JourneyStatisticsEntity {
   final String averageTime;
   final String idleTime;
   final String drivenKm;
+  final double totalDrivenKmValue;
   final String averageKmh;
   final RideStatisticsEntity rideStats;
 
@@ -31,6 +32,7 @@ class JourneyStatisticsEntity {
     required this.averageTime,
     required this.idleTime,
     required this.drivenKm,
+    required this.totalDrivenKmValue,
     required this.averageKmh,
     required this.rideStats,
   });

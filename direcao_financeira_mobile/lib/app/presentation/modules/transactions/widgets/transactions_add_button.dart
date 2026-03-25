@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../widgets/scale_button.dart';
 
 class TransactionsAddButton extends StatelessWidget {
-  const TransactionsAddButton({
-    super.key,
-    required this.onTap,
-  });
+  const TransactionsAddButton({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
     final horizontalPadding = Responsive.hp(context, 6.8).clamp(22.0, 26.0);
     final verticalPadding = Responsive.vp(context, 2.5).clamp(16.0, 20.0);
     final borderRadius = Responsive.hp(context, 7.4).clamp(24.0, 28.0);
@@ -34,14 +32,11 @@ class TransactionsAddButton extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.violet,
-              AppColors.royalBlue,
-            ],
+            colors: [colorScheme.primary, colorScheme.secondary],
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.violet.withValues(alpha: 0.3),
+              color: colorScheme.primary.withValues(alpha: 0.3),
               blurRadius: shadowBlur,
               offset: const Offset(0, 14),
             ),
@@ -52,14 +47,14 @@ class TransactionsAddButton extends StatelessWidget {
           children: [
             Icon(
               Icons.add_rounded,
-              color: Colors.black87,
+              color: colorScheme.onPrimary,
               size: iconSize,
             ),
             SizedBox(width: contentSpacing),
             Text(
               'Nova',
               style: TextStyle(
-                color: Colors.black87,
+                color: colorScheme.onPrimary,
                 fontSize: textSize,
                 fontWeight: FontWeight.w700,
               ),

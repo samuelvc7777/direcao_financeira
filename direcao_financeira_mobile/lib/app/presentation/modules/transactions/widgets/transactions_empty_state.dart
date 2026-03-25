@@ -16,12 +16,13 @@ class TransactionsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
     final title = hasTransactionsLoaded
-        ? 'Nenhuma transação nesse período'
-        : 'Nenhuma transação cadastrada';
+        ? 'Nenhuma transaÃ§Ã£o nesse perÃ­odo'
+        : 'Nenhuma transaÃ§Ã£o cadastrada';
     final subtitle = hasTransactionsLoaded
-        ? 'Não encontramos movimentações para $monthLabel. Troque o mês ou crie uma nova transação.'
-        : 'Assim que você registrar entradas ou saídas, elas aparecerão aqui com o resumo do período.';
+        ? 'NÃ£o encontramos movimentaÃ§Ãµes para $monthLabel. Troque o mÃªs ou crie uma nova transaÃ§Ã£o.'
+        : 'Assim que vocÃª registrar entradas ou saÃ­das, elas aparecerÃ£o aqui com o resumo do perÃ­odo.';
     final containerPadding = Responsive.hp(context, 6.4).clamp(20.0, 24.0);
     final borderRadius = Responsive.hp(context, 7.4).clamp(24.0, 28.0);
     final iconBoxSize = Responsive.hp(context, 20).clamp(68.0, 76.0);
@@ -36,11 +37,9 @@ class TransactionsEmptyState extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         children: [
@@ -48,7 +47,7 @@ class TransactionsEmptyState extends StatelessWidget {
             width: iconBoxSize,
             height: iconBoxSize,
             decoration: BoxDecoration(
-              color: AppColors.violet.withValues(alpha: 0.12),
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(iconBoxRadius),
             ),
             child: Icon(
@@ -62,7 +61,7 @@ class TransactionsEmptyState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface,
+              color: colorScheme.onSurface,
               fontSize: titleSize,
               fontWeight: FontWeight.w800,
             ),
@@ -72,7 +71,7 @@ class TransactionsEmptyState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.58),
+              color: colorScheme.onSurface.withValues(alpha: 0.58),
               fontSize: subtitleSize,
               height: 1.5,
             ),

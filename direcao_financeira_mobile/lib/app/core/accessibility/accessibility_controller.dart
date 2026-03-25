@@ -88,6 +88,19 @@ class AccessibilityController extends GetxController
         'indicators': _normalizeIndicators(
           settingsMap['indicators'] ?? storage.read('tl_indicators'),
         ),
+        'monitored_apps': _normalizeMonitoredApps(settingsMap['monitoredApps']),
+        'gain_per_km_bad': (settingsMap['gainPerKmBad'] ?? 1.57).toDouble(),
+        'gain_per_km_good': (settingsMap['gainPerKmGood'] ?? 2.60).toDouble(),
+        'gain_per_hour_bad': (settingsMap['gainPerHourBad'] ?? 19.67)
+            .toDouble(),
+        'gain_per_hour_good': (settingsMap['gainPerHourGood'] ?? 32.50)
+            .toDouble(),
+        'passenger_rating_bad': (settingsMap['passengerRatingBad'] ?? 4.6)
+            .toDouble(),
+        'passenger_rating_good': (settingsMap['passengerRatingGood'] ?? 5.0)
+            .toDouble(),
+        'passenger_rating_customized':
+            settingsMap['passengerRatingCustomized'] ?? false,
       };
       await _platform.invokeMethod('updateSettings', settings);
     } catch (e) {
@@ -164,6 +177,16 @@ class AccessibilityController extends GetxController
     }
 
     return {'R\$/Km': true, 'R\$/Hora': true, 'Lucro/H': true, 'Nota': true};
+  }
+
+  Map<String, bool> _normalizeMonitoredApps(dynamic rawMonitoredApps) {
+    if (rawMonitoredApps is Map) {
+      return rawMonitoredApps.map(
+        (key, value) => MapEntry(key.toString(), value == true),
+      );
+    }
+
+    return {'Uber': true, '99': true, 'inDrive': true, 'MoveSj': false};
   }
 
   Future<void> _handleRaceDetected(dynamic arguments) async {

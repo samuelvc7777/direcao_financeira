@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -86,7 +85,7 @@ class CustomTextField extends StatelessWidget {
             ),
             prefixIcon: Icon(
               icon,
-              color: AppColors.royalBlue.withValues(alpha: 0.7),
+              color: colorScheme.primary.withValues(alpha: 0.7),
               size: iconSize,
             ),
             prefixIconConstraints: iconConstraints,
@@ -109,18 +108,15 @@ class CustomTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: AppColors.royalBlue,
-                width: 2,
-              ),
+              borderSide: BorderSide(color: colorScheme.primary, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+              borderSide: BorderSide(color: colorScheme.error, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+              borderSide: BorderSide(color: colorScheme.error, width: 2),
             ),
           ),
         ),

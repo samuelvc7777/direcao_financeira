@@ -17,6 +17,8 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(() {
       if (controller.isLoading.value) {
         return const AppLoadingScreen(
@@ -67,21 +69,19 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.midnight,
-                    AppColors.midnight.withValues(alpha: 0.8),
+                    colorScheme.surface,
+                    colorScheme.surfaceContainerHighest,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: colorScheme.shadow.withValues(alpha: 0.15),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
                 ],
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +91,7 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withValues(alpha: 0.2),
+                          color: AppColors.royalBlue.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -105,7 +105,7 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
                         child: Text(
                           shift?.date ?? 'Detalhes do Turno',
                           style: context.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
+                            color: colorScheme.onSurface,
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.5,
                           ),
@@ -132,7 +132,8 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
                       ),
                       _MetricChip(
                         icon: Icons.schedule_rounded,
-                        label: '${_formatTime(route.startedAt)} - ${_formatTime(route.endedAt)}',
+                        label:
+                            '${_formatTime(route.startedAt)} - ${_formatTime(route.endedAt)}',
                         subtitle: 'Tempo total',
                         color: AppColors.amber,
                       ),
@@ -141,9 +142,9 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // ── Área do Mapa ──────────────────────────────────────
             Container(
               height: 420,
@@ -152,13 +153,13 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: colorScheme.shadow.withValues(alpha: 0.2),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
                 ],
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: colorScheme.outlineVariant,
                   width: 1.5,
                 ),
               ),
@@ -189,10 +190,7 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
       if (point.longitude > maxLng) maxLng = point.longitude;
     }
 
-    return LatLng(
-      (minLat + maxLat) / 2,
-      (minLng + maxLng) / 2,
-    );
+    return LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
   }
 
   String _formatTime(DateTime value) {
@@ -229,7 +227,7 @@ class _MapCanvasState extends State<_MapCanvas> {
     _displayPoints = widget.rawPoints.toList();
     _fetchRoadSnappedRoute();
   }
-  
+
   // Utiliza a OSRM API grátis para traçar a linha realística (curvas, formato da rua)
   Future<void> _fetchRoadSnappedRoute() async {
     if (widget.rawPoints.length < 2) {
@@ -242,7 +240,7 @@ class _MapCanvasState extends State<_MapCanvas> {
       final sampled = <LatLng>[];
       int step = (widget.rawPoints.length / 25).ceil();
       if (step < 1) step = 1;
-      
+
       for (int i = 0; i < widget.rawPoints.length; i += step) {
         sampled.add(widget.rawPoints[i]);
       }
@@ -250,21 +248,25 @@ class _MapCanvasState extends State<_MapCanvas> {
         sampled.add(widget.rawPoints.last);
       }
 
-      final coords = sampled.map((p) => '${p.longitude},${p.latitude}').join(';');
-      final url = Uri.parse('https://router.project-osrm.org/route/v1/driving/$coords?geometries=geojson&overview=full');
+      final coords = sampled
+          .map((p) => '${p.longitude},${p.latitude}')
+          .join(';');
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/$coords?geometries=geojson&overview=full',
+      );
 
       final request = await HttpClient().getUrl(url);
       final response = await request.close();
-      
+
       if (response.statusCode == 200) {
         final responseBody = await response.transform(utf8.decoder).join();
         final data = json.decode(responseBody);
-        
+
         final routes = data['routes'] as List?;
         if (routes != null && routes.isNotEmpty) {
           final geometry = routes.first['geometry'];
           final coordinates = geometry['coordinates'] as List;
-          
+
           final snappedPoints = coordinates
               .map((c) => LatLng(c[1] as double, c[0] as double))
               .toList();
@@ -281,7 +283,7 @@ class _MapCanvasState extends State<_MapCanvas> {
     } catch (_) {
       // Em caso de falha de conexão (offline), cai no catch e usa os pontos retos.
     }
-    
+
     // Fallback: usar pontos em linha reta mesmo
     if (mounted) {
       setState(() => _isLoadingRoute = false);
@@ -293,10 +295,7 @@ class _MapCanvasState extends State<_MapCanvas> {
     return Stack(
       children: [
         FlutterMap(
-          options: MapOptions(
-            initialCenter: widget.center, 
-            initialZoom: 14.5,
-          ),
+          options: MapOptions(initialCenter: widget.center, initialZoom: 14.5),
           children: [
             TileLayer(
               urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
@@ -309,7 +308,7 @@ class _MapCanvasState extends State<_MapCanvas> {
                   strokeWidth: 6,
                   color: AppColors.royalBlue,
                   borderStrokeWidth: 2,
-                  borderColor: AppColors.midnight.withValues(alpha: 0.3),
+                  borderColor: Theme.of(context).colorScheme.outlineVariant,
                   strokeJoin: StrokeJoin.round,
                   strokeCap: StrokeCap.round,
                 ),
@@ -339,7 +338,7 @@ class _MapCanvasState extends State<_MapCanvas> {
             ),
           ],
         ),
-        
+
         // Indicador de "Desenhando rua" (opcional)
         if (_isLoadingRoute && !widget.isFullScreen)
           Positioned(
@@ -350,20 +349,25 @@ class _MapCanvasState extends State<_MapCanvas> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.midnight.withValues(alpha: 0.9),
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white24),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const SizedBox(
-                        width: 14, 
-                        height: 14, 
+                        width: 14,
+                        height: 14,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2, 
+                          strokeWidth: 2,
                           color: AppColors.royalBlue,
                         ),
                       ),
@@ -371,7 +375,7 @@ class _MapCanvasState extends State<_MapCanvas> {
                       Text(
                         'Ajustando ao traçado...',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -382,10 +386,12 @@ class _MapCanvasState extends State<_MapCanvas> {
               ],
             ),
           ),
-        
+
         // Botões de interface (FullScreen ou Close)
         Positioned(
-          top: widget.isFullScreen ? MediaQuery.of(context).padding.top + 16 : 16,
+          top: widget.isFullScreen
+              ? MediaQuery.of(context).padding.top + 16
+              : 16,
           right: widget.isFullScreen ? null : 16,
           left: widget.isFullScreen ? 16 : null,
           child: Material(
@@ -409,7 +415,9 @@ class _MapCanvasState extends State<_MapCanvas> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Icon(
-                  widget.isFullScreen ? Icons.close_rounded : Icons.fullscreen_rounded,
+                  widget.isFullScreen
+                      ? Icons.close_rounded
+                      : Icons.fullscreen_rounded,
                   color: Colors.white,
                   size: 26,
                 ),
@@ -428,15 +436,12 @@ class _FullScreenMapPage extends StatelessWidget {
   final List<LatLng> rawPoints;
   final LatLng center;
 
-  const _FullScreenMapPage({
-    required this.rawPoints,
-    required this.center,
-  });
+  const _FullScreenMapPage({required this.rawPoints, required this.center});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       body: _MapCanvas(
         rawPoints: rawPoints,
         center: center,
@@ -466,9 +471,9 @@ class _MetricChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.02)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -488,8 +493,8 @@ class _MetricChip extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -498,7 +503,7 @@ class _MetricChip extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                   fontSize: 11,
                 ),
@@ -512,10 +517,7 @@ class _MetricChip extends StatelessWidget {
 }
 
 class _ModernMarker extends StatelessWidget {
-  const _ModernMarker({
-    required this.color,
-    required this.icon,
-  });
+  const _ModernMarker({required this.color, required this.icon});
 
   final Color color;
   final IconData icon;
@@ -543,10 +545,7 @@ class _ModernMarker extends StatelessWidget {
                 offset: const Offset(0, 2),
               ),
             ],
-            border: Border.all(
-              color: Colors.white,
-              width: 2.5,
-            ),
+            border: Border.all(color: Colors.white, width: 2.5),
           ),
           child: Icon(icon, color: Colors.white, size: 20),
         ),
@@ -588,17 +587,21 @@ class _ShiftRouteState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.midnight.withValues(alpha: 0.5),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Colors.white.withValues(alpha: 0.3), size: 48),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 48,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
@@ -606,11 +609,14 @@ class _ShiftRouteState extends StatelessWidget {
             if (actionLabel != null && onPressed != null) ...[
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: onPressed, 
+                onPressed: onPressed,
                 icon: const Icon(Icons.refresh_rounded, size: 20),
                 label: Text(actionLabel!),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),

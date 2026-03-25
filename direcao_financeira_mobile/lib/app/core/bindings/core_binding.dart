@@ -2,6 +2,9 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../app_bubble/app_bubble_controller.dart';
+import '../app_bubble/app_bubble_action_controller.dart';
+import '../app_bubble/app_bubble_service.dart';
 import '../accessibility/accessibility_service.dart';
 import '../../data/local/get_storage_session_store.dart';
 import '../../data/local/get_storage_user_cache.dart';
@@ -32,6 +35,15 @@ class CoreBinding extends Bindings {
     if (!Get.isRegistered<AppPreferences>()) {
       Get.put<AppPreferences>(
         GetStorageAppPreferences(storage: storage),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<AppBubbleService>()) {
+      Get.put<AppBubbleService>(NativeAppBubbleController(), permanent: true);
+    }
+    if (!Get.isRegistered<AppBubbleActionController>()) {
+      Get.put<AppBubbleActionController>(
+        AppBubbleActionController(),
         permanent: true,
       );
     }

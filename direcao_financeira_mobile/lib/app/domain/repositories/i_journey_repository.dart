@@ -4,6 +4,7 @@ import '../entities/active_shift_entity.dart';
 import '../entities/finish_shift_result_entity.dart';
 import '../entities/journey_statistics_entity.dart';
 import '../entities/location_tracking_status_entity.dart';
+import '../entities/paged_result_entity.dart';
 import '../entities/shift_route_entity.dart';
 import '../entities/shift_entity.dart';
 
@@ -14,10 +15,12 @@ abstract class IJourneyRepository {
     String? date,
     String? endDate,
   });
-  Future<Either<Failure, List<ShiftEntity>>> getShiftHistory({
+  Future<Either<Failure, PagedResultEntity<ShiftEntity>>> getShiftHistory({
     String filter = 'day',
     String? date,
     String? endDate,
+    int offset = 0,
+    int limit = 20,
   });
   Future<Either<Failure, void>> startShift();
   Future<Either<Failure, void>> pauseShift();

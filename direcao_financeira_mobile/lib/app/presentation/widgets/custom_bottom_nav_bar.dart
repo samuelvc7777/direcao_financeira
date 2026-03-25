@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 
-import '../../core/theme/app_colors.dart';
-
 class CustomBottomNavBar extends StatelessWidget {
   const CustomBottomNavBar({
     super.key,
@@ -18,15 +16,17 @@ class CustomBottomNavBar extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.midnight : AppColors.surface;
+    final backgroundColor = colorScheme.surface;
     final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : AppColors.textPrimary.withValues(alpha: 0.08);
+        ? colorScheme.onSurface.withValues(alpha: 0.08)
+        : colorScheme.onSurface.withValues(alpha: 0.08);
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.22)
         : Colors.black.withValues(alpha: 0.06);
-    const activeNavColor = Colors.black;
-    const inactiveNavColor = Colors.white;
+    final activeNavColor = colorScheme.onPrimary;
+    final inactiveNavColor = colorScheme.onSurface.withValues(
+      alpha: isDark ? 0.74 : 0.68,
+    );
 
     return Container(
       decoration: BoxDecoration(

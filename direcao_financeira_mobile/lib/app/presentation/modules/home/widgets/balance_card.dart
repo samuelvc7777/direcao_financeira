@@ -19,6 +19,16 @@ class BalanceCard extends GetView<HomeController> {
       final entradas = controller.entradas;
       final saidas = controller.saidas;
       final isPositivo = controller.isSaldoPositivo;
+      final colorScheme = context.theme.colorScheme;
+      final isDark = context.theme.brightness == Brightness.dark;
+      final primaryTextColor = isDark ? Colors.white : colorScheme.onSurface;
+      final secondaryTextColor = isDark
+          ? Colors.white.withValues(alpha: 0.82)
+          : colorScheme.onSurface.withValues(alpha: 0.72);
+      final subtleTextColor = isDark
+          ? Colors.white.withValues(alpha: 0.62)
+          : colorScheme.onSurface.withValues(alpha: 0.58);
+      final dividerColor = colorScheme.onSurface.withValues(alpha: 0.10);
 
       return Container(
         margin: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1)),
@@ -31,14 +41,26 @@ class BalanceCard extends GetView<HomeController> {
             return Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(Responsive.sp(context, 24)),
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1F3654),
-                    Color(0xFF162A45),
-                    Color(0xFF122238),
-                  ],
+                  colors: isDark
+                      ? const [
+                          Color(0xFF1F3654),
+                          Color(0xFF162A45),
+                          Color(0xFF122238),
+                        ]
+                      : [
+                          Color.alphaBlend(
+                            AppColors.royalBlue.withValues(alpha: 0.18),
+                            colorScheme.surface,
+                          ),
+                          Color.alphaBlend(
+                            AppColors.electricCyan.withValues(alpha: 0.10),
+                            colorScheme.surface,
+                          ),
+                          colorScheme.surface,
+                        ],
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -58,7 +80,7 @@ class BalanceCard extends GetView<HomeController> {
                       height: Responsive.sp(context, 126),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: primaryTextColor.withValues(alpha: isDark ? 0.04 : 0.06),
                       ),
                     ),
                   ),
@@ -70,7 +92,7 @@ class BalanceCard extends GetView<HomeController> {
                       height: Responsive.sp(context, 12),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: primaryTextColor.withValues(alpha: isDark ? 0.04 : 0.08),
                       ),
                     ),
                   ),
@@ -85,17 +107,17 @@ class BalanceCard extends GetView<HomeController> {
                               width: Responsive.sp(context, 30),
                               height: Responsive.sp(context, 30),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.09),
+                                color: primaryTextColor.withValues(alpha: isDark ? 0.09 : 0.08),
                                 borderRadius: BorderRadius.circular(
                                   Responsive.sp(context, 10),
                                 ),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.08),
+                                  color: primaryTextColor.withValues(alpha: isDark ? 0.08 : 0.10),
                                 ),
                               ),
                               child: Icon(
                                 Icons.account_balance_wallet_rounded,
-                                color: Colors.white,
+                                color: primaryTextColor,
                                 size: Responsive.sp(context, 16),
                               ),
                             ),
@@ -104,7 +126,7 @@ class BalanceCard extends GetView<HomeController> {
                               child: Text(
                                 'Saldo Atual',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.82),
+                                  color: secondaryTextColor,
                                   fontSize: Responsive.sp(context, 14),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -119,14 +141,14 @@ class BalanceCard extends GetView<HomeController> {
                                   width: Responsive.sp(context, 32),
                                   height: Responsive.sp(context, 32),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.10),
+                                    color: primaryTextColor.withValues(alpha: isDark ? 0.10 : 0.08),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     isVisible
                                         ? Icons.visibility_rounded
                                         : Icons.visibility_off_rounded,
-                                    color: Colors.white.withValues(alpha: 0.82),
+                                    color: secondaryTextColor,
                                     size: Responsive.sp(context, 16),
                                   ),
                                 ),
@@ -143,7 +165,7 @@ class BalanceCard extends GetView<HomeController> {
                                 ? currencyFormat.format(saldo)
                                 : 'R\$ ••••••',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: primaryTextColor,
                               fontSize: amountFontSize,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.6,
@@ -197,7 +219,7 @@ class BalanceCard extends GetView<HomeController> {
                         SizedBox(height: Responsive.vp(context, 2.1)),
                         Container(
                           height: 1,
-                          color: Colors.white.withValues(alpha: 0.10),
+                          color: dividerColor,
                         ),
                         SizedBox(height: Responsive.vp(context, 1.8)),
                         Row(
@@ -210,6 +232,8 @@ class BalanceCard extends GetView<HomeController> {
                                 accent: AppColors.emerald,
                                 isVisible: isVisible,
                                 currencyFormat: currencyFormat,
+                                primaryTextColor: primaryTextColor,
+                                secondaryTextColor: subtleTextColor,
                               ),
                             ),
                             Container(
@@ -218,7 +242,7 @@ class BalanceCard extends GetView<HomeController> {
                               margin: EdgeInsets.symmetric(
                                 horizontal: Responsive.hp(context, 4),
                               ),
-                              color: Colors.white.withValues(alpha: 0.10),
+                              color: dividerColor,
                             ),
                             Expanded(
                               child: _InfoItem(
@@ -228,6 +252,8 @@ class BalanceCard extends GetView<HomeController> {
                                 accent: AppColors.rose,
                                 isVisible: isVisible,
                                 currencyFormat: currencyFormat,
+                                primaryTextColor: primaryTextColor,
+                                secondaryTextColor: subtleTextColor,
                               ),
                             ),
                           ],
@@ -253,6 +279,8 @@ class _InfoItem extends StatelessWidget {
     required this.accent,
     required this.isVisible,
     required this.currencyFormat,
+    required this.primaryTextColor,
+    required this.secondaryTextColor,
   });
 
   final IconData icon;
@@ -261,6 +289,8 @@ class _InfoItem extends StatelessWidget {
   final Color accent;
   final bool isVisible;
   final NumberFormat currencyFormat;
+  final Color primaryTextColor;
+  final Color secondaryTextColor;
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +314,7 @@ class _InfoItem extends StatelessWidget {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.62),
+                  color: secondaryTextColor,
                   fontSize: Responsive.sp(context, 11.5),
                   fontWeight: FontWeight.w500,
                 ),
@@ -296,7 +326,7 @@ class _InfoItem extends StatelessWidget {
                 child: Text(
                   isVisible ? currencyFormat.format(value) : 'R\$ ••••',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: primaryTextColor,
                     fontSize: Responsive.sp(context, 16),
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,

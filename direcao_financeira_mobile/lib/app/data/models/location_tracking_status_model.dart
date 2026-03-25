@@ -9,6 +9,7 @@ class LocationTrackingStatusModel extends LocationTrackingStatusEntity {
     required super.isPreciseLocation,
     required super.isPaused,
     required super.totalDistanceMeters,
+    required super.idleTimeSeconds,
     super.issueMessage,
   });
 
@@ -24,6 +25,7 @@ class LocationTrackingStatusModel extends LocationTrackingStatusEntity {
       isPaused: json['isPaused'] == true,
       totalDistanceMeters:
           (json['totalDistanceMeters'] as num?)?.toDouble() ?? 0,
+      idleTimeSeconds: json['idleTimeSeconds'] as int? ?? 0,
       issueMessage: json['issueMessage'] as String?,
     );
   }

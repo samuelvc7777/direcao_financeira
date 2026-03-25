@@ -289,31 +289,31 @@ class TransactionsController extends GetxController {
           );
         }
 
-        transactions.insert(0, transaction);
-        transactions.sort(
-          (a, b) => b.transactionDate.compareTo(a.transactionDate),
-        );
         selectedMonth.value = DateTime(
           transaction.transactionDate.year,
           transaction.transactionDate.month,
         );
-
         dashboardRefreshNotifier.requestRefresh();
-
-        Get.back();
-
-        AppSnackbar.show(
-          'Sucesso',
-          'Transacao registrada com sucesso.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.success.withValues(alpha: 0.12),
-          colorText: Get.theme.colorScheme.onSurface,
-          margin: const EdgeInsets.all(16),
-        );
-
-        return true;
+        return _finalizeCreateTransaction();
       },
     );
+  }
+
+  Future<bool> _finalizeCreateTransaction() async {
+    await loadData(silent: true);
+
+    Get.back();
+
+    AppSnackbar.show(
+      'Sucesso',
+      'Transacao registrada com sucesso.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: AppColors.success.withValues(alpha: 0.12),
+      colorText: Get.theme.colorScheme.onSurface,
+      margin: const EdgeInsets.all(16),
+    );
+
+    return true;
   }
 
   Future<void> updateTransaction(

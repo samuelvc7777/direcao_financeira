@@ -28,6 +28,46 @@ class NinetyNineParser {
         return hasMainPrice && (hasRouteStats || hasOfferMarkers)
     }
 
+    fun buildScreenFingerprint(rootNode: AccessibilityNodeInfo): String {
+        val lines = collectVisibleTexts(rootNode)
+        val passengerName = extractPassengerName(lines)
+        val addresses = extractAddresses(lines, passengerName)
+        val priceText = findNodeByRegex(rootNode, priceRegex)?.text?.toString() ?: ""
+        val statsMatches = findAllNodesByRegex(rootNode, statsRegex)
+        var totalKm = 0.0
+        var totalMin = 0
+
+        statsMatches.forEach { node ->
+            val text = node.text?.toString().orEmpty()
+            val minValue =
+                Regex("(\\d+)\\s*min", RegexOption.IGNORE_CASE)
+                    .find(text)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toIntOrNull() ?: 0
+            val kmValue =
+                Regex("\\((\\d+(?:[.,]\\d+)?)\\s*km", RegexOption.IGNORE_CASE)
+                    .find(text)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.replace(",", ".")
+                    ?.toDoubleOrNull() ?: 0.0
+
+            totalKm += kmValue
+            totalMin += minValue
+        }
+
+        return listOf(
+            "99",
+            normalizeFingerprintValue(priceText),
+            normalizeFingerprintValue(totalKm.toString()),
+            normalizeFingerprintValue(totalMin.toString()),
+            normalizeFingerprintValue(passengerName),
+            normalizeFingerprintValue(addresses.first),
+            normalizeFingerprintValue(addresses.second),
+        ).joinToString("|")
+    }
+
     fun buildDebugSnapshot(rootNode: AccessibilityNodeInfo): Map<String, Any> {
         val priceNode = findNodeByRegex(rootNode, priceRegex)
         val statsMatches = findAllNodesByRegex(rootNode, statsRegex)
@@ -322,6 +362,10 @@ class NinetyNineParser {
                 .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
 
         return normalized.lowercase()
+    }
+
+    private fun normalizeFingerprintValue(value: String?): String {
+        return normalizedText(value).replace(" ", "")
     }
 
     private fun collectNonEmptyTexts(

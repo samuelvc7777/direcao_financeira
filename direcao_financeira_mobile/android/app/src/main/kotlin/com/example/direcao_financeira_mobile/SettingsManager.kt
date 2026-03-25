@@ -17,6 +17,14 @@ object SettingsManager {
     private const val KEY_INDICATOR_R_HORA = "indicator_r_hora"
     private const val KEY_INDICATOR_LUCRO_H = "indicator_lucro_h"
     private const val KEY_INDICATOR_NOTA = "indicator_nota"
+    private const val KEY_MONITORED_APPS = "monitored_apps"
+    private const val KEY_GAIN_PER_KM_BAD = "gain_per_km_bad"
+    private const val KEY_GAIN_PER_KM_GOOD = "gain_per_km_good"
+    private const val KEY_GAIN_PER_HOUR_BAD = "gain_per_hour_bad"
+    private const val KEY_GAIN_PER_HOUR_GOOD = "gain_per_hour_good"
+    private const val KEY_PASSENGER_RATING_BAD = "passenger_rating_bad"
+    private const val KEY_PASSENGER_RATING_GOOD = "passenger_rating_good"
+    private const val KEY_PASSENGER_RATING_CUSTOMIZED = "passenger_rating_customized"
     private const val KEY_TRAFFIC_LIGHT_ACTIVE = "traffic_light_active"
     private const val KEY_JOURNEY_ACTIVE = "journey_active"
 
@@ -35,6 +43,19 @@ object SettingsManager {
         "Lucro/H" to true,
         "Nota" to true
     )
+    var monitoredApps: Map<String, Boolean> = mapOf(
+        "Uber" to true,
+        "99" to true,
+        "inDrive" to true,
+        "MoveSj" to false,
+    )
+    var gainPerKmBad: Double = 1.57
+    var gainPerKmGood: Double = 2.60
+    var gainPerHourBad: Double = 19.67
+    var gainPerHourGood: Double = 32.50
+    var passengerRatingBad: Double = 4.6
+    var passengerRatingGood: Double = 5.0
+    var passengerRatingCustomized: Boolean = false
     var trafficLightActive: Boolean = false
     var journeyActive: Boolean = false
 
@@ -56,6 +77,25 @@ object SettingsManager {
             "Lucro/H" to prefs.getBoolean(KEY_INDICATOR_LUCRO_H, true),
             "Nota" to prefs.getBoolean(KEY_INDICATOR_NOTA, true),
         )
+        val enabledMonitoredApps = prefs.getStringSet(KEY_MONITORED_APPS, null)
+        if (enabledMonitoredApps != null) {
+            monitoredApps =
+                monitoredApps.mapValues { entry ->
+                    enabledMonitoredApps.contains(entry.key)
+                }
+        }
+        gainPerKmBad = prefs.getFloat(KEY_GAIN_PER_KM_BAD, gainPerKmBad.toFloat()).toDouble()
+        gainPerKmGood = prefs.getFloat(KEY_GAIN_PER_KM_GOOD, gainPerKmGood.toFloat()).toDouble()
+        gainPerHourBad =
+            prefs.getFloat(KEY_GAIN_PER_HOUR_BAD, gainPerHourBad.toFloat()).toDouble()
+        gainPerHourGood =
+            prefs.getFloat(KEY_GAIN_PER_HOUR_GOOD, gainPerHourGood.toFloat()).toDouble()
+        passengerRatingBad =
+            prefs.getFloat(KEY_PASSENGER_RATING_BAD, passengerRatingBad.toFloat()).toDouble()
+        passengerRatingGood =
+            prefs.getFloat(KEY_PASSENGER_RATING_GOOD, passengerRatingGood.toFloat()).toDouble()
+        passengerRatingCustomized =
+            prefs.getBoolean(KEY_PASSENGER_RATING_CUSTOMIZED, passengerRatingCustomized)
         trafficLightActive = prefs.getBoolean(KEY_TRAFFIC_LIGHT_ACTIVE, false)
         journeyActive = prefs.getBoolean(KEY_JOURNEY_ACTIVE, false)
     }
@@ -75,10 +115,34 @@ object SettingsManager {
         duration = (data["duration"] as? Double)?.toInt() ?: 10
         colorBlind = (data["color_blind"] as? Boolean) ?: false
         
-        val rawIndicators = data["indicators"] as? Map<String, Boolean>
+        val rawIndicators = (data["indicators"] as? Map<*, *>)
         if (rawIndicators != null) {
-            indicators = rawIndicators
+            indicators =
+                rawIndicators.entries.associate { entry ->
+                    entry.key.toString() to (entry.value == true)
+                }
         }
+
+        val rawMonitoredApps =
+            (data["monitored_apps"] as? Map<*, *>) ?: (data["monitoredApps"] as? Map<*, *>)
+        if (rawMonitoredApps != null) {
+            monitoredApps =
+                monitoredApps.keys.associateWith { appName ->
+                    rawMonitoredApps[appName] == true
+                }
+        }
+        gainPerKmBad = (data["gain_per_km_bad"] as? Number)?.toDouble() ?: gainPerKmBad
+        gainPerKmGood = (data["gain_per_km_good"] as? Number)?.toDouble() ?: gainPerKmGood
+        gainPerHourBad =
+            (data["gain_per_hour_bad"] as? Number)?.toDouble() ?: gainPerHourBad
+        gainPerHourGood =
+            (data["gain_per_hour_good"] as? Number)?.toDouble() ?: gainPerHourGood
+        passengerRatingBad =
+            (data["passenger_rating_bad"] as? Number)?.toDouble() ?: passengerRatingBad
+        passengerRatingGood =
+            (data["passenger_rating_good"] as? Number)?.toDouble() ?: passengerRatingGood
+        passengerRatingCustomized =
+            (data["passenger_rating_customized"] as? Boolean) ?: passengerRatingCustomized
 
         persist(context)
     }
@@ -118,6 +182,10 @@ object SettingsManager {
         return trafficLightActive
     }
 
+    fun isMonitoredAppEnabled(appName: String): Boolean {
+        return monitoredApps[appName] == true
+    }
+
     private fun persist(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
@@ -134,6 +202,17 @@ object SettingsManager {
             .putBoolean(KEY_INDICATOR_R_HORA, indicators["R$/Hora"] == true)
             .putBoolean(KEY_INDICATOR_LUCRO_H, indicators["Lucro/H"] == true)
             .putBoolean(KEY_INDICATOR_NOTA, indicators["Nota"] == true)
+            .putStringSet(
+                KEY_MONITORED_APPS,
+                monitoredApps.filterValues { it }.keys.toSet(),
+            )
+            .putFloat(KEY_GAIN_PER_KM_BAD, gainPerKmBad.toFloat())
+            .putFloat(KEY_GAIN_PER_KM_GOOD, gainPerKmGood.toFloat())
+            .putFloat(KEY_GAIN_PER_HOUR_BAD, gainPerHourBad.toFloat())
+            .putFloat(KEY_GAIN_PER_HOUR_GOOD, gainPerHourGood.toFloat())
+            .putFloat(KEY_PASSENGER_RATING_BAD, passengerRatingBad.toFloat())
+            .putFloat(KEY_PASSENGER_RATING_GOOD, passengerRatingGood.toFloat())
+            .putBoolean(KEY_PASSENGER_RATING_CUSTOMIZED, passengerRatingCustomized)
             .putBoolean(KEY_TRAFFIC_LIGHT_ACTIVE, trafficLightActive)
             .putBoolean(KEY_JOURNEY_ACTIVE, journeyActive)
             .apply()

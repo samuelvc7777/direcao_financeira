@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geolocator_android/geolocator_android.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:sqflite_android/sqflite_android.dart';
 
 import '../../data/datasources/journey_route_local_datasource.dart';
 import '../../data/models/active_shift_model.dart';
@@ -17,6 +17,10 @@ const _notificationChannelId = 'journey_location_tracking';
 const _notificationId = 4812;
 const _minimumTrackedSpeedKmH = 10.0;
 const _minimumTrackedSpeedMetersPerSecond = _minimumTrackedSpeedKmH / 3.6;
+const _idleGracePeriod = Duration(minutes: 4);
+const _idleTickInterval = Duration(seconds: 30);
+const _minimumStatusEmitDistanceMeters = 100.0;
+const _minimumStatusEmitInterval = Duration(seconds: 15);
 
 Future<void> initializeLocationTrackingService(GetStorage storage) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -151,18 +155,102 @@ Future<void> _createTrackingNotificationChannel() async {
 
 @pragma('vm:entry-point')
 void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
-  DartPluginRegistrant.ensureInitialized();
+  GeolocatorAndroid.registerWith();
+  SqfliteAndroid.registerWith();
+  await GetStorage.init();
 
+  final storage = GetStorage();
   final routeDataSource = JourneyRouteLocalDataSourceImpl();
   StreamSubscription<Position>? positionSubscription;
   int? currentLocalShiftId;
   DateTime? currentStartedAt;
   bool isPaused = false;
+  DateTime? lastStatusEmittedAt;
+  double? lastEmittedDistanceMeters;
+  String? lastEmittedIssueMessage;
+  bool? lastEmittedTrackingActive;
+  int? lastEmittedIdleTimeSeconds;
+
+  ActiveShiftModel? readActiveShift() {
+    final rawShift = storage.read(_journeyActiveShiftKey);
+    if (rawShift is! Map) {
+      return null;
+    }
+
+    return ActiveShiftModel.fromJson(Map<String, dynamic>.from(rawShift));
+  }
+
+  Future<void> saveActiveShift(ActiveShiftModel shift) async {
+    await storage.write(_journeyActiveShiftKey, shift.toJson());
+  }
+
+  Future<bool> clearMotionIdleState({double? currentDrivenKm}) async {
+    final shift = readActiveShift();
+    if (shift == null ||
+        shift.id != currentLocalShiftId ||
+        (shift.lowSpeedSince == null &&
+            shift.lastMotionIdleCheckpointAt == null &&
+            currentDrivenKm == null)) {
+      return false;
+    }
+
+    await saveActiveShift(
+      shift.copyWith(
+        currentDrivenKm: currentDrivenKm ?? shift.currentDrivenKm,
+        clearLowSpeedSince: true,
+        clearLastMotionIdleCheckpointAt: true,
+      ),
+    );
+    return true;
+  }
+
+  Future<bool> registerLowSpeedObservation({
+    required DateTime observedAt,
+    double? currentDrivenKm,
+  }) async {
+    final shift = readActiveShift();
+    if (shift == null || shift.id != currentLocalShiftId || shift.isPaused) {
+      return false;
+    }
+
+    final lowSpeedSince = shift.lowSpeedSince ?? observedAt;
+    var checkpointAt = shift.lastMotionIdleCheckpointAt;
+    var idleTimeSeconds = shift.idleTimeSeconds;
+    var hasIdleTick = false;
+
+    if (!observedAt.isBefore(lowSpeedSince.add(_idleGracePeriod))) {
+      final baseCheckpointAt = checkpointAt ?? lowSpeedSince;
+      final elapsedSinceCheckpoint = observedAt.difference(baseCheckpointAt);
+      final tickCount =
+          elapsedSinceCheckpoint.inSeconds ~/ _idleTickInterval.inSeconds;
+
+      if (tickCount > 0) {
+        final addedIdleSeconds = tickCount * _idleTickInterval.inSeconds;
+        idleTimeSeconds += addedIdleSeconds;
+        checkpointAt = baseCheckpointAt.add(
+          Duration(seconds: addedIdleSeconds),
+        );
+        hasIdleTick = true;
+      }
+    }
+
+    await saveActiveShift(
+      shift.copyWith(
+        currentDrivenKm: currentDrivenKm ?? shift.currentDrivenKm,
+        idleTimeSeconds: idleTimeSeconds,
+        lowSpeedSince: lowSpeedSince,
+        lastMotionIdleCheckpointAt: checkpointAt,
+      ),
+    );
+
+    return hasIdleTick;
+  }
 
   Future<void> emitStatus({
     String? issueMessage,
     bool? isTrackingActive,
     double? totalDistanceMeters,
+    bool force = false,
   }) async {
     final payload = await _buildTrackingStatusPayload(
       localShiftId: currentLocalShiftId,
@@ -173,6 +261,33 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       routeDataSource: routeDataSource,
     );
 
+    final currentDistanceMeters =
+        (payload['totalDistanceMeters'] as num?)?.toDouble() ?? 0;
+    final currentIssueMessage = payload['issueMessage'] as String?;
+    final currentTrackingActive = payload['isTrackingActive'] as bool? ?? false;
+    final currentIdleTimeSeconds = payload['idleTimeSeconds'] as int? ?? 0;
+    final now = DateTime.now();
+
+    final shouldEmit =
+        force ||
+        lastStatusEmittedAt == null ||
+        currentIssueMessage != lastEmittedIssueMessage ||
+        currentTrackingActive != lastEmittedTrackingActive ||
+        currentIdleTimeSeconds != lastEmittedIdleTimeSeconds ||
+        lastEmittedDistanceMeters == null ||
+        (currentDistanceMeters - lastEmittedDistanceMeters!).abs() >=
+            _minimumStatusEmitDistanceMeters ||
+        now.difference(lastStatusEmittedAt!) >= _minimumStatusEmitInterval;
+
+    if (!shouldEmit) {
+      return;
+    }
+
+    lastStatusEmittedAt = now;
+    lastEmittedDistanceMeters = currentDistanceMeters;
+    lastEmittedIssueMessage = currentIssueMessage;
+    lastEmittedTrackingActive = currentTrackingActive;
+    lastEmittedIdleTimeSeconds = currentIdleTimeSeconds;
     service.invoke('tracking_status', payload);
 
     if (service is AndroidServiceInstance) {
@@ -200,6 +315,7 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       await emitStatus(
         issueMessage: 'Nao foi possivel identificar o turno para rastrear.',
         isTrackingActive: false,
+        force: true,
       );
       return;
     }
@@ -214,6 +330,7 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       await emitStatus(
         issueMessage: validationPayload['issueMessage'] as String,
         isTrackingActive: false,
+        force: true,
       );
       return;
     }
@@ -227,10 +344,16 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     positionSubscription =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
           (position) async {
+            final observedAt = position.timestamp.toLocal();
             if (position.speed < _minimumTrackedSpeedMetersPerSecond) {
               final currentRoute = await routeDataSource.getRouteByLocalShiftId(
                 currentLocalShiftId!,
                 includePoints: false,
+              );
+              await registerLowSpeedObservation(
+                observedAt: observedAt,
+                currentDrivenKm:
+                    (currentRoute?.totalDistanceMeters ?? 0) / 1000,
               );
 
               await emitStatus(
@@ -249,10 +372,14 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
                 recordedAt: position.timestamp.toLocal(),
               ),
             );
+            final resumedMovement = await clearMotionIdleState(
+              currentDrivenKm: (updatedRoute?.totalDistanceMeters ?? 0) / 1000,
+            );
 
             await emitStatus(
               isTrackingActive: true,
               totalDistanceMeters: updatedRoute?.totalDistanceMeters ?? 0,
+              force: resumedMovement,
             );
           },
           onError: (error) async {
@@ -260,11 +387,12 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
               issueMessage:
                   'Nao foi possivel continuar rastreando a localizacao do turno.',
               isTrackingActive: false,
+              force: true,
             );
           },
         );
 
-    await emitStatus(isTrackingActive: true);
+    await emitStatus(isTrackingActive: true, force: true);
   }
 
   service.on('start_tracking').listen((event) async {
@@ -278,6 +406,11 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
         ? DateTime.tryParse(startedAtRaw)?.toLocal()
         : null;
     isPaused = false;
+    lastStatusEmittedAt = null;
+    lastEmittedDistanceMeters = null;
+    lastEmittedIssueMessage = null;
+    lastEmittedTrackingActive = null;
+    lastEmittedIdleTimeSeconds = null;
 
     await startTrackingStream();
   });
@@ -293,6 +426,11 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
         ? DateTime.tryParse(startedAtRaw)?.toLocal()
         : currentStartedAt;
     isPaused = false;
+    lastStatusEmittedAt = null;
+    lastEmittedDistanceMeters = null;
+    lastEmittedIssueMessage = null;
+    lastEmittedTrackingActive = null;
+    lastEmittedIdleTimeSeconds = null;
 
     await startTrackingStream();
   });
@@ -303,6 +441,7 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     await emitStatus(
       issueMessage: 'Rastreamento pausado.',
       isTrackingActive: false,
+      force: true,
     );
     service.stopSelf();
   });
@@ -339,7 +478,7 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       );
     }
 
-    await emitStatus(isTrackingActive: false);
+    await emitStatus(isTrackingActive: false, force: true);
     service.stopSelf();
   });
 }
@@ -367,6 +506,11 @@ Future<Map<String, dynamic>> _buildTrackingStatusPayload({
           includePoints: false,
         )
       : null;
+  final storage = GetStorage();
+  final rawShift = storage.read(_journeyActiveShiftKey);
+  final activeShift = rawShift is Map
+      ? ActiveShiftModel.fromJson(Map<String, dynamic>.from(rawShift))
+      : null;
   final totalDistanceMeters =
       overrideTotalDistanceMeters ?? route?.totalDistanceMeters ?? 0;
 
@@ -391,6 +535,7 @@ Future<Map<String, dynamic>> _buildTrackingStatusPayload({
     'isPreciseLocation': isPreciseLocation,
     'isPaused': isPaused,
     'totalDistanceMeters': totalDistanceMeters,
+    'idleTimeSeconds': activeShift?.idleTimeSeconds ?? 0,
     'issueMessage': computedIssueMessage,
   };
 }

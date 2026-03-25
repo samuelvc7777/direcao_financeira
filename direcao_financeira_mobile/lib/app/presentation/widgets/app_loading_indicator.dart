@@ -10,7 +10,7 @@ class AppLoadingIndicator extends StatefulWidget {
     this.accentColor = AppColors.royalBlue,
     this.size = AppLoadingSize.regular,
     this.label,
-    this.onDark = true,
+    this.onDark = false,
   });
 
   final Color accentColor;
@@ -43,11 +43,24 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final dimensions = _dimensionsFor(widget.size);
-    final foreground = widget.onDark ? Colors.white : AppColors.textPrimary;
+    final foreground = widget.onDark
+        ? colorScheme.onInverseSurface
+        : colorScheme.onSurface;
     final subtitleColor = widget.onDark
-        ? Colors.white.withValues(alpha: 0.72)
-        : AppColors.textSecondary;
+        ? colorScheme.onInverseSurface.withValues(alpha: 0.72)
+        : colorScheme.onSurface.withValues(alpha: 0.72);
+
+    if (widget.size == AppLoadingSize.compact && widget.label == null) {
+      return SizedBox.square(
+        dimension: 16,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(widget.accentColor),
+        ),
+      );
+    }
 
     return AnimatedBuilder(
       animation: _controller,
@@ -70,11 +83,15 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
                 ),
                 borderRadius: BorderRadius.circular(dimensions.containerRadius),
                 border: Border.all(
-                  color: widget.accentColor.withValues(alpha: 0.18),
+                  color: widget.onDark
+                      ? colorScheme.onInverseSurface.withValues(alpha: 0.16)
+                      : colorScheme.onSurface.withValues(alpha: 0.08),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.accentColor.withValues(alpha: 0.18),
+                    color: widget.onDark
+                        ? Colors.black.withValues(alpha: 0.18)
+                        : Colors.black.withValues(alpha: 0.08),
                     blurRadius: dimensions.shadowBlur,
                     offset: const Offset(0, 8),
                   ),
@@ -134,18 +151,18 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator>
     switch (size) {
       case AppLoadingSize.compact:
         return const _LoadingDimensions(
-          containerSize: 22,
-          containerPadding: 5,
+          containerSize: 18,
+          containerPadding: 4,
           containerRadius: 8,
-          barWidth: 3,
-          barMinHeight: 5,
-          barMaxHeight: 11,
-          barSpacing: 2,
-          shadowBlur: 8,
-          labelSpacing: 10,
-          captionSpacing: 4,
-          labelFontSize: 13,
-          captionFontSize: 11,
+          barWidth: 2,
+          barMinHeight: 4,
+          barMaxHeight: 8,
+          barSpacing: 1,
+          shadowBlur: 6,
+          labelSpacing: 8,
+          captionSpacing: 3,
+          labelFontSize: 12,
+          captionFontSize: 10,
         );
       case AppLoadingSize.large:
         return const _LoadingDimensions(
@@ -186,7 +203,7 @@ class AppLoadingScreen extends StatelessWidget {
     super.key,
     this.label = 'Carregando dados',
     this.accentColor = AppColors.royalBlue,
-    this.onDark = true,
+    this.onDark = false,
   });
 
   final String label;
@@ -221,37 +238,40 @@ class AppLoadingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SafeArea(
       bottom: false,
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.midnight.withValues(alpha: 0.94),
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          border: Border.all(
+            color: colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
+              color: Colors.black.withValues(alpha: 0.12),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             AppLoadingIndicator(
               accentColor: accentColor,
               size: AppLoadingSize.compact,
-              onDark: true,
+              onDark: false,
             ),
             const SizedBox(width: 12),
-            Flexible(
+            Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),

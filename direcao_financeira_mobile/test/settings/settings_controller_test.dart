@@ -1,3 +1,4 @@
+import 'package:direcao_financeira_mobile/app/core/app_bubble/app_bubble_service.dart';
 import 'package:dartz/dartz.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/preferences/app_preferences.dart';
@@ -65,6 +66,30 @@ class _FakePreferences implements AppPreferences {
   }
 }
 
+class _FakeAppBubbleService implements AppBubbleService {
+  bool isPermissionGranted = true;
+  bool isRunning = false;
+
+  @override
+  Future<bool> isBubbleRunning() async => isRunning;
+
+  @override
+  Future<bool> isOverlayPermissionGranted() async => isPermissionGranted;
+
+  @override
+  Future<void> openOverlayPermissionSettings() async {}
+
+  @override
+  Future<void> startBubble() async {
+    isRunning = true;
+  }
+
+  @override
+  Future<void> stopBubble() async {
+    isRunning = false;
+  }
+}
+
 void main() {
   setUpAll(() {
     WidgetsFlutterBinding.ensureInitialized();
@@ -74,7 +99,9 @@ void main() {
     test('toggleTheme alterna o estado local do switch', () {
       final repository = _FakeAuthRepository();
       final preferences = _FakePreferences(initialValue: true);
+      final appBubbleService = _FakeAppBubbleService();
       final controller = SettingsController(
+        appBubbleService: appBubbleService,
         preferences: preferences,
         getStoredUserUseCase: GetStoredUserUseCase(repository),
         logoutUseCase: LogoutUseCase(repository),
@@ -94,7 +121,9 @@ void main() {
     test('logout reutiliza o repositorio de autenticacao', () async {
       final repository = _FakeAuthRepository();
       final preferences = _FakePreferences();
+      final appBubbleService = _FakeAppBubbleService();
       final controller = SettingsController(
+        appBubbleService: appBubbleService,
         preferences: preferences,
         getStoredUserUseCase: GetStoredUserUseCase(repository),
         logoutUseCase: LogoutUseCase(repository),

@@ -33,7 +33,7 @@ class TransactionsSummaryCards extends StatelessWidget {
         SizedBox(width: spacing),
         Expanded(
           child: _SummaryCard(
-            label: 'Saídas',
+            label: 'SaÃ­das',
             value: expenseAmount,
             color: AppColors.rose,
             icon: Icons.arrow_downward_rounded,
@@ -68,6 +68,8 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = Responsive.hp(context, 3.2).clamp(8.0, 10.0);
     final verticalPadding = Responsive.vp(context, 1.5).clamp(10.0, 12.0);
@@ -89,9 +91,9 @@ class _SummaryCard extends StatelessWidget {
         vertical: verticalPadding,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: isDark ? AppColors.midnight : colorScheme.surface,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,9 +108,7 @@ class _SummaryCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(
-                      alpha: 0.72,
-                    ),
+                    color: colorScheme.onSurface.withValues(alpha: 0.72),
                     fontSize: labelSize,
                     fontWeight: FontWeight.w700,
                   ),
@@ -122,7 +122,7 @@ class _SummaryCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: context.theme.colorScheme.onSurface,
+              color: colorScheme.onSurface,
               fontSize: valueSize,
               fontWeight: FontWeight.w800,
             ),

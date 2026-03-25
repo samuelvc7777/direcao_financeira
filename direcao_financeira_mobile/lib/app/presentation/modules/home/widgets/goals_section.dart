@@ -92,14 +92,12 @@ class GoalsSection extends GetView<HomeController> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF6B21A8,
-                                    ).withValues(alpha: 0.15),
+                                    color: AppColors.amber.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
                                     Icons.flag_rounded,
-                                    color: Color(0xFF6B21A8),
+                                    color: AppColors.amber,
                                     size: 18,
                                   ),
                                 ),

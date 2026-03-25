@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/responsive.dart';
 
+import '../../../../core/utils/responsive.dart';
 import '../journey_controller.dart';
 
 class MetricPeriodSelector extends GetView<JourneyController> {
@@ -10,28 +9,29 @@ class MetricPeriodSelector extends GetView<JourneyController> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Column(
       children: [
-        // Year/Date Navigator
         Container(
           margin: EdgeInsets.symmetric(
             horizontal: Responsive.hp(context, 2.0).clamp(8.0, 16.0),
           ),
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
           decoration: BoxDecoration(
-            color: AppColors.midnight,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(
               Responsive.sp(context, 12).clamp(10.0, 14.0),
             ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.chevron_left_rounded,
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                 ),
                 onPressed: controller.previousDate,
                 padding: EdgeInsets.zero,
@@ -40,17 +40,17 @@ class MetricPeriodSelector extends GetView<JourneyController> {
               Obx(
                 () => Text(
                   controller.dateLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.chevron_right_rounded,
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                 ),
                 onPressed: controller.nextDate,
                 padding: EdgeInsets.zero,
@@ -60,21 +60,17 @@ class MetricPeriodSelector extends GetView<JourneyController> {
           ),
         ),
         const SizedBox(height: 8),
-        // Period Tabs
         Container(
           padding: const EdgeInsets.all(4),
           margin: EdgeInsets.symmetric(
             horizontal: Responsive.hp(context, 2.0).clamp(8.0, 16.0),
           ),
           decoration: BoxDecoration(
-            color: AppColors.midnight,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(
               Responsive.sp(context, 12).clamp(10.0, 14.0),
             ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05),
-              width: 1,
-            ),
+            border: Border.all(color: colorScheme.outlineVariant, width: 1),
           ),
           child: Obx(
             () => Row(
@@ -123,6 +119,8 @@ class MetricPeriodSelector extends GetView<JourneyController> {
     bool isSelected,
     String value,
   ) {
+    final colorScheme = context.theme.colorScheme;
+
     return Expanded(
       child: GestureDetector(
         onTap: () => controller.changeFilter(value),
@@ -131,7 +129,7 @@ class MetricPeriodSelector extends GetView<JourneyController> {
             vertical: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
           ),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.royalBlue : Colors.transparent,
+            color: isSelected ? colorScheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(
               Responsive.sp(context, 10).clamp(8.0, 12.0),
             ),
@@ -141,13 +139,17 @@ class MetricPeriodSelector extends GetView<JourneyController> {
               Icon(
                 icon,
                 size: Responsive.sp(context, 18).clamp(16.0, 22.0),
-                color: isSelected ? Colors.white : Colors.white54,
+                color: isSelected
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 2),
               Text(
                 title,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white54,
+                  color: isSelected
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurfaceVariant,
                   fontSize: Responsive.sp(context, 11).clamp(10.0, 13.0),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),

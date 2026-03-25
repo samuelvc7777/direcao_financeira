@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -20,15 +19,18 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import io.flutter.plugin.common.MethodChannel
+import java.text.Normalizer
 
 class ScreenReaderService : AccessibilityService() {
-    private val debugTag = "ScreenReader99"
     private val ninetyNinePackageKeywords = listOf("99")
     private val moveSjDriverPackage = "br.com.devbase.movesj.prestador"
     private val samsungGalleryPackage = "com.sec.android.gallery3d"
     private val minimumProcessingIntervalMs = 350L
-    private val minimumOcrIntervalMs = 1500L
+    private val minimumOcrIntervalMs = 3000L
     private val ninetyNineReadDelayMs = 450L
+    private val overlayDisplayDelayMs = 1000L
+    private val repeatedOfferQuietWindowMs = 2500L
+    private val duplicateOfferWindowMs = 20000L
 
     private val moveSjParser = MoveSjParser()
     private val ninetyNineParser = NinetyNineParser()
@@ -39,8 +41,13 @@ class ScreenReaderService : AccessibilityService() {
     private var lastProcessedPackage: String? = null
     private var lastProcessedAtElapsed = 0L
     private var lastOcrAtElapsed = 0L
+    private var lastAcceptedOfferAtElapsed = 0L
+    private var lastAcceptedOfferSignature = ""
+    private var lastAcceptedAppKey: String? = null
+    private var lastAcceptedScreenFingerprint = ""
     private var ocrInFlight = false
     private var pendingNinetyNineRunnable: Runnable? = null
+    private var pendingOverlayRunnable: Runnable? = null
 
     companion object {
         private var channel: MethodChannel? = null
@@ -54,14 +61,12 @@ class ScreenReaderService : AccessibilityService() {
         super.onServiceConnected()
         SettingsManager.initialize(this)
         floatingOverlay = FloatingOverlay(this)
-        Log.d("ScreenReader", "Servico de acessibilidade conectado")
-        emitDebugLog(
-            "Servico conectado. trafficLight=${SettingsManager.trafficLightActive} journey=${SettingsManager.journeyActive}",
-        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (!SettingsManager.shouldKeepRuntimeActive()) {
+            pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
+            pendingOverlayRunnable = null
             floatingOverlay?.hide()
             lastOfferData = null
             return
@@ -72,15 +77,19 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         val packageName = event.packageName?.toString()
-        if (packageName.isNullOrBlank() || !isSupportedRidePackage(packageName)) {
+        if (
+            packageName.isNullOrBlank() ||
+                !isSupportedRidePackage(packageName) ||
+                !isRelevantMonitoredPackage(packageName)
+        ) {
             return
         }
 
-        if (shouldThrottle(packageName)) {
+        if (shouldThrottle(packageName) || shouldRespectQuietWindow(packageName)) {
             return
         }
 
-        if (isNinetyNinePackage(packageName) || packageName == samsungGalleryPackage) {
+        if (isNinetyNineContext(packageName)) {
             scheduleNinetyNineProcessing(packageName, event.displayId)
             return
         }
@@ -88,6 +97,13 @@ class ScreenReaderService : AccessibilityService() {
         val sourceNode = event.source
         val rootNode = rootInActiveWindow
         val targetNode = resolveTargetNode(sourceNode, rootNode)
+
+        if (targetNode != null) {
+            val screenFingerprint = moveSjParser.buildScreenFingerprint(targetNode)
+            if (shouldIgnoreMatchingScreen(appKey = "MoveSj", screenFingerprint = screenFingerprint)) {
+                return
+            }
+        }
 
         if (targetNode != null && moveSjParser.isOfferScreen(targetNode)) {
             val offerData = moveSjParser.parseOffer(targetNode).toMutableMap()
@@ -132,28 +148,14 @@ class ScreenReaderService : AccessibilityService() {
         targetNode: AccessibilityNodeInfo?,
         rootNode: AccessibilityNodeInfo?,
     ): Boolean {
-        if (packageName == samsungGalleryPackage) {
-            val currentPackage = targetNode?.packageName?.toString()
-                ?: rootNode?.packageName?.toString()
-                ?: ""
-
-            if (currentPackage == samsungGalleryPackage) {
-                return true
-            }
-
-            emitDebugLog("galeria ignorada apos delay currentPkg=$currentPackage")
-            return false
-        }
-
         val currentPackage = targetNode?.packageName?.toString()
             ?: rootNode?.packageName?.toString()
             ?: ""
 
-        if (isNinetyNinePackage(currentPackage)) {
+        if (isNinetyNineContext(currentPackage)) {
             return true
         }
 
-        emitDebugLog("99 ignorada apos delay currentPkg=$currentPackage")
         return false
     }
 
@@ -164,34 +166,23 @@ class ScreenReaderService : AccessibilityService() {
         rootNode: AccessibilityNodeInfo?,
         targetNode: AccessibilityNodeInfo?,
     ) {
-        if (packageName == samsungGalleryPackage) {
-            emitDebugLog("galeria samsung ativa; executando OCR do print")
-            requestNinetyNineOcr(displayId)
-            return
-        }
-
         val sourcePackage = sourceNode?.packageName?.toString().orEmpty()
         val rootPackage = rootNode?.packageName?.toString().orEmpty()
         val targetPackage = targetNode?.packageName?.toString().orEmpty()
 
         if (targetNode != null) {
-            val debugSnapshot = ninetyNineParser.buildDebugSnapshot(targetNode)
+            val screenFingerprint = ninetyNineParser.buildScreenFingerprint(targetNode)
+            if (shouldIgnoreMatchingScreen(appKey = "99", screenFingerprint = screenFingerprint)) {
+                return
+            }
+
             val isOfferScreen = ninetyNineParser.isOfferScreen(targetNode)
-            emitDebugLog(
-                "99 package=$packageName sourcePkg=$sourcePackage rootPkg=$rootPackage targetPkg=$targetPackage offer=$isOfferScreen price='${debugSnapshot["priceText"]}' stats=${debugSnapshot["statsCount"]} tipo='${debugSnapshot["offerType"]}' pagamento='${debugSnapshot["paymentMethod"]}' rating='${debugSnapshot["rating"]}' corridas=${debugSnapshot["ridesCount"]} passageiro='${debugSnapshot["passengerName"]}' origem='${debugSnapshot["originAddress"]}' destino='${debugSnapshot["destinationAddress"]}'",
-            )
-            emitDebugLog("99 sampleTexts=${debugSnapshot["sampleTexts"]}")
 
             if (isOfferScreen) {
                 val offerData = ninetyNineParser.parseOffer(targetNode)
-                emitDebugLog("99 payload=$offerData")
                 processOffer(offerData)
                 return
             }
-        } else {
-            emitDebugLog(
-                "99 sem targetNode sourcePkg=$sourcePackage rootPkg=$rootPackage; tentando OCR",
-            )
         }
 
         requestNinetyNineOcr(displayId)
@@ -224,26 +215,34 @@ class ScreenReaderService : AccessibilityService() {
             return
         }
         if (!isMeaningfulOffer(offerData)) {
-            emitDebugLog("oferta descartada por dados insuficientes app=${offerData["app"]}")
             return
         }
 
-        if (buildOfferSignature(offerData) == buildOfferSignature(lastOfferData)) {
+        val signature = buildOfferSignature(offerData)
+        if (isDuplicateOffer(signature)) {
             return
         }
 
         lastOfferData = offerData
-        Log.d("ScreenReader", "Oferta detectada (${offerData["app"]}): $offerData")
+        lastAcceptedOfferSignature = signature
+        lastAcceptedOfferAtElapsed = SystemClock.elapsedRealtime()
+        lastAcceptedAppKey = resolveOfferAppKey(offerData)
+        lastAcceptedScreenFingerprint = buildOfferScreenFingerprint(offerData)
 
-        Handler(Looper.getMainLooper()).post {
-            floatingOverlay?.show(offerData)
-        }
+        pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
+        pendingOverlayRunnable =
+            Runnable {
+                floatingOverlay?.show(offerData)
+                pendingOverlayRunnable = null
+            }.also { runnable ->
+                mainHandler.postDelayed(runnable, overlayDisplayDelayMs)
+            }
 
         notifyFlutter(offerData)
     }
 
     private fun isSupportedRidePackage(packageName: String): Boolean {
-        return isNinetyNinePackage(packageName) ||
+        return isNinetyNineContext(packageName) ||
             packageName == moveSjDriverPackage ||
             packageName == samsungGalleryPackage
     }
@@ -251,6 +250,18 @@ class ScreenReaderService : AccessibilityService() {
     private fun isNinetyNinePackage(packageName: String): Boolean {
         val lowerPackage = packageName.lowercase()
         return ninetyNinePackageKeywords.any { keyword -> lowerPackage.contains(keyword) }
+    }
+
+    private fun isNinetyNineContext(packageName: String): Boolean {
+        return isNinetyNinePackage(packageName) || packageName == samsungGalleryPackage
+    }
+
+    private fun isRelevantMonitoredPackage(packageName: String): Boolean {
+        return when {
+            packageName == moveSjDriverPackage -> SettingsManager.isMonitoredAppEnabled("MoveSj")
+            isNinetyNineContext(packageName) -> SettingsManager.isMonitoredAppEnabled("99")
+            else -> false
+        }
     }
 
     private fun shouldThrottle(packageName: String): Boolean {
@@ -265,6 +276,24 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         return shouldSkip
+    }
+
+    private fun shouldRespectQuietWindow(packageName: String): Boolean {
+        if (lastAcceptedOfferAtElapsed == 0L) {
+            return false
+        }
+
+        val currentApp = resolveAppKey(packageName) ?: return false
+        val lastApp =
+            lastOfferData?.get("platform_name")?.toString()?.takeIf { it.isNotBlank() }
+                ?: lastOfferData?.get("app")?.toString()?.takeIf { it.isNotBlank() }
+                ?: return false
+        if (currentApp != lastApp) {
+            return false
+        }
+
+        return SystemClock.elapsedRealtime() - lastAcceptedOfferAtElapsed <
+            repeatedOfferQuietWindowMs
     }
 
     private fun isMeaningfulOffer(offerData: Map<String, Any>): Boolean {
@@ -295,9 +324,86 @@ class ScreenReaderService : AccessibilityService() {
         ).joinToString("|")
     }
 
+    private fun isDuplicateOffer(signature: String): Boolean {
+        if (signature.isBlank() || lastAcceptedOfferSignature.isBlank()) {
+            return false
+        }
+
+        if (signature != lastAcceptedOfferSignature) {
+            return false
+        }
+
+        return SystemClock.elapsedRealtime() - lastAcceptedOfferAtElapsed <
+            duplicateOfferWindowMs
+    }
+
+    private fun shouldIgnoreMatchingScreen(
+        appKey: String,
+        screenFingerprint: String,
+    ): Boolean {
+        if (screenFingerprint.isBlank() || lastAcceptedScreenFingerprint.isBlank()) {
+            return false
+        }
+
+        if (appKey != lastAcceptedAppKey) {
+            return false
+        }
+
+        if (screenFingerprint != lastAcceptedScreenFingerprint) {
+            return false
+        }
+
+        return SystemClock.elapsedRealtime() - lastAcceptedOfferAtElapsed <
+            duplicateOfferWindowMs
+    }
+
+    private fun resolveAppKey(packageName: String): String? {
+        return when {
+            packageName == moveSjDriverPackage -> "MoveSj"
+            isNinetyNineContext(packageName) -> "99"
+            else -> null
+        }
+    }
+
+    private fun resolveOfferAppKey(offerData: Map<String, Any>): String? {
+        val appValue =
+            offerData["platform_name"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: offerData["app"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: return null
+
+        return when {
+            appValue.equals("MoveSj", ignoreCase = true) -> "MoveSj"
+            appValue.contains("99", ignoreCase = true) -> "99"
+            else -> appValue
+        }
+    }
+
+    private fun buildOfferScreenFingerprint(offerData: Map<String, Any>): String {
+        return listOf(
+            normalizeFingerprintValue(resolveOfferAppKey(offerData)),
+            normalizeFingerprintValue(offerData["valor_bruto"]?.toString()),
+            normalizeFingerprintValue(offerData["km_total"]?.toString()),
+            normalizeFingerprintValue(offerData["minutos_total"]?.toString()),
+            normalizeFingerprintValue(offerData["passenger_name"]?.toString()),
+            normalizeFingerprintValue(offerData["origin_address"]?.toString()),
+            normalizeFingerprintValue(offerData["destination_address"]?.toString()),
+        ).joinToString("|")
+    }
+
+    private fun normalizeFingerprintValue(value: String?): String {
+        if (value.isNullOrBlank()) {
+            return ""
+        }
+
+        val normalized =
+            Normalizer.normalize(value.trim(), Normalizer.Form.NFD)
+                .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+
+        return normalized.lowercase().replace(" ", "")
+    }
+
     private fun requestNinetyNineOcr(displayId: Int) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            emitDebugLog("99 ocr ignorado sdk=${Build.VERSION.SDK_INT}")
             return
         }
 
@@ -314,7 +420,6 @@ class ScreenReaderService : AccessibilityService() {
         ocrInFlight = true
 
         val screenshotDisplayId = if (displayId >= 0) displayId else Display.DEFAULT_DISPLAY
-        emitDebugLog("99 ocr screenshot displayId=$screenshotDisplayId")
 
         takeScreenshot(
             screenshotDisplayId,
@@ -324,7 +429,6 @@ class ScreenReaderService : AccessibilityService() {
                     val bitmap = screenshotToBitmap(screenshot)
                     if (bitmap == null) {
                         ocrInFlight = false
-                        emitDebugLog("99 ocr screenshot sem bitmap")
                         return
                     }
 
@@ -333,7 +437,6 @@ class ScreenReaderService : AccessibilityService() {
 
                 override fun onFailure(errorCode: Int) {
                     ocrInFlight = false
-                    emitDebugLog("99 ocr screenshot falhou code=$errorCode")
                 }
             },
         )
@@ -355,21 +458,12 @@ class ScreenReaderService : AccessibilityService() {
                         .map { line -> line.text.trim() }
                         .filter { it.isNotEmpty() }
 
-                val debugSnapshot = ninetyNineOcrParser.buildDebugSnapshot(visionText.text, lines)
-                emitDebugLog(
-                    "99 ocr price='${debugSnapshot["priceText"]}' stats=${debugSnapshot["statsCount"]} tipo='${debugSnapshot["offerType"]}' pagamento='${debugSnapshot["paymentMethod"]}' rating='${debugSnapshot["rating"]}' corridas=${debugSnapshot["ridesCount"]} passageiro='${debugSnapshot["passengerName"]}' origem='${debugSnapshot["originAddress"]}' destino='${debugSnapshot["destinationAddress"]}'",
-                )
-                emitDebugLog("99 ocr lines=${debugSnapshot["sampleLines"]}")
-
                 val offerData = ninetyNineOcrParser.parseOffer(visionText.text, lines)
                 if (offerData != null) {
-                    emitDebugLog("99 ocr payload=$offerData")
                     processOffer(offerData)
                 }
             }
-            .addOnFailureListener { error ->
-                emitDebugLog("99 ocr erro=${error.message ?: error.javaClass.simpleName}")
-            }
+            .addOnFailureListener { _ -> }
             .addOnCompleteListener {
                 croppedBitmap.recycle()
                 ocrInFlight = false
@@ -392,10 +486,7 @@ class ScreenReaderService : AccessibilityService() {
             hardwareBuffer.close()
             hardwareBitmap?.recycle()
             bitmap
-        } catch (error: Throwable) {
-            emitDebugLog(
-                "99 ocr conversao bitmap falhou=${error.message ?: error.javaClass.simpleName}",
-            )
+        } catch (_: Throwable) {
             null
         }
     }
@@ -406,15 +497,9 @@ class ScreenReaderService : AccessibilityService() {
         }
     }
 
-    private fun emitDebugLog(message: String) {
-        Log.d(debugTag, message)
-        Handler(Looper.getMainLooper()).post {
-            channel?.invokeMethod("onAccessibilityDebugLog", message)
-        }
-    }
-
     override fun onInterrupt() {
+        pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
+        pendingOverlayRunnable = null
         floatingOverlay?.hide()
-        Log.e("ScreenReader", "Servico de acessibilidade interrompido")
     }
 }

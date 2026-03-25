@@ -157,6 +157,8 @@ class _IconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       width: 48,
       height: 48,
@@ -168,10 +170,12 @@ class _IconBadge extends StatelessWidget {
           colors: [
             accentColor.withValues(alpha: 0.98),
             accentColor,
-            Color.lerp(accentColor, Colors.black, 0.16) ?? accentColor,
+            Color.lerp(accentColor, colorScheme.surface, 0.16) ?? accentColor,
           ],
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
+        border: Border.all(
+          color: colorScheme.onPrimary.withValues(alpha: 0.24),
+        ),
         boxShadow: [
           BoxShadow(
             color: accentColor.withValues(alpha: 0.26),
@@ -180,7 +184,7 @@ class _IconBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Center(child: Icon(icon, color: Colors.white, size: 24)),
+      child: Center(child: Icon(icon, color: colorScheme.onPrimary, size: 24)),
     );
   }
 }

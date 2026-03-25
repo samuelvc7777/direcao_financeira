@@ -130,14 +130,28 @@ class _CardsHero extends StatelessWidget {
         ? null
         : cards.reduce((a, b) => a.usedPercentage >= b.usedPercentage ? a : b);
     final isWide = MediaQuery.of(context).size.width >= 760;
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1F1237), Color(0xFF341A57), Color(0xFF4A1B5E)],
+          colors: isDark
+              ? const [Color(0xFF1F1237), Color(0xFF341A57), Color(0xFF4A1B5E)]
+              : [
+                  Color.alphaBlend(
+                    AppColors.violet.withValues(alpha: 0.16),
+                    colorScheme.surface,
+                  ),
+                  Color.alphaBlend(
+                    AppColors.amber.withValues(alpha: 0.08),
+                    colorScheme.surface,
+                  ),
+                  colorScheme.surface,
+                ],
         ),
         boxShadow: [
           BoxShadow(
@@ -212,6 +226,14 @@ class _HeroMainPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? Colors.white
+        : context.theme.colorScheme.onSurface;
+    final secondaryTextColor = isDark
+        ? Colors.white.withValues(alpha: 0.78)
+        : context.theme.colorScheme.onSurface.withValues(alpha: 0.72);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -230,7 +252,7 @@ class _HeroMainPanel extends StatelessWidget {
         Text(
           'Disponivel para usar',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.68),
+            color: secondaryTextColor,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -239,8 +261,8 @@ class _HeroMainPanel extends StatelessWidget {
         const Text('', style: TextStyle(fontSize: 0)),
         Text(
           available,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: primaryTextColor,
             fontSize: 38,
             fontWeight: FontWeight.w900,
             height: 0.95,
@@ -250,7 +272,7 @@ class _HeroMainPanel extends StatelessWidget {
         Text(
           'Um painel mais ousado para enxergar limite, compromissos e ritmo de uso da sua carteira.',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.78),
+            color: secondaryTextColor,
             height: 1.55,
           ),
         ),
@@ -293,13 +315,21 @@ class _HeroCardPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _parseColor(card?.color, AppColors.violet);
+    final isDark = context.theme.brightness == Brightness.dark;
+    final colorScheme = context.theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,7 +337,9 @@ class _HeroCardPreview extends StatelessWidget {
           Text(
             'Cartao em foco',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.72),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.72)
+                  : colorScheme.onSurface.withValues(alpha: 0.68),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -374,8 +406,12 @@ class _HeroCardPreview extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onCreatePressed,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF28153C),
+                backgroundColor: isDark
+                    ? Colors.white
+                    : colorScheme.primary,
+                foregroundColor: isDark
+                    ? const Color(0xFF28153C)
+                    : colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
@@ -1039,25 +1075,32 @@ class _HeroChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final foreground = isDark
+        ? Colors.white
+        : context.theme.colorScheme.onSurface;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: foreground.withValues(alpha: isDark ? 0.10 : 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: foreground.withValues(alpha: isDark ? 0.12 : 0.08),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.white),
+          Icon(icon, size: 16, color: foreground),
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+          style: TextStyle(
+            color: foreground,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
           ),
         ],
       ),
@@ -1078,22 +1121,33 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.64),
-              fontSize: 12,
-            ),
+          style: TextStyle(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.64)
+                : colorScheme.onSurface.withValues(alpha: 0.60),
+            fontSize: 12,
+          ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1120,21 +1174,29 @@ class _InlineMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? Colors.white
+        : context.theme.colorScheme.onSurface;
+    final secondaryTextColor = isDark
+        ? Colors.white.withValues(alpha: 0.64)
+        : context.theme.colorScheme.onSurface.withValues(alpha: 0.60);
+
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.64),
+              color: secondaryTextColor,
               fontSize: 12,
             ),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: primaryTextColor,
             fontSize: 15,
             fontWeight: FontWeight.w800,
           ),

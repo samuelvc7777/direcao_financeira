@@ -5,6 +5,7 @@ class RideModel extends RideEntity {
     required super.id,
     required super.status,
     required super.appName,
+    required super.paymentMethod,
     required super.grossValueCents,
     required super.date,
     required super.time,
@@ -39,6 +40,7 @@ class RideModel extends RideEntity {
       appName: platformName != null && platformName.isNotEmpty
           ? platformName
           : 'App',
+      paymentMethod: json['paymentMethod'] as String?,
       grossValueCents: json['grossValueCents'] as int? ?? 0,
       date: formattedDate,
       time: formattedTime,

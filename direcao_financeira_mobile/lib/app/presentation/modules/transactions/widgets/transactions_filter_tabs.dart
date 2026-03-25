@@ -18,6 +18,8 @@ class TransactionsFilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
     final containerPadding = Responsive.hp(context, 1.2).clamp(4.0, 6.0);
     final spacing = Responsive.hp(context, 2.2).clamp(6.0, 8.0);
     final borderRadius = Responsive.hp(context, 6.4).clamp(18.0, 20.0);
@@ -25,8 +27,13 @@ class TransactionsFilterTabs extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: isDark ? AppColors.deepNavy : colorScheme.surface,
         borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         children: [
@@ -82,45 +89,47 @@ class _FilterTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
     final horizontalPadding = Responsive.hp(context, 3.2).clamp(8.0, 10.0);
     final verticalPadding = Responsive.vp(context, 1.2).clamp(8.0, 10.0);
     final borderRadius = Responsive.hp(context, 5.4).clamp(16.0, 18.0);
     final iconSize = Responsive.sp(context, 18).clamp(16.0, 18.0);
     final labelSize = Responsive.sp(context, 14).clamp(13.0, 14.0);
+    final neutralText = isDark
+        ? Colors.white.withValues(alpha: 0.72)
+        : colorScheme.onSurface.withValues(alpha: 0.62);
 
     return ScaleButton(
       enableHaptic: false,
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
           horizontal: horizontalPadding,
           vertical: verticalPadding,
         ),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  colors: [
-                    accentColor.withValues(alpha: 0.16),
-                    accentColor.withValues(alpha: 0.08),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: isSelected ? null : Colors.transparent,
+          gradient: null,
+          color: isSelected
+              ? accentColor.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                    ? AppColors.midnight
+                    : colorScheme.surfaceContainerLowest),
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
             color: isSelected
-                ? accentColor.withValues(alpha: 0.38)
-                : Colors.transparent,
+                ? accentColor.withValues(alpha: isDark ? 0.42 : 0.30)
+                : colorScheme.outlineVariant.withValues(
+                    alpha: isDark ? 0.22 : 0.5,
+                  ),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: accentColor.withValues(alpha: 0.08),
-                    blurRadius: 5,
+                    color: accentColor.withValues(alpha: isDark ? 0.12 : 0.06),
+                    blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ]
@@ -138,21 +147,13 @@ class _FilterTab extends StatelessWidget {
                     Icon(
                       icon,
                       size: iconSize,
-                      color: isSelected
-                          ? accentColor
-                          : context.theme.colorScheme.onSurface.withValues(
-                              alpha: 0.46,
-                            ),
+                      color: isSelected ? accentColor : neutralText,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       label,
                       style: TextStyle(
-                        color: isSelected
-                            ? accentColor
-                            : context.theme.colorScheme.onSurface.withValues(
-                                alpha: 0.52,
-                              ),
+                        color: isSelected ? accentColor : neutralText,
                         fontSize: labelSize,
                         fontWeight: isSelected
                             ? FontWeight.w700

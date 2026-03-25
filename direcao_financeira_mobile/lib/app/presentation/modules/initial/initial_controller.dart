@@ -13,7 +13,15 @@ class InitialController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    final args = Get.arguments;
+    final initialIndex = args is Map
+        ? (args['initialIndex'] as int? ?? 0).clamp(0, 3)
+        : 0;
+
     _ensureTabDependencies(0);
+    if (initialIndex != 0) {
+      changeTab(initialIndex);
+    }
   }
 
   void changeTab(int index) {

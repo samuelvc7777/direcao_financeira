@@ -24,6 +24,7 @@ class TransactionsDayGroupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
     final dayLabel = DateFormat('dd/MM/yyyy', 'pt_BR').format(group.date);
     final totalIsNegative = group.totalCents < 0;
     final totalLabel = compactAmountFormat.format(
@@ -58,7 +59,7 @@ class TransactionsDayGroupSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
@@ -118,6 +119,8 @@ class _TransactionFinanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
     final isExpense = transaction.type == TransactionType.expense;
     final accentColor = _resolveAccentColor();
     final title = _resolveTitle();
@@ -135,12 +138,12 @@ class _TransactionFinanceCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.midnight,
+        color: isDark ? AppColors.midnight : colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentColor.withValues(alpha: 0.38)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: colorScheme.shadow.withValues(alpha: isDark ? 0.22 : 0.12),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -234,7 +237,7 @@ class _TransactionFinanceCard extends StatelessWidget {
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.07),
+                                    color: colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -321,7 +324,7 @@ class _TransactionFinanceCard extends StatelessWidget {
                         _ActionButton(
                           label: 'Editar',
                           icon: Icons.edit_rounded,
-                          backgroundColor: Colors.white.withValues(alpha: 0.08),
+                          backgroundColor: colorScheme.surfaceContainerHighest,
                           textColor: context.theme.colorScheme.onSurface
                               .withValues(alpha: 0.7),
                           onTap: onEdit,
@@ -331,7 +334,7 @@ class _TransactionFinanceCard extends StatelessWidget {
                           label: 'Excluir',
                           icon: Icons.delete_rounded,
                           backgroundColor: AppColors.rose.withValues(
-                            alpha: 0.18,
+                            alpha: 0.14,
                           ),
                           textColor: AppColors.rose,
                           onTap: onDelete,

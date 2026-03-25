@@ -4,17 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
+import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/accessibility/accessibility_service.dart';
 import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/entities/active_shift_entity.dart';
+import '../../../domain/entities/costs_gains_settings_entity.dart';
 import '../../../domain/entities/location_tracking_status_entity.dart';
 import '../../../domain/entities/ride_entity.dart';
 import '../../../domain/entities/shift_entity.dart';
+import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
+import 'journey_statistics_display_data.dart';
 
 class JourneyController extends GetxController {
+  static const int _historyPageSize = 20;
+
   final GetActiveShiftUseCase getActiveShift;
   final GetDailyStatisticsUseCase getDailyStatistics;
   final GetShiftHistoryUseCase getShiftHistory;
@@ -27,7 +33,9 @@ class JourneyController extends GetxController {
   final GetLocationTrackingStatusUseCase getLocationTrackingStatusUseCase;
   final WatchLocationTrackingStatusUseCase watchLocationTrackingStatusUseCase;
   final GetRidesUseCase getRidesUseCase;
+  final GetCostsGainsSettingsUseCase? getCostsGainsSettings;
   final JourneyRealtimeBridge journeyRealtimeBridge;
+  final AppBubbleService appBubbleService;
   final AccessibilityService accessibilityService;
 
   JourneyController({
@@ -43,7 +51,9 @@ class JourneyController extends GetxController {
     required this.getLocationTrackingStatusUseCase,
     required this.watchLocationTrackingStatusUseCase,
     required this.getRidesUseCase,
+    required this.getCostsGainsSettings,
     required this.journeyRealtimeBridge,
+    required this.appBubbleService,
     required this.accessibilityService,
   });
 
@@ -51,6 +61,10 @@ class JourneyController extends GetxController {
   final isStartingShift = false.obs;
   final isPauseShiftLoading = false.obs;
   final isFinishingShift = false.obs;
+  final isLoadingMoreShifts = false.obs;
+  final isLoadingMoreRides = false.obs;
+  final hasMoreShifts = false.obs;
+  final hasMoreRides = false.obs;
   final selectedFilter = 'day'.obs; // day, week, month, year, custom
   final customStartDate = Rxn<DateTime>();
   final customEndDate = Rxn<DateTime>();
@@ -63,6 +77,7 @@ class JourneyController extends GetxController {
   Timer? _timer;
   Worker? _accessibilityWorker;
   Worker? _connectionWorker;
+  Worker? _journeyMetricsWorker;
   StreamSubscription<LocationTrackingStatusEntity>? _trackingStatusSubscription;
   final elapsedSeconds = 0.obs;
   final startTimeStr = '--:--'.obs;
@@ -70,6 +85,8 @@ class JourneyController extends GetxController {
   final isWaitingAccessibilityActivation = false.obs;
   final pendingShiftSyncCount = 0.obs;
   final trackingStatus = Rxn<LocationTrackingStatusEntity>();
+  DateTime? _lastTrackingUiRefreshAt;
+  double? _lastTrackingUiDistanceMeters;
 
   String get formattedElapsed {
     final hours = elapsedSeconds.value ~/ 3600;
@@ -79,30 +96,30 @@ class JourneyController extends GetxController {
   }
 
   final ridesList = <RideEntity>[].obs;
+  final paymentMethodSummary = <PaymentMethodSummaryItem>[].obs;
+  final isPaymentMethodSectionExpanded = false.obs;
   final selectedRideStatusFilter = 'Todos'.obs;
+  final shiftsTotalCount = 0.obs;
+  final ridesHistoryTotalCount = 0.obs;
+  final paymentMethodFinishedRidesCount = 0.obs;
 
-  List<RideEntity> get filteredRidesList {
-    if (selectedRideStatusFilter.value == 'Todos') {
-      return ridesList;
-    }
+  List<RideEntity> get filteredRidesList => ridesList
+      .where(_matchesSelectedRideStatus)
+      .toList(growable: false);
+  int get filteredRidesCount => filteredRidesList.length;
+  int get mappedPaymentMethodCount =>
+      paymentMethodSummary.fold(0, (total, item) => total + item.count);
 
-    if (selectedRideStatusFilter.value == 'Pendentes') {
-      return ridesList.where((ride) => ride.status == 'PENDING').toList();
-    }
-
-    if (selectedRideStatusFilter.value == 'Cancelados') {
-      return ridesList
-          .where(
-            (ride) => ride.status == 'CANCELED' || ride.status == 'CANCELLED',
-          )
-          .toList();
-    }
-
-    return ridesList.where((ride) => ride.status == 'FINISHED').toList();
+  void togglePaymentMethodSection() {
+    isPaymentMethodSectionExpanded.toggle();
   }
 
   void changeRideStatusFilter(String filter) {
+    if (selectedRideStatusFilter.value == filter) {
+      return;
+    }
     selectedRideStatusFilter.value = filter;
+    ridesHistoryTotalCount.value = filteredRidesCount;
   }
 
   void openRideDetails(RideEntity ride) {
@@ -122,12 +139,19 @@ class JourneyController extends GetxController {
   final totalCostsCents = 0.obs;
   final ridesTotalKm = 0.0.obs;
   final ridesTotalTime = 0.obs;
+  final totalShiftDrivenKm = 0.0.obs;
+  final costsGainsSettings = Rxn<CostsGainsSettingsEntity>();
+  final isOperationalCostBreakdownExpanded = false.obs;
 
   final shiftsCount = 0.obs;
   final shiftsList = <ShiftEntity>[].obs;
 
   final selectedDate = DateTime.now().obs;
   final isTrafficLightActive = false.obs;
+  final isAssistantActive = false.obs;
+  final isAssistantBusy = false.obs;
+  int _statisticsTotalTimeBaseSeconds = 0;
+  int _statisticsIdleTimeBaseSeconds = 0;
 
   bool get hasActiveShift => activeShift.value != null;
   bool get isAccessibilityServiceEnabled =>
@@ -206,6 +230,17 @@ class JourneyController extends GetxController {
       journeyRealtimeBridge.isOnline,
       _handleConnectionStatusChanged,
     );
+    _journeyMetricsWorker = everAll([
+      activeShift,
+      currentKm,
+      elapsedSeconds,
+      totalShifts,
+      selectedFilter,
+      selectedDate,
+      customStartDate,
+      customEndDate,
+      totalShiftDrivenKm,
+    ], (_) => _syncDisplayedJourneyMetrics());
     _trackingStatusSubscription = watchLocationTrackingStatusUseCase().listen(
       _handleTrackingStatusUpdated,
     );
@@ -216,6 +251,7 @@ class JourneyController extends GetxController {
     );
     refreshJourneyData(showErrors: false);
     _loadTrackingStatus();
+    _loadAssistantStatus();
   }
 
   @override
@@ -224,6 +260,7 @@ class JourneyController extends GetxController {
     _timer?.cancel();
     _accessibilityWorker?.dispose();
     _connectionWorker?.dispose();
+    _journeyMetricsWorker?.dispose();
     _trackingStatusSubscription?.cancel();
     super.onClose();
   }
@@ -348,6 +385,149 @@ class JourneyController extends GetxController {
     return (netEarningsCents.value / grossEarningsCents.value) * 100;
   }
 
+  int get operationalGrossEarningsCents => grossEarningsCents.value;
+
+  int get operationalTotalCostsCents {
+    final settings = costsGainsSettings.value;
+    if (settings == null) {
+      return totalCostsCents.value;
+    }
+
+    return operationalFixedCostsCents + operationalVariableCostsCents;
+  }
+
+  int get operationalNetEarningsCents =>
+      operationalGrossEarningsCents - operationalTotalCostsCents;
+
+  double get operationalMargin {
+    if (operationalGrossEarningsCents == 0) {
+      return 0.0;
+    }
+
+    return (operationalNetEarningsCents / operationalGrossEarningsCents) * 100;
+  }
+
+  int get operationalFixedCostsCents {
+    final settings = costsGainsSettings.value;
+    if (settings == null) {
+      return 0;
+    }
+
+    return _operationalFixedCostItems(
+      settings,
+    ).fold(0, (total, item) => total + item.amountCents);
+  }
+
+  int get operationalFuelCostsCents {
+    final settings = costsGainsSettings.value;
+    if (settings == null || settings.kmPerLiter <= 0) {
+      return 0;
+    }
+
+    final litersUsed = operationalDrivenKm / settings.kmPerLiter;
+    return (litersUsed * settings.fuelPricePerLiterCents).round();
+  }
+
+  int get operationalVariablePlatformFeeCents {
+    final settings = costsGainsSettings.value;
+    if (settings == null ||
+        settings.platformFeeType != PlatformFeeType.percentage ||
+        settings.platformFeeValue <= 0) {
+      return 0;
+    }
+
+    return (operationalGrossEarningsCents * (settings.platformFeeValue / 100))
+        .round();
+  }
+
+  int get operationalVariableCostsCents =>
+      operationalFuelCostsCents + operationalVariablePlatformFeeCents;
+
+  double get operationalDrivenKm {
+    var km = totalShiftDrivenKm.value;
+    if (_shouldUseLiveJourneyKm) {
+      km += currentKm.value.floorToDouble();
+    }
+    return km;
+  }
+
+  int get rideAnalysisTotalTimeSeconds {
+    var seconds = ridesTotalTime.value;
+    if (_selectedRangeIncludesNow && hasActiveShift) {
+      // Atualiza em blocos de 5s para evitar oscilação visual excessiva.
+      seconds += (elapsedSeconds.value ~/ 5) * 5;
+    }
+    return seconds;
+  }
+
+  double get rideAnalysisTotalKm {
+    var km = ridesTotalKm.value;
+    if (_shouldUseLiveJourneyKm) {
+      km += currentKm.value.floorToDouble();
+    }
+    return km;
+  }
+
+  String get operationalCostBreakdownLabel {
+    final settings = costsGainsSettings.value;
+    if (settings == null) {
+      return 'Baseado no custo atual das corridas';
+    }
+
+    return 'Fixos ${formatCurrency(operationalFixedCostsCents)} + variáveis ${formatCurrency(operationalVariableCostsCents)}';
+  }
+
+  List<OperationalCostBreakdownItem> get operationalVariableCostItems {
+    final settings = costsGainsSettings.value;
+    if (settings == null) {
+      return operationalFuelCostsCents <= 0
+          ? const []
+          : [
+              OperationalCostBreakdownItem(
+                label: 'Combustível',
+                amountCents: operationalFuelCostsCents,
+              ),
+            ];
+    }
+
+    final items = <OperationalCostBreakdownItem>[];
+
+    if (operationalFuelCostsCents > 0) {
+      items.add(
+        OperationalCostBreakdownItem(
+          label: 'Combustível',
+          amountCents: operationalFuelCostsCents,
+        ),
+      );
+    }
+
+    if (operationalVariablePlatformFeeCents > 0) {
+      items.add(
+        OperationalCostBreakdownItem(
+          label: settings.platformFeeType == PlatformFeeType.percentage
+              ? 'Taxa da Plataforma'
+              : 'Taxa Variável Plataforma',
+          amountCents: operationalVariablePlatformFeeCents,
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  List<OperationalCostBreakdownItem> get operationalFixedCostItems {
+    final settings = costsGainsSettings.value;
+    if (settings == null) {
+      return const [];
+    }
+
+    return _operationalFixedCostItems(settings);
+  }
+
+  void toggleOperationalCostBreakdown() {
+    isOperationalCostBreakdownExpanded.toggle();
+  }
+
   Future<void> refreshJourneyData({
     bool silent = false,
     bool includeRides = true,
@@ -361,6 +541,7 @@ class JourneyController extends GetxController {
 
     await Future.wait([
       _loadActiveShift(showErrors: showErrors),
+      _loadCostsGainsSettings(showErrors: showErrors),
       _loadStatistics(
         startDateParam: params.startDateParam,
         endDateParam: params.endDateParam,
@@ -370,9 +551,10 @@ class JourneyController extends GetxController {
         startDateParam: params.startDateParam,
         endDateParam: params.endDateParam,
         showErrors: showErrors,
+        reset: true,
       ),
       if (includeRides)
-        _loadRides(
+        _loadRidesData(
           startDateParam: params.startDateParam,
           endDateParam: params.endDateParam,
           showErrors: showErrors,
@@ -433,6 +615,24 @@ class JourneyController extends GetxController {
     await refreshJourneyData(showErrors: false);
   }
 
+  Future<void> loadMoreShifts() async {
+    if (isLoadingMoreShifts.value || !hasMoreShifts.value) {
+      return;
+    }
+
+    isLoadingMoreShifts.value = true;
+    final params = _buildQueryParams();
+    await _loadHistory(
+      startDateParam: params.startDateParam,
+      endDateParam: params.endDateParam,
+      showErrors: false,
+      reset: false,
+    );
+    isLoadingMoreShifts.value = false;
+  }
+
+  Future<void> loadMoreRides() async {}
+
   Future<void> openTrackingSettings() async {
     final status = trackingStatus.value;
     if (status == null) {
@@ -480,11 +680,15 @@ class JourneyController extends GetxController {
       (stats) {
         metricsError.value = null;
         totalShifts.value = stats.totalShifts.toString();
-        totalTime.value = stats.totalTime;
-        averageTime.value = stats.averageTime;
-        idleTime.value = stats.idleTime;
-        drivenKm.value = stats.drivenKm;
-        averageKmh.value = stats.averageKmh;
+        _statisticsTotalTimeBaseSeconds =
+            JourneyStatisticsDisplayComposer.parseHmsToSeconds(stats.totalTime);
+        _statisticsIdleTimeBaseSeconds =
+            JourneyStatisticsDisplayComposer.parseHmsToSeconds(stats.idleTime);
+        totalShiftDrivenKm.value = stats.totalDrivenKmValue > 0
+            ? stats.totalDrivenKmValue
+            : JourneyStatisticsDisplayComposer.parseKmLabelToDouble(
+                stats.drivenKm,
+              );
 
         totalRides.value = stats.rideStats.totalRides;
         grossEarningsCents.value = stats.rideStats.grossEarningsCents;
@@ -492,19 +696,39 @@ class JourneyController extends GetxController {
         totalCostsCents.value = stats.rideStats.totalCostsCents;
         ridesTotalKm.value = stats.rideStats.ridesTotalKm;
         ridesTotalTime.value = stats.rideStats.ridesTotalTime;
+        _syncDisplayedJourneyMetrics();
       },
     );
+  }
+
+  Future<void> _loadCostsGainsSettings({required bool showErrors}) async {
+    final useCase = getCostsGainsSettings;
+    if (useCase == null) {
+      costsGainsSettings.value = null;
+      return;
+    }
+
+    final result = await useCase();
+    result.fold((failure) {
+      costsGainsSettings.value = null;
+      debugPrint(
+        '[JourneyController] Erro ao carregar configuracoes de custos: ${failure.message}',
+      );
+    }, (settings) => costsGainsSettings.value = settings);
   }
 
   Future<void> _loadHistory({
     required String? startDateParam,
     required String? endDateParam,
     required bool showErrors,
+    required bool reset,
   }) async {
     final historyResult = await getShiftHistory(
       filter: selectedFilter.value,
       date: startDateParam,
       endDate: endDateParam,
+      offset: reset ? 0 : shiftsList.length,
+      limit: _historyPageSize,
     );
 
     historyResult.fold(
@@ -513,39 +737,159 @@ class JourneyController extends GetxController {
         message: failure.message,
         showErrors: showErrors,
       ),
-      (shifts) {
+      (shiftsPage) {
         historyError.value = null;
-        shiftsList.assignAll(shifts);
-        shiftsCount.value = shifts.length;
-        pendingShiftSyncCount.value = shifts
+        if (reset) {
+          shiftsList.assignAll(shiftsPage.items);
+        } else {
+          shiftsList.addAll(shiftsPage.items);
+        }
+        shiftsCount.value = shiftsList.length;
+        shiftsTotalCount.value = shiftsPage.totalCount;
+        hasMoreShifts.value = shiftsPage.hasMore;
+        pendingShiftSyncCount.value = shiftsList
             .where((shift) => shift.isPendingSync)
             .length;
       },
     );
   }
 
-  Future<void> _loadRides({
+  Future<void> _loadRidesData({
     required String? startDateParam,
     required String? endDateParam,
     required bool showErrors,
   }) async {
-    final ridesResult = await getRidesUseCase(
-      period: selectedFilter.value,
-      date: startDateParam,
-      endDate: endDateParam,
-    );
+    const limit = 100;
+    var offset = 0;
+    final allRides = <RideEntity>[];
 
-    ridesResult.fold(
-      (failure) => _handleLoadFailure(
-        context: 'corridas',
-        message: failure.message,
-        showErrors: showErrors,
-      ),
-      (rides) {
-        ridesError.value = null;
-        ridesList.assignAll(rides);
-      },
+    while (true) {
+      final ridesResult = await getRidesUseCase(
+        period: selectedFilter.value,
+        date: startDateParam,
+        endDate: endDateParam,
+        status: null,
+        offset: offset,
+        limit: limit,
+      );
+
+      final shouldContinue = await ridesResult.fold<Future<bool>>(
+        (failure) async {
+          ridesList.clear();
+          ridesHistoryTotalCount.value = 0;
+          hasMoreRides.value = false;
+          paymentMethodSummary.clear();
+          paymentMethodFinishedRidesCount.value = 0;
+          _handleLoadFailure(
+            context: 'corridas',
+            message: failure.message,
+            showErrors: showErrors,
+          );
+          return false;
+        },
+        (ridesPage) async {
+          ridesError.value = null;
+          allRides.addAll(ridesPage.items);
+          offset += ridesPage.items.length;
+          return ridesPage.hasMore && ridesPage.items.isNotEmpty;
+        },
+      );
+
+      if (!shouldContinue) {
+        break;
+      }
+    }
+
+    if (ridesError.value != null) {
+      return;
+    }
+
+    ridesList.assignAll(allRides);
+    hasMoreRides.value = false;
+    ridesHistoryTotalCount.value = filteredRidesCount;
+    _rebuildPaymentMethodSummary();
+  }
+
+  String? _normalizePaymentMethod(String? paymentMethod) {
+    final normalized = paymentMethod?.trim().toUpperCase();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+
+    switch (normalized) {
+      case 'CARD':
+      case 'CREDIT_CARD':
+      case 'DEBIT_CARD':
+      case 'CREDIT_OR_DEBIT_CARD':
+        return 'CARD';
+      case 'CASH':
+      case 'MONEY':
+        return 'CASH';
+      case 'PIX':
+        return 'PIX';
+      case 'VOUCHER':
+        return 'VOUCHER';
+      default:
+        return normalized;
+    }
+  }
+
+  bool _matchesSelectedRideStatus(RideEntity ride) {
+    final selectedStatus = _selectedRideStatusQuery;
+    if (selectedStatus == null) {
+      return true;
+    }
+
+    return ride.status.trim().toUpperCase() == selectedStatus;
+  }
+
+  void _rebuildPaymentMethodSummary() {
+    final counts = <String, int>{};
+
+    for (final ride in ridesList) {
+      if (ride.status.trim().toUpperCase() != 'FINISHED') {
+        continue;
+      }
+
+      final normalizedPaymentMethod = _normalizePaymentMethod(
+        ride.paymentMethod,
+      );
+      if (normalizedPaymentMethod == null) {
+        continue;
+      }
+
+      counts.update(
+        normalizedPaymentMethod,
+        (value) => value + 1,
+        ifAbsent: () => 1,
+      );
+    }
+
+    paymentMethodFinishedRidesCount.value = ridesList
+        .where((ride) => ride.status.trim().toUpperCase() == 'FINISHED')
+        .length;
+    paymentMethodSummary.assignAll(
+      counts.entries
+          .map(
+            (entry) =>
+                PaymentMethodSummaryItem(code: entry.key, count: entry.value),
+          )
+          .toList()
+        ..sort((a, b) => b.count.compareTo(a.count)),
     );
+  }
+
+  String? get _selectedRideStatusQuery {
+    switch (selectedRideStatusFilter.value) {
+      case 'Pendentes':
+        return 'PENDING';
+      case 'Finalizados':
+        return 'FINISHED';
+      case 'Cancelados':
+        return 'CANCELED';
+      default:
+        return null;
+    }
   }
 
   ({String? startDateParam, String? endDateParam}) _buildQueryParams() {
@@ -570,6 +914,7 @@ class JourneyController extends GetxController {
       elapsedSeconds.value = 0;
       startTimeStr.value = '--:--';
       currentKm.value = 0.0;
+      _syncDisplayedJourneyMetrics();
       return;
     }
 
@@ -585,10 +930,12 @@ class JourneyController extends GetxController {
         idleTimeSeconds: shift.idleTimeSeconds,
         reference: pausedReference,
       );
+      _syncDisplayedJourneyMetrics();
       return;
     }
 
     _startElapsedTimer(shift.startTime, shift.idleTimeSeconds);
+    _syncDisplayedJourneyMetrics();
   }
 
   void _startElapsedTimer(DateTime startTime, int idleTimeSeconds) {
@@ -753,19 +1100,79 @@ class JourneyController extends GetxController {
   }
 
   void _handleTrackingStatusUpdated(LocationTrackingStatusEntity status) {
-    trackingStatus.value = status;
+    final now = DateTime.now();
+    final shouldRefreshDistanceUi =
+        _lastTrackingUiRefreshAt == null ||
+        _lastTrackingUiDistanceMeters == null ||
+        (status.totalDistanceMeters - _lastTrackingUiDistanceMeters!).abs() >=
+            100 ||
+        now.difference(_lastTrackingUiRefreshAt!) >=
+            const Duration(seconds: 15);
+
+    final previousStatus = trackingStatus.value;
+    final shouldRefreshStatusUi =
+        previousStatus == null ||
+        previousStatus.issueMessage != status.issueMessage ||
+        previousStatus.isTrackingActive != status.isTrackingActive ||
+        previousStatus.isPaused != status.isPaused ||
+        previousStatus.idleTimeSeconds != status.idleTimeSeconds ||
+        previousStatus.isLocationServiceEnabled !=
+            status.isLocationServiceEnabled ||
+        previousStatus.hasForegroundPermission !=
+            status.hasForegroundPermission ||
+        previousStatus.hasBackgroundPermission !=
+            status.hasBackgroundPermission ||
+        previousStatus.isPreciseLocation != status.isPreciseLocation;
+
+    if (shouldRefreshStatusUi || shouldRefreshDistanceUi) {
+      trackingStatus.value = status;
+      _lastTrackingUiRefreshAt = now;
+      _lastTrackingUiDistanceMeters = status.totalDistanceMeters;
+    }
 
     if (!hasActiveShift) {
       return;
     }
 
     final trackedKm = status.totalDistanceMeters / 1000;
-    currentKm.value = trackedKm;
+    if (shouldRefreshDistanceUi || shouldRefreshStatusUi) {
+      currentKm.value = trackedKm;
+    }
 
     final shift = activeShift.value;
-    if (shift != null) {
-      activeShift.value = shift.copyWith(currentDrivenKm: trackedKm);
+    if (shift != null && (shouldRefreshDistanceUi || shouldRefreshStatusUi)) {
+      final didIdleTimeChange = shift.idleTimeSeconds != status.idleTimeSeconds;
+      activeShift.value = shift.copyWith(
+        currentDrivenKm: trackedKm,
+        idleTimeSeconds: status.idleTimeSeconds,
+      );
+      if (didIdleTimeChange && !shift.isPaused) {
+        _startElapsedTimer(shift.startTime, status.idleTimeSeconds);
+      }
+      _syncDisplayedJourneyMetrics();
     }
+  }
+
+  void _syncDisplayedJourneyMetrics() {
+    final displayData = JourneyStatisticsDisplayComposer.compose(
+      baseTotalTimeSeconds: _statisticsTotalTimeBaseSeconds,
+      baseIdleTimeSeconds: _statisticsIdleTimeBaseSeconds,
+      baseDrivenKm: totalShiftDrivenKm.value,
+      shiftsCount: int.tryParse(totalShifts.value) ?? 0,
+      activeIdleSeconds: _selectedRangeIncludesNow && hasActiveShift
+          ? activeShift.value?.idleTimeSeconds ?? 0
+          : 0,
+      liveElapsedSeconds: _statisticsLiveElapsedSeconds,
+      liveDrivenKm: currentKm.value.floorToDouble(),
+      includeLiveTime: _shouldUseLiveJourneyTime,
+      includeLiveKm: _shouldUseLiveJourneyKm,
+    );
+
+    totalTime.value = displayData.totalTime;
+    averageTime.value = displayData.averageTime;
+    idleTime.value = displayData.idleTime;
+    drivenKm.value = displayData.drivenKm;
+    averageKmh.value = displayData.averageKmh;
   }
 
   String _normalizeErrorMessage(String message) {
@@ -790,6 +1197,144 @@ class JourneyController extends GetxController {
     }
 
     return normalized;
+  }
+
+  double _selectedPeriodWorkDays(CostsGainsSettingsEntity settings) {
+    final totalDays = _selectedPeriodDayCount;
+    if (totalDays <= 0 || settings.workDaysPerWeek <= 0) {
+      return 0;
+    }
+
+    if (selectedFilter.value == 'day') {
+      return 1;
+    }
+
+    return totalDays * (settings.workDaysPerWeek / 7);
+  }
+
+  List<OperationalCostBreakdownItem> _operationalFixedCostItems(
+    CostsGainsSettingsEntity settings,
+  ) {
+    final items = <OperationalCostBreakdownItem>[
+      OperationalCostBreakdownItem(
+        label: 'Prestação/Aluguel',
+        amountCents: _diluteMonthlyCostForSelectedPeriod(
+          monthlyCostCents: settings.financeOrRentMonthlyCents,
+          settings: settings,
+        ),
+      ),
+      OperationalCostBreakdownItem(
+        label: 'Seguro',
+        amountCents: _diluteMonthlyCostForSelectedPeriod(
+          monthlyCostCents: settings.insuranceMonthlyCents,
+          settings: settings,
+        ),
+      ),
+      OperationalCostBreakdownItem(
+        label: 'Manutenção',
+        amountCents: _diluteMonthlyCostForSelectedPeriod(
+          monthlyCostCents: settings.maintenanceMonthlyCents,
+          settings: settings,
+        ),
+      ),
+      OperationalCostBreakdownItem(
+        label: 'Impostos',
+        amountCents: _diluteMonthlyCostForSelectedPeriod(
+          monthlyCostCents: (settings.annualTaxesCents / 12).round(),
+          settings: settings,
+        ),
+      ),
+    ];
+
+    if (settings.platformFeeType == PlatformFeeType.fixed &&
+        settings.platformFeeValue > 0) {
+      items.add(
+        OperationalCostBreakdownItem(
+          label: 'Taxa Fixa Plataforma',
+          amountCents: _diluteMonthlyCostForSelectedPeriod(
+            monthlyCostCents: (settings.platformFeeValue * 100).round(),
+            settings: settings,
+          ),
+        ),
+      );
+    }
+
+    return items.where((item) => item.amountCents > 0).toList();
+  }
+
+  int _diluteMonthlyCostForSelectedPeriod({
+    required int monthlyCostCents,
+    required CostsGainsSettingsEntity settings,
+  }) {
+    if (monthlyCostCents <= 0) {
+      return 0;
+    }
+
+    final monthlyWorkDays = settings.workDaysPerWeek * 4.33;
+    if (monthlyWorkDays <= 0) {
+      return 0;
+    }
+
+    final fixedCostPerWorkDayCents = monthlyCostCents / monthlyWorkDays;
+    return (fixedCostPerWorkDayCents * _selectedPeriodWorkDays(settings))
+        .round();
+  }
+
+  int get _selectedPeriodDayCount {
+    final range = _selectedRange;
+    return range.endExclusive.difference(range.start).inDays;
+  }
+
+  bool get _selectedRangeIncludesNow {
+    final now = DateTime.now();
+    final range = _selectedRange;
+    return !now.isBefore(range.start) && now.isBefore(range.endExclusive);
+  }
+
+  bool get _shouldUseLiveJourneyKm =>
+      hasActiveShift && _selectedRangeIncludesNow;
+
+  bool get _shouldUseLiveJourneyTime =>
+      hasActiveShift && _selectedRangeIncludesNow;
+
+  int get _statisticsLiveElapsedSeconds => (elapsedSeconds.value ~/ 30) * 30;
+
+  ({DateTime start, DateTime endExclusive}) get _selectedRange {
+    DateTime startOfDay(DateTime value) =>
+        DateTime(value.year, value.month, value.day);
+
+    if (selectedFilter.value == 'custom' &&
+        customStartDate.value != null &&
+        customEndDate.value != null) {
+      final start = startOfDay(customStartDate.value!);
+      final endExclusive = startOfDay(
+        customEndDate.value!,
+      ).add(const Duration(days: 1));
+      return (start: start, endExclusive: endExclusive);
+    }
+
+    final date = selectedDate.value;
+
+    switch (selectedFilter.value) {
+      case 'week':
+        final start = startOfDay(
+          date.subtract(Duration(days: date.weekday - 1)),
+        );
+        return (start: start, endExclusive: start.add(const Duration(days: 7)));
+      case 'month':
+        final start = DateTime(date.year, date.month);
+        return (
+          start: start,
+          endExclusive: DateTime(date.year, date.month + 1),
+        );
+      case 'year':
+        final start = DateTime(date.year);
+        return (start: start, endExclusive: DateTime(date.year + 1));
+      case 'day':
+      default:
+        final start = startOfDay(date);
+        return (start: start, endExclusive: start.add(const Duration(days: 1)));
+    }
   }
 
   void _showActionError(String action, String message) {
@@ -1007,4 +1552,70 @@ class JourneyController extends GetxController {
   void activateTrafficLight() {
     toggleTrafficLight();
   }
+
+  Future<void> _loadAssistantStatus() async {
+    isAssistantActive.value = await appBubbleService.isBubbleRunning();
+  }
+
+  Future<void> toggleAssistant() async {
+    if (isAssistantBusy.value) return;
+
+    isAssistantBusy.value = true;
+    try {
+      if (isAssistantActive.value) {
+        await appBubbleService.stopBubble();
+        isAssistantActive.value = false;
+        AppSnackbar.show(
+          'Assistente desativado',
+          'O balão da Direção Financeira foi removido da tela.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      final hasPermission = await appBubbleService.isOverlayPermissionGranted();
+      if (!hasPermission) {
+        await appBubbleService.openOverlayPermissionSettings();
+        AppSnackbar.show(
+          'Permissão necessária',
+          'Libere a permissão de sobreposição para ativar o Assistente.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      await appBubbleService.startBubble();
+      isAssistantActive.value = true;
+      AppSnackbar.show(
+        'Assistente ativado',
+        'A logo já está visível sobre outros apps.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (_) {
+      AppSnackbar.show(
+        'Não foi possível ativar',
+        'Falhou ao iniciar o Assistente neste momento.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isAssistantBusy.value = false;
+    }
+  }
+}
+
+class OperationalCostBreakdownItem {
+  const OperationalCostBreakdownItem({
+    required this.label,
+    required this.amountCents,
+  });
+
+  final String label;
+  final int amountCents;
+}
+
+class PaymentMethodSummaryItem {
+  const PaymentMethodSummaryItem({required this.code, required this.count});
+
+  final String code;
+  final int count;
 }

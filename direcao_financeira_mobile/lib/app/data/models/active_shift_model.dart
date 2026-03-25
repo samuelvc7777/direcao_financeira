@@ -9,6 +9,8 @@ class ActiveShiftModel extends ActiveShiftEntity {
     required super.currentDrivenKm,
     required super.idleTimeSeconds,
     super.pausedAt,
+    super.lowSpeedSince,
+    super.lastMotionIdleCheckpointAt,
   });
 
   @override
@@ -20,7 +22,11 @@ class ActiveShiftModel extends ActiveShiftEntity {
     double? currentDrivenKm,
     int? idleTimeSeconds,
     DateTime? pausedAt,
+    DateTime? lowSpeedSince,
+    DateTime? lastMotionIdleCheckpointAt,
     bool clearPausedAt = false,
+    bool clearLowSpeedSince = false,
+    bool clearLastMotionIdleCheckpointAt = false,
   }) {
     return ActiveShiftModel(
       id: id ?? this.id,
@@ -30,6 +36,12 @@ class ActiveShiftModel extends ActiveShiftEntity {
       currentDrivenKm: currentDrivenKm ?? this.currentDrivenKm,
       idleTimeSeconds: idleTimeSeconds ?? this.idleTimeSeconds,
       pausedAt: clearPausedAt ? null : (pausedAt ?? this.pausedAt),
+      lowSpeedSince: clearLowSpeedSince
+          ? null
+          : (lowSpeedSince ?? this.lowSpeedSince),
+      lastMotionIdleCheckpointAt: clearLastMotionIdleCheckpointAt
+          ? null
+          : (lastMotionIdleCheckpointAt ?? this.lastMotionIdleCheckpointAt),
     );
   }
 
@@ -44,6 +56,14 @@ class ActiveShiftModel extends ActiveShiftEntity {
       pausedAt: json['pausedAt'] != null
           ? DateTime.parse(json['pausedAt'] as String).toLocal()
           : null,
+      lowSpeedSince: json['lowSpeedSince'] != null
+          ? DateTime.parse(json['lowSpeedSince'] as String).toLocal()
+          : null,
+      lastMotionIdleCheckpointAt: json['lastMotionIdleCheckpointAt'] != null
+          ? DateTime.parse(
+              json['lastMotionIdleCheckpointAt'] as String,
+            ).toLocal()
+          : null,
     );
   }
 
@@ -56,6 +76,10 @@ class ActiveShiftModel extends ActiveShiftEntity {
       'currentDrivenKm': currentDrivenKm,
       'idleTime': idleTimeSeconds,
       'pausedAt': pausedAt?.toUtc().toIso8601String(),
+      'lowSpeedSince': lowSpeedSince?.toUtc().toIso8601String(),
+      'lastMotionIdleCheckpointAt': lastMotionIdleCheckpointAt
+          ?.toUtc()
+          .toIso8601String(),
     };
   }
 }

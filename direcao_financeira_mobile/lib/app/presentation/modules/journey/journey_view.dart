@@ -1,22 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
-
-import '../../widgets/custom_app_bar.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/custom_app_bar.dart';
 import 'journey_controller.dart';
 import 'widgets/journey_status_banner.dart';
-import 'widgets/shift_history_section.dart';
 import 'widgets/rides_list_section.dart';
+import 'widgets/shift_history_section.dart';
 
-class JourneyView extends GetView<JourneyController> {
+class JourneyView extends StatefulWidget {
   const JourneyView({super.key});
 
   @override
+  State<JourneyView> createState() => _JourneyViewState();
+}
+
+class _JourneyViewState extends State<JourneyView> {
+  late final JourneyController controller;
+  late int _selectedTabIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<JourneyController>();
+
+    final args = Get.arguments;
+    _selectedTabIndex = args is Map
+        ? (args['journeyInitialTabIndex'] as int? ?? 0).clamp(0, 1)
+        : 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return DefaultTabController(
       length: 2,
+      initialIndex: _selectedTabIndex,
       child: Scaffold(
         backgroundColor: context.theme.scaffoldBackgroundColor,
         appBar: const CustomAppBar(
@@ -26,176 +48,166 @@ class JourneyView extends GetView<JourneyController> {
           showBackButton: false,
         ),
         body: SafeArea(
-          child: Column(
-            children: [
-              const JourneyStatusBanner(),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: Responsive.hp(context, 4.0).clamp(16.0, 24.0),
-                  vertical: Responsive.vp(context, 1.5).clamp(12.0, 20.0),
-                ),
-                child: Container(
-                  height: Responsive.vp(context, 6.0).clamp(48.0, 56.0),
-                  decoration: BoxDecoration(
-                    color: AppColors.deepNavy.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(
-                      Responsive.sp(context, 30).clamp(24.0, 30.0),
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      width: 1.5,
-                    ),
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return const AppLoadingScreen(
+                label: 'Carregando jornada...',
+                accentColor: AppColors.royalBlue,
+              );
+            }
+
+            return Column(
+              children: [
+                const JourneyStatusBanner(),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.hp(context, 4.0).clamp(16.0, 24.0),
+                    vertical: Responsive.vp(context, 1.5).clamp(12.0, 20.0),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: TabBar(
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: Colors.transparent,
-                      indicator: BoxDecoration(
-                        color: AppColors.royalBlue,
-                        borderRadius: BorderRadius.circular(
+                  child: Container(
+                    height: Responsive.vp(context, 6.0).clamp(48.0, 56.0),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(
+                        Responsive.sp(context, 30).clamp(24.0, 30.0),
+                      ),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: TabBar(
+                        onTap: (index) {
+                          if (_selectedTabIndex == index) {
+                            return;
+                          }
+                          setState(() {
+                            _selectedTabIndex = index;
+                          });
+                        },
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        indicator: BoxDecoration(
+                          color: colorScheme.primary,
+                          borderRadius: BorderRadius.circular(
+                            Responsive.sp(context, 26).clamp(20.0, 26.0),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.24,
+                              ),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        labelColor: colorScheme.onPrimary,
+                        labelStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: Responsive.sp(
+                            context,
+                            14,
+                          ).clamp(12.0, 15.0),
+                        ),
+                        unselectedLabelColor: colorScheme.onSurfaceVariant,
+                        unselectedLabelStyle: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: Responsive.sp(
+                            context,
+                            14,
+                          ).clamp(12.0, 15.0),
+                        ),
+                        splashBorderRadius: BorderRadius.circular(
                           Responsive.sp(context, 26).clamp(20.0, 26.0),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.royalBlue.withValues(alpha: 0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                        tabs: [
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.work_outline_rounded,
+                                  size: Responsive.sp(
+                                    context,
+                                    18,
+                                  ).clamp(16.0, 20.0),
+                                ),
+                                SizedBox(
+                                  width: Responsive.hp(
+                                    context,
+                                    1.5,
+                                  ).clamp(6.0, 10.0),
+                                ),
+                                const Text('Turnos'),
+                              ],
+                            ),
+                          ),
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.directions_car_rounded,
+                                  size: Responsive.sp(
+                                    context,
+                                    18,
+                                  ).clamp(16.0, 20.0),
+                                ),
+                                SizedBox(
+                                  width: Responsive.hp(
+                                    context,
+                                    1.5,
+                                  ).clamp(6.0, 10.0),
+                                ),
+                                const Text('Corridas'),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      labelColor: Colors.white,
-                      labelStyle: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: Responsive.sp(context, 14).clamp(12.0, 15.0),
-                      ),
-                      unselectedLabelColor: Colors.white54,
-                      unselectedLabelStyle: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: Responsive.sp(context, 14).clamp(12.0, 15.0),
-                      ),
-                      splashBorderRadius: BorderRadius.circular(
-                        Responsive.sp(context, 26).clamp(20.0, 26.0),
-                      ),
-                      tabs: [
-                        Tab(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.work_outline_rounded,
-                                size: Responsive.sp(
-                                  context,
-                                  18,
-                                ).clamp(16.0, 20.0),
-                              ),
-                              SizedBox(
-                                width: Responsive.hp(
-                                  context,
-                                  1.5,
-                                ).clamp(6.0, 10.0),
-                              ),
-                              const Text('Turnos'),
-                            ],
-                          ),
-                        ),
-                        Tab(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.directions_car_rounded,
-                                size: Responsive.sp(
-                                  context,
-                                  18,
-                                ).clamp(16.0, 20.0),
-                              ),
-                              SizedBox(
-                                width: Responsive.hp(
-                                  context,
-                                  1.5,
-                                ).clamp(6.0, 10.0),
-                              ),
-                              const Text('Corridas'),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Obx(
-                  () => Stack(
-                    children: [
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final width = constraints.maxWidth;
-                          final horizontalPadding = width < 360
-                              ? 8.0
-                              : width < 430
-                              ? 12.0
-                              : 16.0;
-
-                          return Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 720),
-                              child: TabBarView(
-                                physics: const BouncingScrollPhysics(),
-                                children: [
-                                  SingleChildScrollView(
-                                    physics: const BouncingScrollPhysics(),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: horizontalPadding,
-                                    ),
-                                    child: const Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(height: 8),
-                                        ShiftHistorySection(),
-                                        SizedBox(height: 100),
-                                      ],
-                                    ),
-                                  ),
-                                  SingleChildScrollView(
-                                    physics: const BouncingScrollPhysics(),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: horizontalPadding,
-                                    ),
-                                    child: const Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(height: 8),
-                                        RidesListSection(),
-                                        SizedBox(height: 100),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      if (controller.isLoading.value)
-                        const Align(
-                          alignment: Alignment.topCenter,
-                          child: AppLoadingBanner(
-                            label: 'Atualizando jornada',
-                            accentColor: AppColors.royalBlue,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+                const Expanded(child: _JourneyTabsBody()),
+              ],
+            );
+          }),
         ),
       ),
+    );
+  }
+}
+
+class _JourneyTabsBody extends StatelessWidget {
+  const _JourneyTabsBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final horizontalPadding = width < 360
+            ? 8.0
+            : width < 430
+            ? 12.0
+            : 16.0;
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: const TabBarView(
+                physics: BouncingScrollPhysics(),
+                children: [ShiftHistorySection(), RidesListSection()],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

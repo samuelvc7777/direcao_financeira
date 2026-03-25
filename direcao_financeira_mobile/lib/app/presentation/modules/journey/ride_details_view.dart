@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/entities/ride_entity.dart';
 import '../../../domain/usecases/ride_status_use_cases.dart';
 import '../../widgets/custom_app_bar.dart';
+import 'journey_controller.dart';
 import 'widgets/ride_details_atoms.dart';
 import 'widgets/ride_details_cards.dart';
 import 'widgets/ride_details_models.dart';
@@ -46,8 +46,8 @@ class _RideDetailsViewState extends State<RideDetailsView> {
     );
     if (!mounted) return;
 
-    result.fold(
-      (failure) {
+    await result.fold<Future<void>>(
+      (failure) async {
         setState(() => _isSubmitting = false);
         Get.snackbar(
           'Erro ao finalizar',
@@ -55,7 +55,10 @@ class _RideDetailsViewState extends State<RideDetailsView> {
           snackPosition: SnackPosition.BOTTOM,
         );
       },
-      (_) {
+      (_) async {
+        await _refreshJourneyMetrics();
+        if (!mounted) return;
+
         Get.back();
         Get.snackbar(
           'Corrida finalizada',
@@ -76,8 +79,8 @@ class _RideDetailsViewState extends State<RideDetailsView> {
     );
     if (!mounted) return;
 
-    result.fold(
-      (failure) {
+    await result.fold<Future<void>>(
+      (failure) async {
         setState(() => _isSubmitting = false);
         Get.snackbar(
           'Erro ao cancelar',
@@ -85,7 +88,10 @@ class _RideDetailsViewState extends State<RideDetailsView> {
           snackPosition: SnackPosition.BOTTOM,
         );
       },
-      (_) {
+      (_) async {
+        await _refreshJourneyMetrics();
+        if (!mounted) return;
+
         Get.back();
         Get.snackbar(
           'Corrida cancelada',
@@ -96,13 +102,25 @@ class _RideDetailsViewState extends State<RideDetailsView> {
     );
   }
 
+  Future<void> _refreshJourneyMetrics() async {
+    if (!Get.isRegistered<JourneyController>()) {
+      return;
+    }
+
+    await Get.find<JourneyController>().refreshJourneyData(
+      silent: true,
+      showErrors: false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ride = Get.arguments as RideEntity?;
+    final colorScheme = context.theme.colorScheme;
     final isDark = context.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.deepNavy : AppColors.background,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(
         title: 'Detalhes da Corrida',
         subtitle: 'Resumo da corrida salva',
@@ -112,15 +130,14 @@ class _RideDetailsViewState extends State<RideDetailsView> {
       bottomNavigationBar: ride == null
           ? null
           : ride.status != 'PENDING'
-              ? RideEditOnlyBar(onEdit: () => Get.back())
-              : RideBottomActionBar(
-                  isLoading: _isSubmitting,
-                  onCancel: (reason) => _cancelRide(ride, reason),
-                  onEdit: () => Get.back(),
-                  onFinish: (paymentOption) => _finishRide(ride, paymentOption),
-                ),
+          ? null
+          : RideBottomActionBar(
+              isLoading: _isSubmitting,
+              onCancel: (reason) => _cancelRide(ride, reason),
+              onFinish: (paymentOption) => _finishRide(ride, paymentOption),
+            ),
       body: ride == null
-          ? _RideNotFound(isDark: isDark)
+          ? _RideNotFound(colorScheme: colorScheme)
           : _RideDetailsBody(ride: ride, isDark: isDark),
     );
   }
@@ -129,8 +146,9 @@ class _RideDetailsViewState extends State<RideDetailsView> {
 // ─── Estado vazio ──────────────────────────────────────────────────────────
 
 class _RideNotFound extends StatelessWidget {
-  const _RideNotFound({required this.isDark});
-  final bool isDark;
+  const _RideNotFound({required this.colorScheme});
+
+  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
@@ -141,13 +159,13 @@ class _RideNotFound extends StatelessWidget {
           Icon(
             Icons.no_transfer_rounded,
             size: 64,
-            color: isDark ? Colors.white24 : Colors.black26,
+            color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 16),
           Text(
             'Corrida nao encontrada.',
             style: context.textTheme.bodyLarge?.copyWith(
-              color: isDark ? Colors.white54 : Colors.black45,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/preferences/app_preferences.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,19 +10,28 @@ import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../costs_gains_settings/costs_gains_flow_coordinator.dart';
 import '../../../routes/app_pages.dart';
 
-class SettingsController extends GetxController {
+class SettingsController extends GetxController with WidgetsBindingObserver {
   SettingsController({
+    required this.appBubbleService,
     required this.preferences,
     required this.getStoredUserUseCase,
     required this.logoutUseCase,
   });
 
+  static const _appBubbleEnabledKey = 'appBubbleEnabled';
+
+  final AppBubbleService appBubbleService;
   final AppPreferences preferences;
   final GetStoredUserUseCase getStoredUserUseCase;
   final LogoutUseCase logoutUseCase;
+  var _pendingAppBubbleActivation = false;
 
   late final RxBool isDarkModeEnabled =
       (preferences.readBool('isDarkMode') ?? Get.isPlatformDarkMode).obs;
+  late final RxBool isAppBubbleEnabled =
+      (preferences.readBool(_appBubbleEnabledKey) ?? false).obs;
+  final isAppBubblePermissionGranted = false.obs;
+  final isAppBubbleBusy = false.obs;
   final userName = 'Samuel Vitor'.obs;
   final userEmail = 'samuelvitorcarvalho717@gmail.com'.obs;
   final planName = 'Plano Anual'.obs;
@@ -99,7 +109,44 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _loadUser();
+    _loadAppBubbleState();
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      refreshAppBubblePermission();
+    }
+  }
+
+  Future<void> _loadAppBubbleState() async {
+    isAppBubblePermissionGranted.value = await appBubbleService
+        .isOverlayPermissionGranted();
+    final isBubbleRunning = await appBubbleService.isBubbleRunning();
+
+    if (isAppBubbleEnabled.value &&
+        isAppBubblePermissionGranted.value &&
+        !isBubbleRunning) {
+      try {
+        await appBubbleService.startBubble();
+      } catch (_) {
+        isAppBubbleEnabled.value = false;
+        await preferences.writeBool(_appBubbleEnabledKey, false);
+      }
+      return;
+    }
+
+    if (!isAppBubbleEnabled.value && isBubbleRunning) {
+      await appBubbleService.stopBubble();
+    }
   }
 
   void _loadUser() {
@@ -172,6 +219,79 @@ class SettingsController extends GetxController {
   }
 
   void openSubscription() => Get.toNamed(AppRoutes.subscription);
+
+  Future<void> toggleAppBubble(bool value) async {
+    if (isAppBubbleBusy.value) return;
+
+    isAppBubbleBusy.value = true;
+    try {
+      if (!value) {
+        _pendingAppBubbleActivation = false;
+        await appBubbleService.stopBubble();
+        isAppBubbleEnabled.value = false;
+        await preferences.writeBool(_appBubbleEnabledKey, false);
+        _showInfo('Balão flutuante', 'O balão foi desativado com sucesso.');
+        return;
+      }
+
+      final hasPermission = await appBubbleService.isOverlayPermissionGranted();
+      isAppBubblePermissionGranted.value = hasPermission;
+
+      if (!hasPermission) {
+        _pendingAppBubbleActivation = true;
+        await appBubbleService.openOverlayPermissionSettings();
+        _showInfo(
+          'Permissão necessária',
+          'Libere a permissão de sobreposição para exibir o balão sobre outros apps.',
+        );
+        return;
+      }
+
+      await appBubbleService.startBubble();
+      _pendingAppBubbleActivation = false;
+      isAppBubbleEnabled.value = true;
+      await preferences.writeBool(_appBubbleEnabledKey, true);
+      _showInfo(
+        'Balão flutuante',
+        'O balão da Direção Financeira já está ativo.',
+      );
+    } catch (_) {
+      _showInfo(
+        'Não foi possível ativar',
+        'Falhou ao iniciar o balão flutuante neste momento.',
+      );
+    } finally {
+      isAppBubbleBusy.value = false;
+    }
+  }
+
+  Future<void> refreshAppBubblePermission() async {
+    isAppBubblePermissionGranted.value = await appBubbleService
+        .isOverlayPermissionGranted();
+
+    if (_pendingAppBubbleActivation && isAppBubblePermissionGranted.value) {
+      try {
+        await appBubbleService.startBubble();
+        isAppBubbleEnabled.value = true;
+        await preferences.writeBool(_appBubbleEnabledKey, true);
+      } catch (_) {
+        isAppBubbleEnabled.value = false;
+        await preferences.writeBool(_appBubbleEnabledKey, false);
+      } finally {
+        _pendingAppBubbleActivation = false;
+      }
+      return;
+    }
+
+    if (isAppBubbleEnabled.value && !isAppBubblePermissionGranted.value) {
+      isAppBubbleEnabled.value = false;
+      await preferences.writeBool(_appBubbleEnabledKey, false);
+    }
+  }
+
+  Future<void> openAppBubblePermissionSettings() async {
+    await appBubbleService.openOverlayPermissionSettings();
+  }
 
   void openSettingItem(SettingsItemData item) {
     if (item.title == 'Categorias') {

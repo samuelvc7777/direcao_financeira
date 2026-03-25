@@ -4,6 +4,7 @@ import '../../core/errors/failures.dart';
 import '../../core/network/api_error_mapper.dart';
 import '../../core/network/api_request_logger.dart';
 import '../../domain/entities/detected_ride_draft_entity.dart';
+import '../../domain/entities/paged_result_entity.dart';
 import '../../domain/entities/ride_entity.dart';
 import '../../domain/repositories/i_ride_repository.dart';
 import '../datasources/i_ride_datasource.dart';
@@ -20,16 +21,22 @@ class RideRepositoryImpl implements IRideRepository {
   final ApiRequestLogger apiRequestLogger;
 
   @override
-  Future<Either<Failure, List<RideEntity>>> getRides({
+  Future<Either<Failure, PagedResultEntity<RideEntity>>> getRides({
     String period = 'day',
     String? date,
     String? endDate,
+    String? status,
+    int offset = 0,
+    int limit = 20,
   }) async {
     try {
       final rides = await dataSource.getRides(
         period: period,
         date: date,
         endDate: endDate,
+        status: status,
+        offset: offset,
+        limit: limit,
       );
       return Right(rides);
     } catch (e) {

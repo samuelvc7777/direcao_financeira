@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/entities/traffic_light_settings_entity.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -15,7 +16,7 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
     return Scaffold(
       backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(
-        title: 'Configurar Semaforo',
+        title: 'Configurar Semáforo',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -32,7 +33,7 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
             SizedBox(height: Responsive.vp(context, 2.6)),
             _buildSectionHeader(
               context,
-              'Limites do Semaforo',
+              'Limites do Semáforo',
               icon: Icons.traffic_rounded,
             ),
             SizedBox(height: Responsive.vp(context, 1.2)),
@@ -52,7 +53,7 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
             SizedBox(height: Responsive.vp(context, 2.4)),
             _buildSectionHeader(
               context,
-              'Posicao na Tela',
+              'Posição na Tela',
               icon: Icons.grid_view_rounded,
             ),
             SizedBox(height: Responsive.vp(context, 2)),
@@ -103,6 +104,8 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
     IconData? icon,
     String? trailing,
   }) {
+    final colorScheme = context.theme.colorScheme;
+
     return Row(
       children: [
         if (isLive)
@@ -119,14 +122,14 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
           Icon(
             icon,
             size: Responsive.sp(context, 20),
-            color: Colors.white.withValues(alpha: 0.6),
+            color: colorScheme.onSurfaceVariant,
           ),
           SizedBox(width: Responsive.sp(context, 8)),
         ],
         Text(
           title.toUpperCase(),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: colorScheme.onSurfaceVariant,
             fontSize: Responsive.sp(context, 13),
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -137,15 +140,15 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
           Text(
             trailing,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.3),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               fontSize: Responsive.sp(context, 12),
             ),
           ),
         if (isLive)
           Text(
-            'Mude as opcoes abaixo',
+            'Mude as opções abaixo',
             style: TextStyle(
-              color: Colors.deepPurpleAccent.withValues(alpha: 0.5),
+              color: AppColors.primary.withValues(alpha: 0.7),
               fontSize: Responsive.sp(context, 12),
             ),
           ),
@@ -157,29 +160,37 @@ class TrafficLightSettingsView extends GetView<TrafficLightSettingsController> {
 class _PreviewCard extends GetView<TrafficLightSettingsController> {
   const _PreviewCard();
 
+  static const Map<String, double> _previewMetricValues = <String, double>{
+    'R\$/Km': 2.35,
+    'R\$/Hora': 52.80,
+    'Lucro/H': 38.90,
+    'Nota': 4.9,
+  };
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(() {
       final previewTheme = _TrafficLightPreviewTheme.fromSettings(
         controller.selectedTheme.value,
+      );
+      final activeIndicators = controller.orderedActiveIndicators.isEmpty
+          ? const ['R\$/Km', 'R\$/Hora', 'Lucro/H']
+          : controller.orderedActiveIndicators;
+      final signalStatus = _resolveSignalStatus(activeIndicators);
+      final signalColor = _resolveSignalColor(
+        signalStatus,
         controller.colorBlindMode.value,
       );
-      final baseFontSize = controller.fontSize.value;
-      final activeIndicators = controller.orderedActiveIndicators;
-      final indicatorValues = <String, String>{
-        'R\$/Km': controller.gainPerKmGood.value.toStringAsFixed(2),
-        'R\$/Hora': controller.gainPerHourGood.value.toStringAsFixed(2),
-        'Nota': controller.passengerRatingGood.value.toStringAsFixed(1),
-        'Lucro/H': controller.gainPerHourGood.value.toStringAsFixed(2),
-      };
 
       return Container(
         height: Responsive.vp(context, 50),
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(Responsive.sp(context, 32)),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: colorScheme.outlineVariant),
         ),
         child: Stack(
           alignment: Alignment.center,
@@ -195,7 +206,7 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
               height: Responsive.vp(context, 45),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(Responsive.sp(context, 30)),
-                border: Border.all(color: Colors.white24, width: 2),
+                border: Border.all(color: colorScheme.outlineVariant, width: 2),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(Responsive.sp(context, 28)),
@@ -218,9 +229,8 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
                         child: _buildTrafficLightPreview(
                           context,
                           previewTheme,
-                          baseFontSize,
                           activeIndicators,
-                          indicatorValues,
+                          signalColor,
                         ),
                       ),
                     ),
@@ -235,10 +245,12 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
   }
 
   Widget _buildRideMockup(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: EdgeInsets.all(Responsive.sp(context, 10)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
       ),
       child: Column(
@@ -254,7 +266,7 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
               Text(
                 'Ricardo Silva',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontSize: Responsive.sp(context, 10),
                   fontWeight: FontWeight.bold,
                 ),
@@ -286,7 +298,7 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
           _buildMockAddress(
             context,
             Colors.blue,
-            'Shopping Cidade Sao Paulo',
+            'Shopping Cidade São Paulo',
             '1.2 km',
           ),
           SizedBox(height: Responsive.vp(context, 0.5)),
@@ -308,7 +320,7 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
             ),
             alignment: Alignment.center,
             child: Text(
-              'Aceitar â€¢ R\$ 35,40',
+              'Aceitar • R\$ 35,40',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: Responsive.sp(context, 10),
@@ -324,58 +336,47 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
   Widget _buildTrafficLightPreview(
     BuildContext context,
     _TrafficLightPreviewTheme previewTheme,
-    double baseFontSize,
     List<String> activeIndicators,
-    Map<String, String> indicatorValues,
+    Color signalColor,
   ) {
-    final isVerticalMetrics =
+    final baseFontSize = controller.fontSize.value;
+    final isSidePosition =
         controller.selectedPosition.value == TrafficLightPosition.esquerda ||
         controller.selectedPosition.value == TrafficLightPosition.direita;
+    final previewWidth = isSidePosition
+        ? Responsive.hp(context, 31)
+        : Responsive.hp(context, 46);
+    final monitoredApp = controller.monitoredApps.entries
+        .firstWhere(
+          (entry) => entry.value,
+          orElse: () => const MapEntry('App', true),
+        )
+        .key;
 
     return Container(
-      padding: EdgeInsets.all(Responsive.sp(context, 10)),
+      width: previewWidth,
+      constraints: BoxConstraints(minHeight: Responsive.vp(context, 9.6)),
+      padding: EdgeInsets.all(Responsive.sp(context, 11)),
       decoration: BoxDecoration(
         color: previewTheme.backgroundColor,
-        borderRadius: BorderRadius.circular(Responsive.sp(context, 12)),
-        border: Border.all(color: previewTheme.borderColor, width: 1.5),
+        borderRadius: BorderRadius.circular(Responsive.sp(context, 18)),
+        border: Border.all(
+          color: signalColor,
+          width: Responsive.sp(context, 4),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: Responsive.sp(context, 16),
+            offset: Offset(0, Responsive.sp(context, 6)),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'RICARDO â€¢ 4.92',
-            style: TextStyle(
-              color: previewTheme.secondaryTextColor,
-              fontSize: Responsive.sp(context, _scaledFont(baseFontSize, 0.52)),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: Responsive.vp(context, 0.8)),
-          if (activeIndicators.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                horizontal: Responsive.sp(context, 8),
-                vertical: Responsive.vp(context, 1),
-              ),
-              decoration: BoxDecoration(
-                color: previewTheme.tagBackgroundColor,
-                borderRadius: BorderRadius.circular(Responsive.sp(context, 8)),
-              ),
-              child: Text(
-                'Nenhum indicador selecionado',
-                style: TextStyle(
-                  color: previewTheme.primaryTextColor,
-                  fontSize: Responsive.sp(
-                    context,
-                    _scaledFont(baseFontSize, 0.7),
-                  ),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )
-          else if (isVerticalMetrics)
+          if (isSidePosition)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: activeIndicators
@@ -386,9 +387,9 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
                       ),
                       child: _buildMockMetric(
                         context,
-                        label: name,
-                        value: indicatorValues[name] ?? '--',
-                        color: previewTheme.indicatorColor(name),
+                        label: _overlayMetricLabel(name),
+                        value: _formatPreviewValue(name),
+                        color: signalColor,
                         theme: previewTheme,
                         baseFontSize: baseFontSize,
                       ),
@@ -397,94 +398,79 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
                   .toList(),
             )
           else
-            Wrap(
-              spacing: Responsive.sp(context, 10),
-              runSpacing: Responsive.vp(context, 0.8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: activeIndicators
                   .map(
-                    (name) => _buildMockMetric(
-                      context,
-                      label: name,
-                      value: indicatorValues[name] ?? '--',
-                      color: previewTheme.indicatorColor(name),
-                      theme: previewTheme,
-                      baseFontSize: baseFontSize,
+                    (name) => Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: name == activeIndicators.last
+                              ? 0
+                              : Responsive.sp(context, 8),
+                        ),
+                        child: _buildMockMetric(
+                          context,
+                          label: _overlayMetricLabel(name),
+                          value: _formatPreviewValue(name),
+                          color: signalColor,
+                          theme: previewTheme,
+                          baseFontSize: baseFontSize,
+                        ),
+                      ),
                     ),
                   )
                   .toList(),
             ),
-          SizedBox(height: Responsive.vp(context, 1)),
+          SizedBox(height: Responsive.vp(context, 1.3)),
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(Responsive.sp(context, 2)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.sp(context, 8),
+                  vertical: Responsive.sp(context, 4),
+                ),
                 decoration: BoxDecoration(
-                  color: previewTheme.tagBackgroundColor,
+                  color: previewTheme.badgeBackgroundColor,
                   borderRadius: BorderRadius.circular(
-                    Responsive.sp(context, 2),
+                    Responsive.sp(context, 6),
                   ),
                 ),
-                child: Text(
-                  controller.selectedTheme.value.name
-                      .substring(0, 3)
-                      .toUpperCase(),
-                  style: TextStyle(
-                    color: previewTheme.primaryTextColor,
-                    fontSize: Responsive.sp(
-                      context,
-                      _scaledFont(baseFontSize, 0.4),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: Responsive.hp(context, isSidePosition ? 16 : 12),
+                  ),
+                  child: Text(
+                    monitoredApp.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: previewTheme.badgeTextColor,
+                      fontSize: Responsive.sp(
+                        context,
+                        _scaledFont(baseFontSize, 0.34),
+                      ),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
               ),
-              SizedBox(width: Responsive.sp(context, 4)),
+              SizedBox(width: Responsive.sp(context, 8)),
               Expanded(
-                child: isVerticalMetrics
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${controller.cardDuration.value.toInt()}s',
-                            style: TextStyle(
-                              color: previewTheme.primaryTextColor,
-                              fontSize: Responsive.sp(
-                                context,
-                                _scaledFont(baseFontSize, 0.65),
-                              ),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '8.5km',
-                            style: TextStyle(
-                              color: previewTheme.secondaryTextColor,
-                              fontSize: Responsive.sp(
-                                context,
-                                _scaledFont(baseFontSize, 0.55),
-                              ),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        '${controller.cardDuration.value.toInt()}s • 8.5km',
-                        style: TextStyle(
-                          color: previewTheme.primaryTextColor,
-                          fontSize: Responsive.sp(
-                            context,
-                            _scaledFont(baseFontSize, 0.65),
-                          ),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-              SizedBox(width: Responsive.sp(context, 6)),
-              Icon(
-                Icons.close,
-                color: previewTheme.secondaryTextColor,
-                size: Responsive.sp(context, _scaledFont(baseFontSize, 0.65)),
+                child: Text(
+                  '${_formatDuration(controller.cardDuration.value.toInt())} - 18.3km',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: previewTheme.primaryTextColor,
+                    fontSize: Responsive.sp(
+                      context,
+                      _scaledFont(baseFontSize, 0.58),
+                    ),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
@@ -505,62 +491,22 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
       case TrafficLightPosition.topo:
         return Positioned(
           top: vertical,
-          left: horizontal,
-          right: horizontal,
-          child: child,
+          left: 0,
+          right: 0,
+          child: Align(alignment: Alignment.topCenter, child: child),
         );
       case TrafficLightPosition.esquerda:
-        return Positioned(
-          top: vertical,
-          left: horizontal,
-          right: Responsive.hp(context, 16),
-          child: child,
-        );
+        return Positioned(top: vertical, left: horizontal, child: child);
       case TrafficLightPosition.direita:
-        return Positioned(
-          top: vertical,
-          left: Responsive.hp(context, 16),
-          right: horizontal,
-          child: child,
-        );
+        return Positioned(top: vertical, right: horizontal, child: child);
       case TrafficLightPosition.rodape:
         return Positioned(
-          bottom: Responsive.vp(context, 15),
-          left: horizontal,
-          right: horizontal,
-          child: child,
+          bottom: Responsive.vp(context, 6),
+          left: 0,
+          right: 0,
+          child: Align(alignment: Alignment.bottomCenter, child: child),
         );
     }
-  }
-
-  Widget _buildMockAddress(
-    BuildContext context,
-    Color color,
-    String text,
-    String dist,
-  ) {
-    return Row(
-      children: [
-        Icon(Icons.circle, color: color, size: Responsive.sp(context, 6)),
-        SizedBox(width: Responsive.sp(context, 6)),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: Responsive.sp(context, 8),
-            ),
-          ),
-        ),
-        Text(
-          dist,
-          style: TextStyle(
-            color: Colors.blue,
-            fontSize: Responsive.sp(context, 8),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildMockMetric(
@@ -577,29 +523,41 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
       children: [
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: theme.secondaryTextColor,
-            fontSize: Responsive.sp(context, _scaledFont(baseFontSize, 0.4)),
+            color: theme.labelColor,
+            fontSize: Responsive.sp(context, _scaledFont(baseFontSize, 0.42)),
+            fontWeight: FontWeight.w500,
           ),
         ),
+        SizedBox(height: Responsive.vp(context, 0.35)),
         Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: Responsive.sp(context, 2),
-              height: Responsive.sp(context, 10),
-              color: color,
+              width: Responsive.sp(context, 4),
+              height: Responsive.sp(context, 21),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(Responsive.sp(context, 6)),
+              ),
             ),
-            SizedBox(width: Responsive.sp(context, 2)),
-            Text(
-              value,
-              style: TextStyle(
-                color: theme.primaryTextColor,
-                fontSize: Responsive.sp(
-                  context,
-                  _scaledFont(baseFontSize, 0.8),
+            SizedBox(width: Responsive.sp(context, 6)),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: theme.primaryTextColor,
+                  fontSize: Responsive.sp(
+                    context,
+                    _scaledFont(baseFontSize, 0.74),
+                  ),
+                  fontWeight: FontWeight.w800,
                 ),
-                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -608,79 +566,194 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
     );
   }
 
+  Widget _buildMockAddress(
+    BuildContext context,
+    Color color,
+    String text,
+    String dist,
+  ) {
+    final colorScheme = context.theme.colorScheme;
+
+    return Row(
+      children: [
+        Icon(Icons.circle, color: color, size: Responsive.sp(context, 6)),
+        SizedBox(width: Responsive.sp(context, 6)),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: Responsive.sp(context, 8),
+            ),
+          ),
+        ),
+        Text(
+          dist,
+          style: TextStyle(
+            color: Colors.blue,
+            fontSize: Responsive.sp(context, 8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  _PreviewSignalStatus _resolveSignalStatus(List<String> activeIndicators) {
+    final statuses = <_PreviewSignalStatus>[];
+
+    if (activeIndicators.contains('R\$/Km')) {
+      statuses.add(
+        _evaluateThreshold(
+          _previewMetricValues['R\$/Km']!,
+          controller.gainPerKmBad.value,
+          controller.gainPerKmGood.value,
+        ),
+      );
+    }
+
+    if (activeIndicators.contains('R\$/Hora') ||
+        activeIndicators.contains('Lucro/H')) {
+      statuses.add(
+        _evaluateThreshold(
+          _previewMetricValues['R\$/Hora']!,
+          controller.gainPerHourBad.value,
+          controller.gainPerHourGood.value,
+        ),
+      );
+    }
+
+    if (activeIndicators.contains('Nota')) {
+      statuses.add(
+        _evaluateThreshold(
+          _previewMetricValues['Nota']!,
+          controller.passengerRatingBad.value,
+          controller.passengerRatingGood.value,
+        ),
+      );
+    }
+
+    if (statuses.isEmpty) {
+      return _PreviewSignalStatus.good;
+    }
+
+    if (statuses.contains(_PreviewSignalStatus.bad)) {
+      return _PreviewSignalStatus.bad;
+    }
+    if (statuses.contains(_PreviewSignalStatus.medium)) {
+      return _PreviewSignalStatus.medium;
+    }
+    return _PreviewSignalStatus.good;
+  }
+
+  _PreviewSignalStatus _evaluateThreshold(
+    double value,
+    double badThreshold,
+    double goodThreshold,
+  ) {
+    if (value < badThreshold) {
+      return _PreviewSignalStatus.bad;
+    }
+    if (value >= goodThreshold) {
+      return _PreviewSignalStatus.good;
+    }
+    return _PreviewSignalStatus.medium;
+  }
+
+  Color _resolveSignalColor(_PreviewSignalStatus status, bool colorBlindMode) {
+    if (colorBlindMode) {
+      switch (status) {
+        case _PreviewSignalStatus.good:
+          return const Color(0xFF1F78FF);
+        case _PreviewSignalStatus.medium:
+          return const Color(0xFFF39C12);
+        case _PreviewSignalStatus.bad:
+          return const Color(0xFF7E57C2);
+      }
+    }
+
+    switch (status) {
+      case _PreviewSignalStatus.good:
+        return const Color(0xFF18B663);
+      case _PreviewSignalStatus.medium:
+        return const Color(0xFFF39C12);
+      case _PreviewSignalStatus.bad:
+        return const Color(0xFFE74C3C);
+    }
+  }
+
+  String _overlayMetricLabel(String name) {
+    if (name == 'Lucro/H') {
+      return 'Lucro';
+    }
+    return name;
+  }
+
+  String _formatPreviewValue(String name) {
+    final value = _previewMetricValues[name] ?? 0.0;
+    if (name == 'Nota') {
+      return value.toStringAsFixed(1);
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds * 4;
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    return '${hours}h${remainingMinutes.toString().padLeft(2, '0')}m';
+  }
+
   double _scaledFont(double base, double factor) {
-    return (base * factor).clamp(6.0, 18.0);
+    return (base * factor).clamp(6.0, 22.0);
   }
 }
 
 class _TrafficLightPreviewTheme {
   final Color backgroundColor;
-  final Color borderColor;
   final Color primaryTextColor;
-  final Color secondaryTextColor;
-  final Color tagBackgroundColor;
-  final Map<String, Color> indicatorColors;
+  final Color labelColor;
+  final Color badgeBackgroundColor;
+  final Color badgeTextColor;
 
   const _TrafficLightPreviewTheme({
     required this.backgroundColor,
-    required this.borderColor,
     required this.primaryTextColor,
-    required this.secondaryTextColor,
-    required this.tagBackgroundColor,
-    required this.indicatorColors,
+    required this.labelColor,
+    required this.badgeBackgroundColor,
+    required this.badgeTextColor,
   });
 
-  factory _TrafficLightPreviewTheme.fromSettings(
-    TrafficLightTheme theme,
-    bool colorBlindMode,
-  ) {
-    final indicatorColors = colorBlindMode
-        ? <String, Color>{
-            'R\$/Km': const Color(0xFF1565C0),
-            'R\$/Hora': const Color(0xFFEF6C00),
-            'Nota': const Color(0xFF6A1B9A),
-            'Lucro/H': const Color(0xFF00897B),
-          }
-        : <String, Color>{
-            'R\$/Km': Colors.green,
-            'R\$/Hora': Colors.orange,
-            'Nota': Colors.lightGreenAccent,
-            'Lucro/H': Colors.greenAccent,
-          };
-
+  factory _TrafficLightPreviewTheme.fromSettings(TrafficLightTheme theme) {
     switch (theme) {
       case TrafficLightTheme.claro:
         return _TrafficLightPreviewTheme(
           backgroundColor: Colors.white,
-          borderColor: indicatorColors['R\$/Km']!,
-          primaryTextColor: const Color(0xFF111111),
-          secondaryTextColor: const Color(0xFF666666),
-          tagBackgroundColor: const Color(0xFFF1F1F1),
-          indicatorColors: indicatorColors,
+          primaryTextColor: const Color(0xFF161616),
+          labelColor: const Color(0xFF7A7A7A),
+          badgeBackgroundColor: const Color(0xFF111111),
+          badgeTextColor: Colors.white,
         );
       case TrafficLightTheme.escuro:
         return _TrafficLightPreviewTheme(
-          backgroundColor: const Color(0xFF121212),
-          borderColor: indicatorColors['R\$/Km']!,
-          primaryTextColor: Colors.white,
-          secondaryTextColor: Colors.white38,
-          tagBackgroundColor: Colors.white12,
-          indicatorColors: indicatorColors,
+          backgroundColor: const Color(0xFF131313),
+          primaryTextColor: const Color(0xFFF7F7F7),
+          labelColor: const Color(0xFFA6A6A6),
+          badgeBackgroundColor: const Color(0xFFF2F2F2),
+          badgeTextColor: const Color(0xFF111111),
         );
       case TrafficLightTheme.verde:
         return _TrafficLightPreviewTheme(
-          backgroundColor: const Color(0xFF034D35),
-          borderColor: indicatorColors['Lucro/H']!,
-          primaryTextColor: Colors.white,
-          secondaryTextColor: Colors.white70,
-          tagBackgroundColor: Colors.white12,
-          indicatorColors: indicatorColors,
+          backgroundColor: const Color(0xFFEAF8F0),
+          primaryTextColor: const Color(0xFF0B2F1D),
+          labelColor: const Color(0xFF3D6B57),
+          badgeBackgroundColor: const Color(0xFF0B2F1D),
+          badgeTextColor: Colors.white,
         );
     }
   }
-
-  Color indicatorColor(String label) => indicatorColors[label] ?? borderColor;
 }
+
+enum _PreviewSignalStatus { good, medium, bad }
 
 class _ThresholdsSection extends GetView<TrafficLightSettingsController> {
   const _ThresholdsSection();
@@ -724,8 +797,8 @@ class _ThresholdsSection extends GetView<TrafficLightSettingsController> {
         ),
         SizedBox(height: Responsive.vp(context, 1.2)),
         _ThresholdEditorCard(
-          title: 'Avaliacao do Passageiro',
-          subtitle: 'Nota minima ideal',
+          title: 'Avaliação do Passageiro',
+          subtitle: 'Nota mínima ideal',
           icon: Icons.person_rounded,
           accent: Colors.amber,
           badLabel: 'Ruim',
@@ -779,10 +852,13 @@ class _ThresholdEditorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
+
     return Container(
       padding: EdgeInsets.all(Responsive.sp(context, 14)),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: isDark ? const Color(0xFF1A1A1A) : colorScheme.surface,
         borderRadius: BorderRadius.circular(Responsive.sp(context, 18)),
         border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
@@ -814,7 +890,7 @@ class _ThresholdEditorCard extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: isDark ? Colors.white : colorScheme.onSurface,
                         fontSize: Responsive.sp(context, 16),
                         fontWeight: FontWeight.w700,
                       ),
@@ -822,7 +898,9 @@ class _ThresholdEditorCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: Colors.white38,
+                        color: isDark
+                            ? Colors.white38
+                            : colorScheme.onSurface.withValues(alpha: 0.54),
                         fontSize: Responsive.sp(context, 11),
                       ),
                     ),
@@ -882,13 +960,18 @@ class _ThresholdValueBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: Colors.white70,
+            color: isDark
+                ? Colors.white70
+                : colorScheme.onSurface.withValues(alpha: 0.72),
             fontSize: Responsive.sp(context, 12),
             fontWeight: FontWeight.w700,
           ),
@@ -900,7 +983,9 @@ class _ThresholdValueBox extends StatelessWidget {
             vertical: Responsive.sp(context, 8),
           ),
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: isDark
+                ? Colors.black
+                : colorScheme.onSurface.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(Responsive.sp(context, 14)),
             border: Border.all(color: borderColor.withValues(alpha: 0.45)),
           ),
@@ -922,7 +1007,7 @@ class _ThresholdValueBox extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : colorScheme.onSurface,
                     fontSize: Responsive.sp(context, 15),
                     fontWeight: FontWeight.w800,
                   ),
@@ -1018,7 +1103,7 @@ class _PositionSelector extends GetView<TrafficLightSettingsController> {
           context,
           TrafficLightPosition.rodape,
           Icons.vertical_align_bottom_rounded,
-          'Rodape',
+          'Rodapé',
         ),
       ],
     );
@@ -1030,6 +1115,8 @@ class _PositionSelector extends GetView<TrafficLightSettingsController> {
     IconData icon,
     String label,
   ) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(() {
       final isSelected = controller.selectedPosition.value == pos;
       return GestureDetector(
@@ -1039,11 +1126,13 @@ class _PositionSelector extends GetView<TrafficLightSettingsController> {
           padding: EdgeInsets.symmetric(vertical: Responsive.vp(context, 1.5)),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.deepPurpleAccent.withValues(alpha: 0.15)
-                : const Color(0xFF1A1A1A),
+                ? AppColors.primary.withValues(alpha: 0.12)
+                : colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
             border: Border.all(
-              color: isSelected ? Colors.deepPurpleAccent : Colors.transparent,
+              color: isSelected
+                  ? AppColors.primary
+                  : colorScheme.outlineVariant,
               width: 2,
             ),
           ),
@@ -1051,14 +1140,18 @@ class _PositionSelector extends GetView<TrafficLightSettingsController> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.deepPurpleAccent : Colors.white38,
+                color: isSelected
+                    ? AppColors.primary
+                    : colorScheme.onSurfaceVariant,
                 size: Responsive.sp(context, 24),
               ),
               SizedBox(height: Responsive.vp(context, 1)),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white38,
+                  color: isSelected
+                      ? colorScheme.onSurface
+                      : colorScheme.onSurfaceVariant,
                   fontSize: Responsive.sp(context, 11),
                   fontWeight: FontWeight.w600,
                 ),
@@ -1109,6 +1202,8 @@ class _ThemeSelector extends GetView<TrafficLightSettingsController> {
     Color bg,
     Color text,
   ) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(() {
       final isSelected = controller.selectedTheme.value == theme;
       return GestureDetector(
@@ -1123,8 +1218,8 @@ class _ThemeSelector extends GetView<TrafficLightSettingsController> {
                 borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
                 border: Border.all(
                   color: isSelected
-                      ? Colors.deepPurpleAccent
-                      : Colors.transparent,
+                      ? AppColors.primary
+                      : colorScheme.outlineVariant,
                   width: 2,
                 ),
               ),
@@ -1152,7 +1247,9 @@ class _ThemeSelector extends GetView<TrafficLightSettingsController> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.deepPurpleAccent : Colors.white38,
+                color: isSelected
+                    ? AppColors.primary
+                    : colorScheme.onSurfaceVariant,
                 fontSize: Responsive.sp(context, 12),
                 fontWeight: FontWeight.bold,
               ),
@@ -1189,6 +1286,8 @@ class _IndicatorsGrid extends GetView<TrafficLightSettingsController> {
     IconData icon,
     String number,
   ) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(() {
       final isActive = controller.indicators[name] ?? false;
       return GestureDetector(
@@ -1199,10 +1298,10 @@ class _IndicatorsGrid extends GetView<TrafficLightSettingsController> {
             vertical: Responsive.vp(context, 1),
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
             border: Border.all(
-              color: isActive ? Colors.deepPurpleAccent : Colors.transparent,
+              color: isActive ? AppColors.primary : colorScheme.outlineVariant,
               width: 2,
             ),
           ),
@@ -1215,7 +1314,7 @@ class _IndicatorsGrid extends GetView<TrafficLightSettingsController> {
                   vertical: Responsive.sp(context, 2),
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.deepPurpleAccent.withValues(alpha: 0.2),
+                  color: AppColors.primary.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(
                     Responsive.sp(context, 8),
                   ),
@@ -1223,7 +1322,7 @@ class _IndicatorsGrid extends GetView<TrafficLightSettingsController> {
                 child: Text(
                   number,
                   style: TextStyle(
-                    color: Colors.deepPurpleAccent,
+                    color: AppColors.primary,
                     fontSize: Responsive.sp(context, 9),
                     fontWeight: FontWeight.bold,
                   ),
@@ -1233,13 +1332,17 @@ class _IndicatorsGrid extends GetView<TrafficLightSettingsController> {
               Icon(
                 icon,
                 size: Responsive.sp(context, 20),
-                color: isActive ? Colors.deepPurpleAccent : Colors.white24,
+                color: isActive
+                    ? AppColors.primary
+                    : colorScheme.onSurfaceVariant,
               ),
               SizedBox(height: Responsive.vp(context, 0.5)),
               Text(
                 name,
                 style: TextStyle(
-                  color: isActive ? Colors.deepPurpleAccent : Colors.white24,
+                  color: isActive
+                      ? AppColors.primary
+                      : colorScheme.onSurfaceVariant,
                   fontSize: Responsive.sp(context, 11),
                   fontWeight: FontWeight.bold,
                 ),
@@ -1256,11 +1359,14 @@ class _IndicatorsGrid extends GetView<TrafficLightSettingsController> {
 class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: EdgeInsets.all(Responsive.sp(context, 20)),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(Responsive.sp(context, 24)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         children: [
@@ -1276,7 +1382,7 @@ class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
           SizedBox(height: Responsive.vp(context, 2.5)),
           _buildSliderRow(
             context,
-            'Duracao do Card',
+            'Duração do Card',
             controller.cardDuration,
             5,
             30,
@@ -1293,6 +1399,8 @@ class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
     double min,
     double max,
   ) {
+    final colorScheme = context.theme.colorScheme;
+
     return Column(
       children: [
         Row(
@@ -1303,13 +1411,13 @@ class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
                 Icon(
                   _getIcon(label),
                   size: Responsive.sp(context, 18),
-                  color: Colors.deepPurpleAccent,
+                  color: AppColors.primary,
                 ),
                 SizedBox(width: Responsive.sp(context, 8)),
                 Text(
                   label,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: colorScheme.onSurface,
                     fontSize: Responsive.sp(context, 14),
                     fontWeight: FontWeight.w600,
                   ),
@@ -1322,18 +1430,18 @@ class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
                 vertical: Responsive.sp(context, 4),
               ),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(Responsive.sp(context, 8)),
               ),
               child: Obx(
                 () => Text(
                   label == 'Opacidade'
                       ? '${value.value.toInt()}%'
-                      : (label == 'Duracao do Card'
+                      : (label == 'Duração do Card'
                             ? '${value.value.toInt()}s'
                             : '${value.value.toInt()}'),
                   style: TextStyle(
-                    color: Colors.white38,
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: Responsive.sp(context, 12),
                     fontWeight: FontWeight.bold,
                   ),
@@ -1347,9 +1455,9 @@ class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
             value: value.value,
             min: min,
             max: max,
-            activeColor: Colors.deepPurpleAccent,
-            inactiveColor: Colors.white10,
-            thumbColor: Colors.deepPurpleAccent,
+            activeColor: AppColors.primary,
+            inactiveColor: colorScheme.outlineVariant,
+            thumbColor: AppColors.primary,
             onChanged: (v) => value.value = v,
           ),
         ),
@@ -1367,17 +1475,20 @@ class _VisualAdjustments extends GetView<TrafficLightSettingsController> {
 class _ColorBlindToggle extends GetView<TrafficLightSettingsController> {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: EdgeInsets.all(Responsive.sp(context, 20)),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(Responsive.sp(context, 24)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
           Icon(
             Icons.accessibility_new_rounded,
-            color: Colors.deepPurpleAccent,
+            color: AppColors.primary,
             size: Responsive.sp(context, 24),
           ),
           SizedBox(width: Responsive.sp(context, 12)),
@@ -1385,9 +1496,9 @@ class _ColorBlindToggle extends GetView<TrafficLightSettingsController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Modo Daltonico',
+                'Modo daltônico',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                   fontSize: Responsive.sp(context, 14),
                   fontWeight: FontWeight.w600,
                 ),
@@ -1395,7 +1506,7 @@ class _ColorBlindToggle extends GetView<TrafficLightSettingsController> {
               Text(
                 'Usar paleta adaptada no preview',
                 style: TextStyle(
-                  color: Colors.white38,
+                  color: colorScheme.onSurfaceVariant,
                   fontSize: Responsive.sp(context, 12),
                 ),
               ),
@@ -1406,8 +1517,8 @@ class _ColorBlindToggle extends GetView<TrafficLightSettingsController> {
             () => Switch(
               value: controller.colorBlindMode.value,
               onChanged: (v) => controller.colorBlindMode.value = v,
-              activeThumbColor: Colors.deepPurpleAccent,
-              activeTrackColor: Colors.deepPurpleAccent.withValues(alpha: 0.45),
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.45),
             ),
           ),
         ],
@@ -1419,6 +1530,8 @@ class _ColorBlindToggle extends GetView<TrafficLightSettingsController> {
 class _SaveButton extends GetView<TrafficLightSettingsController> {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return SizedBox(
       width: double.infinity,
       height: Responsive.vp(context, 7),
@@ -1426,19 +1539,19 @@ class _SaveButton extends GetView<TrafficLightSettingsController> {
         onPressed: controller.saveSettings,
         icon: Icon(
           Icons.save_rounded,
-          color: Colors.white,
+          color: colorScheme.onPrimary,
           size: Responsive.sp(context, 20),
         ),
         label: Text(
-          'Salvar Configuracoes',
+          'Salvar Configurações',
           style: TextStyle(
-            color: Colors.white,
+            color: colorScheme.onPrimary,
             fontSize: Responsive.sp(context, 16),
             fontWeight: FontWeight.bold,
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepPurpleAccent,
+          backgroundColor: AppColors.primary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Responsive.sp(context, 16)),
           ),

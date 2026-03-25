@@ -163,71 +163,17 @@ BoxDecoration rideCardDecoration({required bool isDark}) {
   );
 }
 
-/// Barra de acoes para corridas nao pendentes: Apenas Editar
-class RideEditOnlyBar extends StatelessWidget {
-  const RideEditOnlyBar({super.key, required this.onEdit});
-
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.midnight : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.07)
-                : Colors.black.withValues(alpha: 0.07),
-            width: 1,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-          child: SizedBox(
-            width: double.infinity,
-            child: _ActionButton(
-              label: 'Editar',
-              icon: Icons.edit_rounded,
-              color: AppColors.royalBlue,
-              isOutlined: true,
-              isLoading: false,
-              onTap: onEdit,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Barra de acoes fixa no bottom: Cancelar | Editar | Finalizar.
+/// Barra de acoes fixa no bottom: Cancelar | Finalizar.
 /// Deve ser colocada fora do scroll, fixada na base da tela.
 class RideBottomActionBar extends StatelessWidget {
   const RideBottomActionBar({
     super.key,
     required this.onCancel,
-    required this.onEdit,
     required this.onFinish,
     this.isLoading = false,
   });
 
   final ValueChanged<String> onCancel;
-  final VoidCallback onEdit;
   final ValueChanged<RidePaymentOption> onFinish;
   final bool isLoading;
 
@@ -263,37 +209,19 @@ class RideBottomActionBar extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Linha superior: Editar | Cancelar ──
-              Row(
-                children: [
-                  // Editar (outlined blue)
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Editar',
-                      icon: Icons.edit_rounded,
-                      color: AppColors.royalBlue,
-                      isOutlined: true,
-                      isLoading: false,
-                      onTap: onEdit,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Cancelar (outlined rose)
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Cancelar',
-                      icon: Icons.close_rounded,
-                      color: AppColors.rose,
-                      isOutlined: true,
-                      isLoading: isLoading,
-                      onTap: () => _showCancelDialog(context, isDark: isDark),
-                    ),
-                  ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: _ActionButton(
+                  label: 'Cancelar corrida',
+                  icon: Icons.close_rounded,
+                  color: AppColors.rose,
+                  isOutlined: false,
+                  isLoading: isLoading,
+                  onTap: () => _showCancelDialog(context, isDark: isDark),
+                ),
               ),
               const SizedBox(height: 10),
 
-              // ── Linha inferior: Finalizar full-width ──
               SizedBox(
                 width: double.infinity,
                 child: _ActionButton(

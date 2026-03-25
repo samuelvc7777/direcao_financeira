@@ -91,13 +91,15 @@ class _LogoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'CONTA',
           style: TextStyle(
-            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -111,12 +113,10 @@ class _LogoutCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.surface,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: context.theme.colorScheme.onSurface.withValues(
-                  alpha: 0.08,
-                ),
+                color: colorScheme.onSurface.withValues(alpha: 0.08),
               ),
             ),
             child: Row(
@@ -136,7 +136,7 @@ class _LogoutCard extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22),
+                      color: colorScheme.onPrimary.withValues(alpha: 0.22),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -146,20 +146,20 @@ class _LogoutCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
                       Icons.logout_rounded,
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                       size: 22,
                     ),
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Sair da conta',
                     style: TextStyle(
-                      color: AppColors.rose,
+                      color: colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -167,7 +167,7 @@ class _LogoutCard extends StatelessWidget {
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.rust.withValues(alpha: 0.72),
+                  color: colorScheme.onSurface.withValues(alpha: 0.56),
                 ),
               ],
             ),

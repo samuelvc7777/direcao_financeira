@@ -346,15 +346,20 @@ class PortfolioItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final onSurface = context.theme.colorScheme.onSurface;
     final isColored = !isInactive;
-    final titleColor = isColored ? Colors.white : onSurface;
-    final subtitleColor =
-        isColored ? Colors.white.withValues(alpha: 0.82) : onSurface.withValues(alpha: 0.54);
-    final badgeColor = isColored ? Colors.white : accentColor;
+    final coloredForeground =
+        ThemeData.estimateBrightnessForColor(accentColor) == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF0F172A);
+    final titleColor = isColored ? coloredForeground : onSurface;
+    final subtitleColor = isColored
+        ? coloredForeground.withValues(alpha: 0.82)
+        : onSurface.withValues(alpha: 0.54);
+    final badgeColor = isColored ? coloredForeground : accentColor;
     final badgeBackground = isColored
-        ? Colors.white.withValues(alpha: 0.18)
+        ? coloredForeground.withValues(alpha: 0.18)
         : accentColor.withValues(alpha: 0.12);
     final chipBackground = isColored
-        ? Colors.white.withValues(alpha: 0.14)
+        ? coloredForeground.withValues(alpha: 0.14)
         : accentColor.withValues(alpha: 0.10);
 
     return Opacity(
@@ -411,18 +416,18 @@ class PortfolioItemCard extends StatelessWidget {
                         height: 52,
                         decoration: BoxDecoration(
                           color: isColored
-                              ? Colors.white.withValues(alpha: 0.16)
+                              ? coloredForeground.withValues(alpha: 0.16)
                               : accentColor.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
                             color: isColored
-                                ? Colors.white.withValues(alpha: 0.12)
+                                ? coloredForeground.withValues(alpha: 0.12)
                                 : accentColor.withValues(alpha: 0.14),
                           ),
                         ),
                         child: Icon(
                           leadingIcon,
-                          color: isColored ? Colors.white : accentColor,
+                          color: isColored ? coloredForeground : accentColor,
                           size: 24,
                         ),
                       ),
@@ -462,7 +467,7 @@ class PortfolioItemCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: isColored
-                                  ? Colors.white.withValues(alpha: 0.14)
+                                  ? coloredForeground.withValues(alpha: 0.14)
                                   : accentColor.withValues(alpha: 0.14),
                             ),
                           ),
@@ -508,11 +513,11 @@ class PortfolioItemCard extends StatelessWidget {
                         minHeight: 7,
                         value: progress!.clamp(0.0, 1.0),
                         backgroundColor: isColored
-                            ? Colors.white.withValues(alpha: 0.18)
+                            ? coloredForeground.withValues(alpha: 0.18)
                             : onSurface.withValues(alpha: 0.06),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           isColored
-                              ? Colors.white
+                              ? coloredForeground
                               : (progress! >= 0.9 ? AppColors.rose : accentColor),
                         ),
                       ),
@@ -530,7 +535,7 @@ class PortfolioItemCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
                             color: isColored
-                                ? Colors.white.withValues(alpha: 0.12)
+                                ? coloredForeground.withValues(alpha: 0.12)
                                 : accentColor.withValues(alpha: 0.12),
                           ),
                         ),
@@ -538,7 +543,7 @@ class PortfolioItemCard extends StatelessWidget {
                           item,
                           style: TextStyle(
                             color: isColored
-                                ? Colors.white.withValues(alpha: 0.92)
+                                ? coloredForeground.withValues(alpha: 0.92)
                                 : onSurface.withValues(alpha: 0.72),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

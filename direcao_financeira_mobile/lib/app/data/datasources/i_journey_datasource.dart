@@ -3,6 +3,7 @@ import '../models/journey_statistics_model.dart';
 import '../models/pending_finished_shift_model.dart';
 import '../models/shift_route_model.dart';
 import '../models/shift_model.dart';
+import '../../domain/entities/paged_result_entity.dart';
 
 abstract class IJourneyDataSource {
   Future<ActiveShiftModel?> getActiveShift();
@@ -11,10 +12,12 @@ abstract class IJourneyDataSource {
     String? date,
     String? endDate,
   });
-  Future<List<ShiftModel>> getShiftHistory({
+  Future<PagedResultEntity<ShiftModel>> getShiftHistory({
     String filter = 'day',
     String? date,
     String? endDate,
+    int offset = 0,
+    int limit = 20,
   });
   Future<int> syncFinishedShift(
     PendingFinishedShiftModel shift,

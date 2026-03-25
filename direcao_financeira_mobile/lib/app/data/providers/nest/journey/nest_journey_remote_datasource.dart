@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../../../datasources/i_journey_datasource.dart';
+import '../../../../domain/entities/paged_result_entity.dart';
 import '../../../models/active_shift_model.dart';
 import '../../../models/journey_statistics_model.dart';
 import '../../../models/pending_finished_shift_model.dart';
@@ -86,6 +87,7 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
     final data = response.data;
 
     return JourneyStatisticsModel(
+      totalDrivenKmValue: 0,
       totalShifts: data['totalShifts'] ?? 0,
       totalTime: _formatDuration(data['totalTime'] ?? 0),
       averageTime: _formatDuration(data['avgShiftTime'] ?? 0),
@@ -108,10 +110,12 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
   }
 
   @override
-  Future<List<ShiftModel>> getShiftHistory({
+  Future<PagedResultEntity<ShiftModel>> getShiftHistory({
     String filter = 'day',
     String? date,
     String? endDate,
+    int offset = 0,
+    int limit = 20,
   }) async {
     final response = await dio.get(
       '/journey/history',
@@ -120,7 +124,12 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
     final data = response.data;
 
     if (data is! List) {
-      return [];
+      return PagedResultEntity<ShiftModel>(
+        items: const [],
+        totalCount: 0,
+        offset: offset,
+        limit: limit,
+      );
     }
 
     final shifts = <ShiftModel>[];
@@ -160,7 +169,15 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
       );
     }
 
-    return shifts;
+    final safeOffset = offset.clamp(0, shifts.length);
+    final safeEnd = (safeOffset + limit).clamp(0, shifts.length);
+
+    return PagedResultEntity<ShiftModel>(
+      items: shifts.sublist(safeOffset, safeEnd),
+      totalCount: shifts.length,
+      offset: offset,
+      limit: limit,
+    );
   }
 
   @override

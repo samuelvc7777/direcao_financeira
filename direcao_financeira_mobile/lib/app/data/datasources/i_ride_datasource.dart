@@ -1,11 +1,15 @@
 import '../../domain/entities/detected_ride_draft_entity.dart';
+import '../../domain/entities/paged_result_entity.dart';
 import '../models/ride_model.dart';
 
 abstract class IRideDataSource {
-  Future<List<RideModel>> getRides({
+  Future<PagedResultEntity<RideModel>> getRides({
     String period = 'day',
     String? date,
     String? endDate,
+    String? status,
+    int offset = 0,
+    int limit = 20,
   });
 
   Future<void> createDetectedRide(DetectedRideDraftEntity ride);

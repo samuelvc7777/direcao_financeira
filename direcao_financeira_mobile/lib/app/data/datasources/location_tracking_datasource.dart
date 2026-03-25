@@ -1,6 +1,8 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:get_storage/get_storage.dart';
 
 import '../../core/location/location_tracking_service.dart';
+import '../models/active_shift_model.dart';
 import '../models/location_tracking_status_model.dart';
 import 'journey_route_local_datasource.dart';
 
@@ -20,17 +22,18 @@ abstract class ILocationTrackingDataSource {
     required int localShiftId,
     required DateTime startedAt,
   });
-  Future<void> stopTracking({
-    required DateTime endedAt,
-  });
+  Future<void> stopTracking({required DateTime endedAt});
 }
 
 class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
   LocationTrackingDataSourceImpl({
     required this.routeLocalDataSource,
+    required this.storage,
   });
 
   final IJourneyRouteLocalDataSource routeLocalDataSource;
+  final GetStorage storage;
+  static const _activeShiftKey = 'journey_local_active_shift';
 
   @override
   Future<LocationTrackingStatusModel> ensureReadyForShiftStart() async {
@@ -44,6 +47,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
         isPreciseLocation: false,
         isPaused: false,
         totalDistanceMeters: 0,
+        idleTimeSeconds: 0,
         issueMessage: 'Ative o GPS do aparelho para iniciar o turno.',
       );
     }
@@ -62,8 +66,8 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
         isPreciseLocation: false,
         isPaused: false,
         totalDistanceMeters: 0,
-        issueMessage:
-            'Permita a localizacao para iniciar e rastrear o turno.',
+        idleTimeSeconds: 0,
+        issueMessage: 'Permita a localizacao para iniciar e rastrear o turno.',
       );
     }
 
@@ -76,6 +80,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
         isPreciseLocation: false,
         isPaused: false,
         totalDistanceMeters: 0,
+        idleTimeSeconds: 0,
         issueMessage:
             'A permissao de localizacao foi negada em definitivo. Libere nas configuracoes do app.',
       );
@@ -97,6 +102,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
         isPreciseLocation: false,
         isPaused: false,
         totalDistanceMeters: 0,
+        idleTimeSeconds: 0,
         issueMessage:
             'Troque para localizacao precisa para rastrear a rota do turno.',
       );
@@ -116,6 +122,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
         isPreciseLocation: true,
         isPaused: false,
         totalDistanceMeters: 0,
+        idleTimeSeconds: 0,
         issueMessage:
             'A localizacao ja pode estar liberada, mas ainda falta marcar "Permitir o tempo todo" nas configuracoes do app.',
       );
@@ -129,6 +136,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
       isPreciseLocation: true,
       isPaused: false,
       totalDistanceMeters: 0,
+      idleTimeSeconds: 0,
     );
   }
 
@@ -141,6 +149,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
     final permission = await Geolocator.checkPermission();
     final accuracyStatus = await Geolocator.getLocationAccuracy();
     final isRunning = await LocationTrackingService.isRunning();
+    final activeShift = _readActiveShift();
     final route = localShiftId != null
         ? await routeLocalDataSource.getRouteByLocalShiftId(
             localShiftId,
@@ -162,6 +171,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
       isPreciseLocation: isPreciseLocation,
       isPaused: isPaused,
       totalDistanceMeters: route?.totalDistanceMeters ?? 0,
+      idleTimeSeconds: activeShift?.idleTimeSeconds ?? 0,
       issueMessage: _buildIssueMessage(
         serviceEnabled: serviceEnabled,
         hasForegroundPermission: hasForegroundPermission,
@@ -208,9 +218,7 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
   }
 
   @override
-  Future<void> stopTracking({
-    required DateTime endedAt,
-  }) async {
+  Future<void> stopTracking({required DateTime endedAt}) async {
     await LocationTrackingService.stopTracking(endedAt: endedAt);
   }
 
@@ -243,5 +251,14 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
     }
 
     return null;
+  }
+
+  ActiveShiftModel? _readActiveShift() {
+    final raw = storage.read(_activeShiftKey);
+    if (raw is! Map) {
+      return null;
+    }
+
+    return ActiveShiftModel.fromJson(Map<String, dynamic>.from(raw));
   }
 }

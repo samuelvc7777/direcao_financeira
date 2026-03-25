@@ -27,8 +27,6 @@ class TransactionFormView extends GetView<TransactionsController> {
       descriptionController.text = trans.description;
       isPaid.value = trans.status == TransactionStatus.cleared;
       selectedDate.value = trans.transactionDate;
-
-      // Tenta encontrar conta e categoria nos observables do controller
       selectedAccount.value = controller.activeAccounts.firstWhereOrNull(
         (a) => a.id == trans.bankAccountId,
       );
@@ -38,53 +36,51 @@ class TransactionFormView extends GetView<TransactionsController> {
     } else if (arg is TransactionType) {
       selectedType.value = arg;
     }
-
-    amountFocusNode.addListener(() {
-      isAmountFocused.value = amountFocusNode.hasFocus;
-    });
+    amountFocusNode.addListener(
+      () => isAmountFocused.value = amountFocusNode.hasFocus,
+    );
   }
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final FocusNode amountFocusNode = FocusNode();
-
   final TransactionEntity? editingTransaction;
-
   final Rx<TransactionType> selectedType = TransactionType.expense.obs;
   final RxBool isPaid = true.obs;
   final RxBool isAmountFocused = false.obs;
   final Rx<DateTime> selectedDate = DateTime.now().obs;
-
   final Rx<BankAccountEntity?> selectedAccount = Rx<BankAccountEntity?>(null);
   final Rx<CategoryEntity?> selectedCategory = Rx<CategoryEntity?>(null);
 
   void _toggleType(TransactionType type) {
-    if (editingTransaction != null) return; // Nao permite trocar tipo na edicao
-    if (selectedType.value == type) return;
+    if (editingTransaction != null || selectedType.value == type) return;
     selectedType.value = type;
-    selectedCategory.value = null; // Reseta a categoria pois a lista muda
-    isPaid.value = true; // Reseta o status
+    selectedCategory.value = null;
+    isPaid.value = true;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = editingTransaction != null;
+    final theme = context.theme;
+    final cs = theme.colorScheme;
+    final editing = editingTransaction != null;
 
     return Scaffold(
-      backgroundColor: AppColors.deepNavy,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        foregroundColor: cs.onSurface,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: cs.onSurface),
           onPressed: () => Get.back(),
         ),
         title: Text(
-          isEditing ? 'Editar Transação' : 'Nova Transação',
-          style: const TextStyle(
-            color: Colors.white,
+          editing ? 'Editar Transacao' : 'Nova Transacao',
+          style: TextStyle(
+            color: cs.onSurface,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -94,35 +90,35 @@ class TransactionFormView extends GetView<TransactionsController> {
         if (controller.isLoading.value) {
           final isExp = selectedType.value == TransactionType.expense;
           return AppLoadingScreen(
-            label: isEditing ? 'Carregando transacao' : 'Preparando formulario',
+            label: editing ? 'Carregando transacao' : 'Preparando formulario',
             accentColor: isExp ? AppColors.rose : AppColors.emerald,
           );
         }
 
         final isExpense = selectedType.value == TransactionType.expense;
         final activeColor = isExpense ? AppColors.rose : AppColors.emerald;
-        final statusLabel = isExpense ? 'Pago' : 'Recebido';
+        final muted = cs.onSurface.withValues(alpha: 0.64);
+        final subtle = cs.onSurface.withValues(alpha: 0.48);
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Type Selector Tabs (Saida | Entrada)
-                if (!isEditing)
+                if (!editing) ...[
                   Row(
                     children: [
                       Expanded(
                         child: _TypeTab(
-                          label: 'Saída',
+                          label: 'Saida',
                           isSelected: isExpense,
                           activeColor: AppColors.rose,
                           onTap: () => _toggleType(TransactionType.expense),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: _TypeTab(
                           label: 'Entrada',
@@ -133,23 +129,22 @@ class TransactionFormView extends GetView<TransactionsController> {
                       ),
                     ],
                   ),
-                if (!isEditing) const SizedBox(height: 48),
-
-                // Amount Input
+                  const SizedBox(height: 28),
+                ],
                 TextFormField(
                   controller: amountController,
                   focusNode: amountFocusNode,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: cs.onSurface,
                     fontSize: 48,
                     fontWeight: FontWeight.w800,
                   ),
                   decoration: InputDecoration(
                     hintText: 'R\$ 0,00',
                     hintStyle: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: subtle,
                       fontSize: 48,
                       fontWeight: FontWeight.w800,
                     ),
@@ -167,19 +162,14 @@ class TransactionFormView extends GetView<TransactionsController> {
                     if (v?.isEmpty ?? true) return 'Informe o valor.';
                     final numValue =
                         int.tryParse(v!.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-                    if (numValue <= 0) return 'Maior que zero.';
-                    return null;
+                    return numValue <= 0 ? 'Maior que zero.' : null;
                   },
                 ),
                 const SizedBox(height: 8),
                 GestureDetector(
-                  onTap: () {
-                    if (isAmountFocused.value) {
-                      amountFocusNode.unfocus();
-                    } else {
-                      amountFocusNode.requestFocus();
-                    }
-                  },
+                  onTap: () => isAmountFocused.value
+                      ? amountFocusNode.unfocus()
+                      : amountFocusNode.requestFocus(),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -188,7 +178,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                             ? 'Toque para sair'
                             : 'Toque para digitar',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.4),
+                          color: subtle,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -199,58 +189,43 @@ class TransactionFormView extends GetView<TransactionsController> {
                             ? Icons.keyboard_hide_outlined
                             : Icons.keyboard_alt_outlined,
                         size: 16,
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: subtle,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
-
-                // Details Section Title
+                const SizedBox(height: 32),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'DETALHES DA TRANSAÇÃO',
+                    'DETALHES DA TRANSACAO',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: muted,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Status Switch
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
-                    ),
-                  ),
+                const SizedBox(height: 14),
+                _SectionCard(
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: isPaid.value
-                              ? activeColor
-                              : Colors.white.withValues(alpha: 0.1),
+                              ? activeColor.withValues(alpha: 0.12)
+                              : cs.surfaceContainerHighest,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.check_rounded,
-                          color: Colors.white,
+                          color: isPaid.value ? activeColor : cs.onSurface,
                           size: 16,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,18 +234,15 @@ class TransactionFormView extends GetView<TransactionsController> {
                               isExpense
                                   ? 'Status do Pagamento'
                                   : 'Status do Recebimento',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(color: muted, fontSize: 13),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isPaid.value ? statusLabel : 'Pendente',
+                              isPaid.value ? 'Pago' : 'Pendente',
                               style: TextStyle(
                                 color: isPaid.value
                                     ? activeColor
-                                    : Colors.white.withValues(alpha: 0.7),
+                                    : cs.onSurface,
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -280,18 +252,16 @@ class TransactionFormView extends GetView<TransactionsController> {
                       ),
                       Switch(
                         value: isPaid.value,
-                        onChanged: (val) => isPaid.value = val,
-                        activeThumbColor: Colors.white,
+                        onChanged: (v) => isPaid.value = v,
+                        activeThumbColor: cs.onPrimary,
                         activeTrackColor: activeColor,
-                        inactiveThumbColor: Colors.white.withValues(alpha: 0.4),
-                        inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+                        inactiveThumbColor: cs.surfaceContainerHighest,
+                        inactiveTrackColor: cs.surfaceContainerHighest,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Date Selector
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
@@ -335,9 +305,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Account Selector
+                const SizedBox(height: 14),
                 _SelectionField<BankAccountEntity>(
                   label: 'Conta',
                   hint: 'Carteira',
@@ -347,9 +315,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                   itemLabelBuilder: (a) => a.name,
                   onChanged: (v) => selectedAccount.value = v,
                 ),
-                const SizedBox(height: 16),
-
-                // Category Selector
+                const SizedBox(height: 14),
                 _SelectionField<CategoryEntity>(
                   label: 'Categoria',
                   hint: 'Toque para selecionar',
@@ -361,39 +327,19 @@ class TransactionFormView extends GetView<TransactionsController> {
                   itemLabelBuilder: (c) => c.name,
                   onChanged: (v) => selectedCategory.value = v,
                 ),
-                const SizedBox(height: 16),
-
-                // Description Input
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
-                    ),
-                  ),
+                const SizedBox(height: 14),
+                _SectionCard(
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.notes_rounded,
-                        color: Colors.white.withValues(alpha: 0.4),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 16),
+                      Icon(Icons.notes_rounded, color: muted, size: 22),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: descriptionController,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: cs.onSurface, fontSize: 16),
                           decoration: InputDecoration(
-                            hintText: 'Descrição (opcional)',
-                            hintStyle: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.4),
-                              fontSize: 15,
-                            ),
+                            hintText: 'Descricao (opcional)',
+                            hintStyle: TextStyle(color: muted, fontSize: 15),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
@@ -403,35 +349,30 @@ class TransactionFormView extends GetView<TransactionsController> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-
-                // Save Button
+                const SizedBox(height: 24),
                 SizedBox(
-                  width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
                     onPressed: _handleSave,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: activeColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: cs.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     child: controller.isSubmitting.value
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: cs.onPrimary,
                               strokeWidth: 2.5,
                             ),
                           )
                         : Text(
-                            isEditing
-                                ? 'Salvar Alterações'
-                                : 'Salvar Transação',
+                            editing ? 'Salvar Alteracoes' : 'Salvar Transacao',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -439,7 +380,6 @@ class TransactionFormView extends GetView<TransactionsController> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -448,51 +388,46 @@ class TransactionFormView extends GetView<TransactionsController> {
     );
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<void> _pickDate(BuildContext context, Color activeColor) async {
+    final theme = context.theme;
+    final cs = theme.colorScheme;
     final date = await showDatePicker(
       context: context,
       initialDate: selectedDate.value,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: activeColor,
-              onPrimary: Colors.white,
-              surface: AppColors.midnight,
-              onSurface: Colors.white,
-            ),
+      builder: (context, child) => Theme(
+        data: theme.copyWith(
+          colorScheme: cs.copyWith(
+            primary: activeColor,
+            onPrimary: cs.onPrimary,
+            surface: cs.surface,
+            onSurface: cs.onSurface,
           ),
-          child: child!,
-        );
-      },
+        ),
+        child: child!,
+      ),
     );
-    if (date != null) {
-      selectedDate.value = date;
-    }
+    if (date != null) selectedDate.value = date;
   }
 
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedAccount.value == null) {
-      AppSnackbar.show('Atenção', 'Selecione a conta.');
+      AppSnackbar.show('Atencao', 'Selecione a conta.');
       return;
     }
     if (selectedCategory.value == null) {
-      AppSnackbar.show('Atenção', 'Selecione a categoria.');
+      AppSnackbar.show('Atencao', 'Selecione a categoria.');
       return;
     }
-
-    final rawAmount = amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    final amountCents = int.tryParse(rawAmount) ?? 0;
-
+    final amountCents =
+        int.tryParse(amountController.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
+        0;
     if (editingTransaction != null) {
-      // MODO EDICAO
       await controller.updateTransaction(
         editingTransaction!.id,
         categoryId: selectedCategory.value!.id,
@@ -501,10 +436,9 @@ class TransactionFormView extends GetView<TransactionsController> {
             : descriptionController.text.trim(),
         amountCents: amountCents,
         transactionDate: selectedDate.value,
-        scope: TransactionMutationScope.current, // Por enquanto unitario
+        scope: TransactionMutationScope.current,
       );
     } else {
-      // MODO CRIACAO
       await controller.createTransaction(
         type: selectedType.value,
         assetType: AssetType.bankAccount,
@@ -521,6 +455,24 @@ class TransactionFormView extends GetView<TransactionsController> {
   }
 }
 
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: child,
+    );
+  }
+}
+
 class _TypeTab extends StatelessWidget {
   const _TypeTab({
     required this.label,
@@ -528,14 +480,13 @@ class _TypeTab extends StatelessWidget {
     required this.activeColor,
     required this.onTap,
   });
-
   final String label;
   final bool isSelected;
   final Color activeColor;
   final VoidCallback onTap;
-
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -544,12 +495,10 @@ class _TypeTab extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor.withValues(alpha: 0.1)
-              : Colors.transparent,
+              : cs.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected
-                ? activeColor
-                : Colors.white.withValues(alpha: 0.1),
+            color: isSelected ? activeColor : cs.outlineVariant,
             width: 1.5,
           ),
         ),
@@ -559,7 +508,7 @@ class _TypeTab extends StatelessWidget {
             style: TextStyle(
               color: isSelected
                   ? activeColor
-                  : Colors.white.withValues(alpha: 0.5),
+                  : cs.onSurface.withValues(alpha: 0.58),
               fontSize: 15,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
@@ -573,20 +522,22 @@ class _TypeTab extends StatelessWidget {
 class _DateChip extends StatelessWidget {
   const _DateChip({
     required this.label,
-    this.icon,
     required this.isSelected,
     required this.activeColor,
     required this.onTap,
+    this.icon,
   });
-
   final String label;
   final IconData? icon;
   final bool isSelected;
   final Color activeColor;
   final VoidCallback onTap;
-
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    final textColor = isSelected
+        ? activeColor
+        : cs.onSurface.withValues(alpha: 0.58);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -595,33 +546,25 @@ class _DateChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor.withValues(alpha: 0.1)
-              : Colors.white.withValues(alpha: 0.03),
+              : cs.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? activeColor.withValues(alpha: 0.3)
-                : Colors.white.withValues(alpha: 0.05),
+                : cs.outlineVariant,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected
-                    ? activeColor
-                    : Colors.white.withValues(alpha: 0.5),
-              ),
+              Icon(icon, size: 16, color: textColor),
               const SizedBox(width: 6),
             ],
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? activeColor
-                    : Colors.white.withValues(alpha: 0.5),
+                color: textColor,
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -643,7 +586,6 @@ class _SelectionField<T> extends StatelessWidget {
     required this.itemLabelBuilder,
     required this.onChanged,
   });
-
   final String label;
   final String hint;
   final IconData icon;
@@ -652,98 +594,196 @@ class _SelectionField<T> extends StatelessWidget {
   final String Function(T) itemLabelBuilder;
   final ValueChanged<T?> onChanged;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          isExpanded: true,
-          icon: Icon(
-            Icons.chevron_right_rounded,
-            color: Colors.white.withValues(alpha: 0.4),
-          ),
-          dropdownColor: AppColors.midnight,
-          hint: Row(
-            children: [
-              Icon(icon, color: Colors.white.withValues(alpha: 0.4), size: 22),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+  void _showSelectionModal(BuildContext context) {
+    final theme = context.theme;
+    final cs = theme.colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 48,
+              height: 5,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
                 children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      fontSize: 12,
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Icon(icon, color: cs.primary, size: 22),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(width: 16),
                   Text(
-                    hint,
+                    'Selecionar $label',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final selected = item == value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          onChanged(item);
+                          Navigator.pop(context);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? cs.primary.withValues(alpha: 0.08)
+                                : cs.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selected
+                                  ? cs.primary.withValues(alpha: 0.45)
+                                  : cs.outlineVariant,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  itemLabelBuilder(item),
+                                  style: TextStyle(
+                                    color: selected ? cs.primary : cs.onSurface,
+                                    fontSize: 16,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              if (selected)
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  color: cs.primary,
+                                  size: 20,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    final hasValue = value != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showSelectionModal(context),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cs.outlineVariant),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: cs.onSurfaceVariant, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.56),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasValue ? itemLabelBuilder(value as T) : hint,
+                      style: TextStyle(
+                        color: hasValue
+                            ? cs.onSurface
+                            : cs.onSurface.withValues(alpha: 0.5),
+                        fontSize: 15,
+                        fontWeight: hasValue
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: cs.onSurface.withValues(alpha: 0.42),
               ),
             ],
           ),
-          selectedItemBuilder: (context) {
-            return items.map((item) {
-              return Row(
-                children: [
-                  Icon(
-                    icon,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        itemLabelBuilder(item),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            }).toList();
-          },
-          items: items.map((item) {
-            return DropdownMenuItem<T>(
-              value: item,
-              child: Text(
-                itemLabelBuilder(item),
-                style: const TextStyle(color: Colors.white),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
         ),
       ),
     );

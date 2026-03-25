@@ -5,15 +5,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../settings_controller.dart';
 
 class SettingsProfileCard extends StatelessWidget {
-  const SettingsProfileCard({
-    super.key,
-    required this.controller,
-  });
+  const SettingsProfileCard({super.key, required this.controller});
 
   final SettingsController controller;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(
       () => Container(
         width: double.infinity,
@@ -28,7 +27,9 @@ class SettingsProfileCard extends StatelessWidget {
             ],
           ),
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.18)),
+          border: Border.all(
+            color: AppColors.royalBlue.withValues(alpha: 0.18),
+          ),
           boxShadow: [
             BoxShadow(
               color: AppColors.royalBlue.withValues(alpha: 0.1),
@@ -52,7 +53,7 @@ class SettingsProfileCard extends StatelessWidget {
                       Text(
                         controller.userName.value,
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface,
+                          color: colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -61,23 +62,28 @@ class SettingsProfileCard extends StatelessWidget {
                       Text(
                         controller.userEmail.value,
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                          color: colorScheme.onSurface.withValues(alpha: 0.72),
                           fontSize: 13,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withValues(alpha: 0.12),
+                          color: colorScheme.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.15)),
+                          border: Border.all(
+                            color: colorScheme.primary.withValues(alpha: 0.15),
+                          ),
                         ),
                         child: Text(
                           controller.planStatus.value,
-                          style: const TextStyle(
-                            color: AppColors.royalBlue,
+                          style: TextStyle(
+                            color: colorScheme.primary,
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -99,7 +105,7 @@ class SettingsProfileCard extends StatelessWidget {
                       Text(
                         controller.planName.value,
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface,
+                          color: colorScheme.onSurface,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
@@ -108,7 +114,7 @@ class SettingsProfileCard extends StatelessWidget {
                       Text(
                         '${controller.remainingDays.value} dias restantes',
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
                           fontSize: 13,
                         ),
                       ),
@@ -119,9 +125,14 @@ class SettingsProfileCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: controller.openSubscription,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.royalBlue,
-                    side: BorderSide(color: AppColors.royalBlue.withValues(alpha: 0.34)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    foregroundColor: colorScheme.primary,
+                    side: BorderSide(
+                      color: colorScheme.primary.withValues(alpha: 0.34),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -138,7 +149,7 @@ class SettingsProfileCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: controller.planProgress.value,
                 minHeight: 6,
-                backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                backgroundColor: colorScheme.onSurface.withValues(alpha: 0.08),
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.sand),
               ),
             ),
@@ -156,9 +167,13 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
     final parts = name.trim().split(RegExp(r'\s+'));
-    final initials =
-        parts.take(2).map((part) => part.isEmpty ? '' : part[0]).join().toUpperCase();
+    final initials = parts
+        .take(2)
+        .map((part) => part.isEmpty ? '' : part[0])
+        .join()
+        .toUpperCase();
 
     return Container(
       width: 60,
@@ -175,7 +190,7 @@ class _Avatar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-              color: AppColors.royalBlue.withValues(alpha: 0.22),
+            color: AppColors.royalBlue.withValues(alpha: 0.22),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -185,7 +200,7 @@ class _Avatar extends StatelessWidget {
       child: Text(
         initials.isEmpty ? 'SV' : initials,
         style: TextStyle(
-          color: context.theme.colorScheme.onSurface,
+          color: colorScheme.onPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w800,
         ),

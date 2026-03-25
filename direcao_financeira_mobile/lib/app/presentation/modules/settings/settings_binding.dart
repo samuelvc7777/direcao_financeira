@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/preferences/app_preferences.dart';
 import '../../../domain/repositories/i_auth_repository.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
@@ -24,6 +25,7 @@ class SettingsBinding extends Bindings {
     if (!Get.isRegistered<SettingsController>()) {
       Get.lazyPut<SettingsController>(
         () => SettingsController(
+          appBubbleService: Get.find<AppBubbleService>(),
           preferences: Get.find<AppPreferences>(),
           getStoredUserUseCase: Get.find<GetStoredUserUseCase>(),
           logoutUseCase: Get.find<LogoutUseCase>(),

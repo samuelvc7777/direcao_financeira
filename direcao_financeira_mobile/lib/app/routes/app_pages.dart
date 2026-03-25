@@ -23,6 +23,8 @@ import '../presentation/modules/transactions/views/transaction_form_view.dart';
 import '../presentation/modules/transactions/views/credit_card_form_view.dart';
 import '../presentation/modules/journey/journey_view.dart';
 import '../presentation/modules/journey/journey_binding.dart';
+import '../presentation/modules/journey/add_ride_binding.dart';
+import '../presentation/modules/journey/add_ride_view.dart';
 import '../presentation/modules/journey/operational_metrics_view.dart';
 import '../presentation/modules/journey/daily_statistics_view.dart';
 import '../presentation/modules/journey/ride_details_view.dart';
@@ -54,6 +56,7 @@ class AppRoutes {
   static const String shiftMetrics = '/journey/shift-metrics';
   static const String shiftRoute = '/journey/shift-route';
   static const String journeyRideDetails = '/journey/ride-details';
+  static const String journeyAddRide = '/journey/add-ride';
   static const String trafficLightSettings = '/traffic-light-settings';
   static const String costsGainsSettings = '/costs-gains-settings';
   static const String costsGainsWizard = '/costs-gains-wizard';
@@ -99,6 +102,13 @@ class AppPages {
     GetPage(
       name: AppRoutes.journeyRideDetails,
       page: () => const RideDetailsView(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.journeyAddRide,
+      page: () => const AddRideView(),
+      binding: AddRideBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

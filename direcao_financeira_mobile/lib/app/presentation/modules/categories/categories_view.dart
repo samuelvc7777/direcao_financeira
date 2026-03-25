@@ -7,6 +7,7 @@ import '../../../domain/entities/category_entity.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_filled_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/app_loading_indicator.dart';
 import 'categories_controller.dart';
 
 class CategoriesView extends GetView<CategoriesController> {
@@ -41,8 +42,9 @@ class CategoriesView extends GetView<CategoriesController> {
         ),
         child: Obx(() {
           if (controller.isLoading.value) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.royalBlue),
+            return const AppLoadingScreen(
+              label: 'Carregando categorias...',
+              accentColor: AppColors.royalBlue,
             );
           }
 
@@ -788,10 +790,10 @@ class _ErrorState extends StatelessWidget {
               size: 44,
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'Nao foi possivel carregar as categorias.',
               style: TextStyle(
-                color: Colors.white,
+                color: context.theme.colorScheme.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -848,10 +850,10 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'Nenhuma categoria ativa ainda.',
               style: TextStyle(
-                color: Colors.white,
+                color: context.theme.colorScheme.onSurface,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),

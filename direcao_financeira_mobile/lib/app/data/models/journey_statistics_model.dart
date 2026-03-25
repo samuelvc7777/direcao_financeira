@@ -40,6 +40,7 @@ class JourneyStatisticsModel extends JourneyStatisticsEntity {
     required super.averageTime,
     required super.idleTime,
     required super.drivenKm,
+    required super.totalDrivenKmValue,
     required super.averageKmh,
     required super.rideStats,
   });
@@ -51,6 +52,8 @@ class JourneyStatisticsModel extends JourneyStatisticsEntity {
       averageTime: json['averageTime'] as String,
       idleTime: json['idleTime'] as String,
       drivenKm: json['drivenKm'] as String,
+      totalDrivenKmValue:
+          (json['totalDrivenKmValue'] as num?)?.toDouble() ?? 0.0,
       averageKmh: json['averageKmh'] as String,
       rideStats: json['rideStats'] != null 
         ? RideStatisticsModel.fromJson(json['rideStats'] as Map<String, dynamic>)
@@ -72,6 +75,7 @@ class JourneyStatisticsModel extends JourneyStatisticsEntity {
       'averageTime': averageTime,
       'idleTime': idleTime,
       'drivenKm': drivenKm,
+      'totalDrivenKmValue': totalDrivenKmValue,
       'averageKmh': averageKmh,
       'rideStats': (rideStats as RideStatisticsModel).toJson(),
     };

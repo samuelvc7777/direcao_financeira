@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -58,6 +59,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  static const Locale _defaultLocale = Locale('pt', 'BR');
+
   const MyApp({
     super.key,
     required this.initialRoute,
@@ -76,7 +79,15 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       scrollBehavior: const AppScrollBehavior(),
-      title: 'Direcao Financeira',
+      title: 'Dire\u00e7\u00e3o Financeira',
+      locale: _defaultLocale,
+      fallbackLocale: _defaultLocale,
+      supportedLocales: const [_defaultLocale],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

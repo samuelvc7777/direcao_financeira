@@ -4,6 +4,7 @@ import '../entities/active_shift_entity.dart';
 import '../entities/finish_shift_result_entity.dart';
 import '../entities/journey_statistics_entity.dart';
 import '../entities/location_tracking_status_entity.dart';
+import '../entities/paged_result_entity.dart';
 import '../entities/shift_route_entity.dart';
 import '../entities/shift_entity.dart';
 import '../repositories/i_journey_repository.dart';
@@ -38,15 +39,19 @@ class GetShiftHistoryUseCase {
   final IJourneyRepository repository;
   GetShiftHistoryUseCase(this.repository);
 
-  Future<Either<Failure, List<ShiftEntity>>> call({
+  Future<Either<Failure, PagedResultEntity<ShiftEntity>>> call({
     String filter = 'day',
     String? date,
     String? endDate,
+    int offset = 0,
+    int limit = 20,
   }) async {
     return await repository.getShiftHistory(
       filter: filter,
       date: date,
       endDate: endDate,
+      offset: offset,
+      limit: limit,
     );
   }
 }

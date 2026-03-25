@@ -12,8 +12,9 @@ class SubscriptionView extends GetView<SubscriptionController> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.petrol,
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(title: 'Minha Assinatura'),
       body: Container(
         width: double.infinity,
@@ -21,14 +22,12 @@ class SubscriptionView extends GetView<SubscriptionController> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.petrol, AppColors.backgroundDark],
+            colors: [cs.surface, cs.surfaceContainerLowest],
           ),
         ),
         child: Obx(() {
           if (controller.isLoading.value) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.aqua),
-            );
+            return Center(child: CircularProgressIndicator(color: cs.primary));
           }
 
           final error = controller.errorMessage.value;
@@ -37,7 +36,7 @@ class SubscriptionView extends GetView<SubscriptionController> {
           }
 
           return RefreshIndicator(
-            color: AppColors.teal,
+            color: cs.primary,
             onRefresh: controller.loadData,
             child: ListView(
               physics: const ClampingScrollPhysics(
@@ -66,19 +65,20 @@ class _CurrentSubscriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     final subscription = controller.activeSubscription.value;
 
     if (subscription == null) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: _panelDecoration(),
+        decoration: _panelDecoration(cs),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Nenhuma assinatura ativa',
               style: TextStyle(
-                color: Colors.white,
+                color: cs.onSurface,
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
               ),
@@ -87,7 +87,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
             Text(
               'Ative ou renove seu plano para continuar com os recursos premium.',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
+                color: cs.onSurface.withValues(alpha: 0.72),
                 height: 1.5,
               ),
             ),
@@ -96,7 +96,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
               Text(
                 'No Android, o checkout agora acontece pela Google Play.',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.62),
+                  color: cs.onSurface.withValues(alpha: 0.62),
                   height: 1.4,
                 ),
               ),
@@ -122,16 +122,20 @@ class _CurrentSubscriptionCard extends StatelessWidget {
     }
 
     final plan = subscription.plan;
+    final planColor = _parsePlanColor(plan?.color);
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: _panelDecoration(
+        cs,
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _parsePlanColor(plan?.color).withValues(alpha: 0.2),
-            AppColors.surfaceDark.withValues(alpha: 0.96),
+            planColor.withValues(
+              alpha: context.theme.brightness == Brightness.dark ? 0.22 : 0.12,
+            ),
+            cs.surfaceContainerHigh,
           ],
         ),
       ),
@@ -151,7 +155,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: controller
                       .statusColor(subscription.status)
-                      .withValues(alpha: 0.18),
+                      .withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -164,8 +168,8 @@ class _CurrentSubscriptionCard extends StatelessWidget {
               ),
               Text(
                 plan?.name ?? 'Plano atual',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
@@ -176,7 +180,7 @@ class _CurrentSubscriptionCard extends StatelessWidget {
           Text(
             plan?.description ?? 'Sem descricao disponivel.',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.74),
+              color: cs.onSurface.withValues(alpha: 0.74),
               height: 1.5,
             ),
           ),
@@ -209,19 +213,19 @@ class _CurrentSubscriptionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: cs.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.shop_2_outlined, color: AppColors.aqua),
+                  Icon(Icons.shop_2_outlined, color: cs.primary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Compras e renovacoes no Android passam pela Google Play.',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                         height: 1.4,
                       ),
                     ),
@@ -272,22 +276,22 @@ class _CurrentSubscriptionCard extends StatelessWidget {
 
 class _PlansSection extends StatelessWidget {
   const _PlansSection({required this.controller});
-
   final SubscriptionController controller;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     if (!controller.hasPlanCatalog.value) {
       return Container(
         padding: const EdgeInsets.all(20),
-        decoration: _panelDecoration(),
+        decoration: _panelDecoration(cs),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Troca de plano',
               style: TextStyle(
-                color: Colors.white,
+                color: cs.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
@@ -296,7 +300,7 @@ class _PlansSection extends StatelessWidget {
             Text(
               'A API deste ambiente nao retornou uma lista de planos disponiveis.',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: cs.onSurface.withValues(alpha: 0.7),
                 height: 1.5,
               ),
             ),
@@ -307,14 +311,14 @@ class _PlansSection extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: _panelDecoration(),
+      decoration: _panelDecoration(cs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Planos',
             style: TextStyle(
-              color: Colors.white,
+              color: cs.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -325,7 +329,7 @@ class _PlansSection extends StatelessWidget {
                 ? 'Selecione um plano para comprar ou renovar pela Google Play.'
                 : 'Selecione uma opcao para atualizar sua assinatura.',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: cs.onSurface.withValues(alpha: 0.7),
               height: 1.5,
             ),
           ),
@@ -335,8 +339,10 @@ class _PlansSection extends StatelessWidget {
           ],
           const SizedBox(height: 16),
           ...controller.plans.map(
-            (plan) => Obx(
-              () => Padding(
+            (plan) => Obx(() {
+              final selected = controller.selectedPlanId.value == plan.id;
+              final planColor = _parsePlanColor(plan.color);
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
@@ -344,14 +350,14 @@ class _PlansSection extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: controller.selectedPlanId.value == plan.id
-                          ? _parsePlanColor(plan.color).withValues(alpha: 0.18)
-                          : Colors.white.withValues(alpha: 0.04),
+                      color: selected
+                          ? planColor.withValues(alpha: 0.1)
+                          : cs.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: controller.selectedPlanId.value == plan.id
-                            ? _parsePlanColor(plan.color)
-                            : Colors.white.withValues(alpha: 0.08),
+                        color: selected
+                            ? planColor.withValues(alpha: 0.4)
+                            : cs.outlineVariant,
                       ),
                     ),
                     child: Row(
@@ -363,16 +369,15 @@ class _PlansSection extends StatelessWidget {
                           ),
                         ),
                         _PlanSelectionIndicator(
-                          isSelected:
-                              controller.selectedPlanId.value == plan.id,
-                          color: _parsePlanColor(plan.color),
+                          isSelected: selected,
+                          color: planColor,
                         ),
                       ],
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
           ),
           const SizedBox(height: 8),
           Obx(
@@ -393,7 +398,7 @@ class _PlansSection extends StatelessWidget {
             Obx(
               () => CustomFilledButton(
                 text: 'RESTAURAR COMPRAS',
-                backgroundColor: AppColors.surfaceDark,
+                backgroundColor: cs.surfaceContainerHighest,
                 isLoading: controller.isRestoringPurchases.value,
                 onPressed: controller.restorePurchases,
               ),
@@ -407,14 +412,13 @@ class _PlansSection extends StatelessWidget {
 
 class _PlanTileContent extends StatelessWidget {
   const _PlanTileContent({required this.controller, required this.plan});
-
   final SubscriptionController controller;
   final PlanEntity plan;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     final hasStoreProduct = controller.hasStoreProductForPlan(plan);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -423,8 +427,8 @@ class _PlanTileContent extends StatelessWidget {
             Expanded(
               child: Text(
                 plan.name,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -437,13 +441,13 @@ class _PlanTileContent extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.aqua.withValues(alpha: 0.16),
+                  color: cs.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   'Atual',
                   style: TextStyle(
-                    color: AppColors.aqua,
+                    color: cs.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -454,7 +458,7 @@ class _PlanTileContent extends StatelessWidget {
         Text(
           plan.description,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: cs.onSurface.withValues(alpha: 0.68),
             height: 1.4,
           ),
         ),
@@ -466,7 +470,7 @@ class _PlanTileContent extends StatelessWidget {
           children: [
             Text(
               '${controller.planPriceLabel(plan)} / ${plan.durationDays} dias',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.sand,
                 fontWeight: FontWeight.w700,
               ),
@@ -479,14 +483,14 @@ class _PlanTileContent extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: hasStoreProduct
-                      ? AppColors.teal.withValues(alpha: 0.16)
-                      : AppColors.rust.withValues(alpha: 0.18),
+                      ? AppColors.teal.withValues(alpha: 0.12)
+                      : AppColors.rust.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   hasStoreProduct ? 'Google Play' : 'Sem productId',
                   style: TextStyle(
-                    color: hasStoreProduct ? AppColors.aqua : AppColors.sand,
+                    color: hasStoreProduct ? AppColors.aqua : AppColors.rust,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -500,29 +504,29 @@ class _PlanTileContent extends StatelessWidget {
 
 class _StoreInfoBanner extends StatelessWidget {
   const _StoreInfoBanner({required this.controller});
-
   final SubscriptionController controller;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.shop_2_outlined, color: AppColors.aqua, size: 18),
-              SizedBox(width: 10),
+              Icon(Icons.shop_2_outlined, color: cs.primary, size: 18),
+              const SizedBox(width: 10),
               Text(
                 'Google Play conectada',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: cs.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -530,10 +534,10 @@ class _StoreInfoBanner extends StatelessWidget {
           ),
           if (controller.isStoreCatalogLoading.value) ...[
             const SizedBox(height: 12),
-            const LinearProgressIndicator(
+            LinearProgressIndicator(
               minHeight: 4,
-              color: AppColors.aqua,
-              backgroundColor: Colors.white24,
+              color: cs.primary,
+              backgroundColor: cs.surfaceContainerHighest,
             ),
           ],
           if (controller.storeErrorMessage.value != null) ...[
@@ -541,7 +545,7 @@ class _StoreInfoBanner extends StatelessWidget {
             Text(
               controller.storeErrorMessage.value!,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
+                color: cs.onSurface.withValues(alpha: 0.72),
                 height: 1.4,
               ),
             ),
@@ -554,21 +558,21 @@ class _StoreInfoBanner extends StatelessWidget {
 
 class _HistorySection extends StatelessWidget {
   const _HistorySection({required this.controller});
-
   final SubscriptionController controller;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: _panelDecoration(),
+      decoration: _panelDecoration(cs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Historico',
             style: TextStyle(
-              color: Colors.white,
+              color: cs.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -577,66 +581,67 @@ class _HistorySection extends StatelessWidget {
           if (controller.history.isEmpty)
             Text(
               'Nenhum historico de assinatura encontrado.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
-            ),
-          ...controller.history.map(
-            (subscription) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    margin: const EdgeInsets.only(top: 4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: controller.statusColor(subscription.status),
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.68)),
+            )
+          else
+            ...controller.history.map(
+              (subscription) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: controller.statusColor(subscription.status),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          subscription.plan?.name ?? 'Plano sem nome',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            subscription.plan?.name ?? 'Plano sem nome',
+                            style: TextStyle(
+                              color: cs.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${controller.formatStatus(subscription.status)} • ${controller.formatPrice(subscription.plan?.priceCents ?? 0)}',
-                          style: const TextStyle(color: AppColors.sand),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Inicio: ${controller.formatDate(subscription.startDate)}',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.68),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${controller.formatStatus(subscription.status)} * ${controller.formatPrice(subscription.plan?.priceCents ?? 0)}',
+                            style: TextStyle(color: AppColors.sand),
                           ),
-                        ),
-                        Text(
-                          'Fim: ${controller.formatDate(subscription.endDate)}',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.68),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Inicio: ${controller.formatDate(subscription.startDate)}',
+                            style: TextStyle(
+                              color: cs.onSurface.withValues(alpha: 0.68),
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            'Fim: ${controller.formatDate(subscription.endDate)}',
+                            style: TextStyle(
+                              color: cs.onSurface.withValues(alpha: 0.68),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -649,19 +654,20 @@ class _InfoBadge extends StatelessWidget {
     required this.label,
     required this.value,
   });
-
   final IconData icon;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return Container(
       constraints: const BoxConstraints(minWidth: 148),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,17 +677,14 @@ class _InfoBadge extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.62),
+              color: cs.onSurface.withValues(alpha: 0.62),
               fontSize: 12,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -694,12 +697,11 @@ class _PlanSelectionIndicator extends StatelessWidget {
     required this.isSelected,
     required this.color,
   });
-
   final bool isSelected;
   final Color color;
-
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       width: 24,
@@ -708,12 +710,12 @@ class _PlanSelectionIndicator extends StatelessWidget {
         shape: BoxShape.circle,
         color: isSelected ? color : Colors.transparent,
         border: Border.all(
-          color: isSelected ? color : Colors.white.withValues(alpha: 0.24),
+          color: isSelected ? color : cs.outlineVariant,
           width: 2,
         ),
       ),
       child: isSelected
-          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          ? Icon(Icons.check, size: 14, color: _contrastColor(color))
           : null,
     );
   }
@@ -721,12 +723,12 @@ class _PlanSelectionIndicator extends StatelessWidget {
 
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
-
   final String message;
   final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -735,10 +737,10 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, color: AppColors.sand, size: 42),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Nao foi possivel carregar sua assinatura.',
               style: TextStyle(
-                color: Colors.white,
+                color: cs.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -748,7 +750,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: cs.onSurface.withValues(alpha: 0.7),
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -768,22 +770,21 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-BoxDecoration _panelDecoration({Gradient? gradient}) {
-  return BoxDecoration(
-    gradient: gradient,
-    color: gradient == null
-        ? AppColors.surfaceDark.withValues(alpha: 0.92)
-        : null,
-    borderRadius: BorderRadius.circular(28),
-    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-  );
-}
+BoxDecoration _panelDecoration(ColorScheme cs, {Gradient? gradient}) =>
+    BoxDecoration(
+      gradient: gradient,
+      color: gradient == null ? cs.surfaceContainerHigh : null,
+      borderRadius: BorderRadius.circular(28),
+      border: Border.all(color: cs.outlineVariant),
+    );
 
 Color _parsePlanColor(String? colorHex) {
   final normalized = (colorHex ?? '').replaceFirst('#', '');
-  if (normalized.length != 6) {
-    return AppColors.teal;
-  }
-
+  if (normalized.length != 6) return AppColors.teal;
   return Color(int.parse('FF$normalized', radix: 16));
 }
+
+Color _contrastColor(Color color) =>
+    ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+    ? Colors.white
+    : Colors.black87;

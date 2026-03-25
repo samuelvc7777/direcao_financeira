@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
 
+import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/accessibility/accessibility_service.dart';
 import '../../../core/network/journey_realtime_bridge.dart';
+import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
 import 'journey_controller.dart';
@@ -44,7 +46,11 @@ class JourneyBinding extends Bindings {
         getLocationTrackingStatusUseCase: Get.find(),
         watchLocationTrackingStatusUseCase: Get.find(),
         getRidesUseCase: Get.find(),
+        getCostsGainsSettings: Get.isRegistered<GetCostsGainsSettingsUseCase>()
+            ? Get.find<GetCostsGainsSettingsUseCase>()
+            : null,
         journeyRealtimeBridge: Get.find<JourneyRealtimeBridge>(),
+        appBubbleService: Get.find<AppBubbleService>(),
         accessibilityService: Get.find<AccessibilityService>(),
       ),
     );

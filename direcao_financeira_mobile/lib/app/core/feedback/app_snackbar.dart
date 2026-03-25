@@ -16,12 +16,24 @@ class AppSnackbar {
     double? borderRadius,
     bool isDismissible = true,
   }) {
+    final theme = Get.theme;
+    final fallbackBackground = theme.colorScheme.inverseSurface;
+    final resolvedBackground = backgroundColor == null
+        ? fallbackBackground
+        : Color.alphaBlend(backgroundColor, theme.colorScheme.surface);
+    final resolvedText = backgroundColor != null && backgroundColor.a < 0.4
+        ? ThemeData.estimateBrightnessForColor(resolvedBackground) ==
+                Brightness.dark
+            ? Colors.white
+            : theme.colorScheme.onSurface
+        : colorText;
+
     return Get.snackbar(
       title,
       message,
       snackPosition: snackPosition,
-      backgroundColor: backgroundColor,
-      colorText: colorText,
+      backgroundColor: resolvedBackground,
+      colorText: resolvedText,
       duration: duration,
       icon: icon,
       margin: margin,

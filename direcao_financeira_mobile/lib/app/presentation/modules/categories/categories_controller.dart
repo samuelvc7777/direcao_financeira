@@ -131,15 +131,15 @@ class CategoriesController extends GetxController {
     final confirmed =
         await Get.dialog<bool>(
           AlertDialog(
-            backgroundColor: const Color(0xFF022C35),
+            backgroundColor: Get.theme.colorScheme.surface,
             title: Text(
               '$actionNameCap categoria',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Get.theme.colorScheme.onSurface),
             ),
             content: Text(
               'A categoria "${category.name}" sera ${actionName}ada.',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75),
+                color: Get.theme.colorScheme.onSurface.withValues(alpha: 0.75),
                 height: 1.4,
               ),
             ),

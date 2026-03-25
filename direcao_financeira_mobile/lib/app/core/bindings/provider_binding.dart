@@ -186,7 +186,10 @@ class ProviderBinding extends Bindings {
       permanent: true,
     );
     Get.put<ILocationTrackingDataSource>(
-      LocationTrackingDataSourceImpl(routeLocalDataSource: Get.find()),
+      LocationTrackingDataSourceImpl(
+        routeLocalDataSource: Get.find(),
+        storage: Get.find(),
+      ),
       permanent: true,
     );
     Get.put<ITrafficLightLocalDataSource>(
@@ -350,7 +353,10 @@ class ProviderBinding extends Bindings {
       permanent: true,
     );
     Get.put<ILocationTrackingDataSource>(
-      LocationTrackingDataSourceImpl(routeLocalDataSource: Get.find()),
+      LocationTrackingDataSourceImpl(
+        routeLocalDataSource: Get.find(),
+        storage: Get.find(),
+      ),
       permanent: true,
     );
     Get.put<ITrafficLightLocalDataSource>(

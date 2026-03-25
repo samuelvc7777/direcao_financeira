@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Direcao Financeira - Analise Financeira</title>
+  <style>
+    :root {
+      --bg: #09111f;
+      --bg-soft: #0f1b31;
+      --panel: #13213b;
+      --panel-2: #172947;
+      --text: #eef4ff;
+      --muted: #9fb2d1;
+      --line: rgba(255, 255, 255, 0.08);
+      --accent: #2dd4bf;
+      --accent-2: #60a5fa;
+      --warn: #f59e0b;
+      --danger: #fb7185;
+      --success: #34d399;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 28%),
+        radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, #060b15 100%);
+      color: var(--text);
+    }
+
+    .deck {
+      width: min(1500px, calc(100% - 48px));
+      margin: 32px auto 80px;
+      display: grid;
+      gap: 28px;
+    }
+
+    .slide {
+      min-height: 820px;
+      padding: 56px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(19, 33, 59, 0.96), rgba(10, 17, 31, 0.98));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 40%);
+      pointer-events: none;
+    }
+
+    .slide-number {
+      position: absolute;
+      top: 28px;
+      right: 32px;
+      color: var(--muted);
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 18px;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 72px;
+      line-height: 1.02;
+      max-width: 980px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      font-size: 44px;
+      line-height: 1.08;
+      margin-bottom: 20px;
+    }
+
+    .subtitle {
+      font-size: 28px;
+      line-height: 1.35;
+      color: var(--muted);
+      max-width: 960px;
+    }
+
+    .hero-grid,
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+      display: grid;
+      gap: 20px;
+    }
+
+    .hero-grid {
+      grid-template-columns: 1.25fr 0.95fr;
+      align-items: end;
+      height: 100%;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 24px;
+    }
+
+    .metric {
+      background: linear-gradient(180deg, rgba(96, 165, 250, 0.09), rgba(255, 255, 255, 0.03));
+      border: 1px solid rgba(96, 165, 250, 0.16);
+    }
+
+    .metric-label {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .metric-value {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .metric-foot {
+      margin-top: 10px;
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .list {
+      margin-top: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .list-item {
+      font-size: 24px;
+      line-height: 1.35;
+      color: var(--text);
+      padding-left: 22px;
+      position: relative;
+    }
+
+    .list-item::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      position: absolute;
+      left: 0;
+      top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 22px;
+      font-size: 18px;
+    }
+
+    th,
+    td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+
+    td strong {
+      color: var(--text);
+    }
+
+    .right {
+      text-align: right;
+    }
+
+    .note {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 18px;
+    }
+
+    .growth-bar {
+      margin-top: 14px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .growth-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .emphasis {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .danger {
+      color: var(--danger);
+    }
+
+    .warn {
+      color: var(--warn);
+    }
+
+    .success {
+      color: var(--success);
+    }
+
+    .formula {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(45, 212, 191, 0.08);
+      border: 1px solid rgba(45, 212, 191, 0.16);
+      font-size: 22px;
+      color: #dffcf7;
+    }
+
+    .split-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .tag {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .deck {
+        width: 100%;
+        margin: 0;
+      }
+
+      .slide {
+        page-break-after: always;
+        break-after: page;
+        border-radius: 0;
+        min-height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide">
+      <div class="slide-number">Slide 01</div>
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">Direcao Financeira</p>
+          <h1>Analise financeira completa do app mobile com Supabase</h1>
+          <p class="subtitle">
+            Estrutura detalhada de custo por custo, lucro por faixa de usuarios,
+            risco operacional e potencial de crescimento com assinatura de
+            <strong>R$ 25,00 por mes</strong>.
+          </p>
+
+          <div class="formula">
+            Premissa central: 100% da base do cenario e pagante no plano de R$ 25,00.
+          </div>
+
+          <div class="list">
+            <div class="list-item">Sem custo com programadores, equipe ou marketing.</div>
+            <div class="list-item">Custos incluidos: Supabase, app, Google Play e imposto no Brasil.</div>
+            <div class="list-item">Base tecnica analisada diretamente no codigo do projeto.</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card metric">
+            <div class="metric-label">Preco da assinatura</div>
+            <div class="metric-value">R$ 25,00</div>
+            <div class="metric-foot">Receita bruta por usuario pagante por mes.</div>
+          </div>
+          <div class="card metric">
+            <div class="metric-label">Taxa Google Play</div>
+            <div class="metric-value">15%</div>
+            <div class="metric-foot">R$ 3,75 por assinante/mês.</div>
+          </div>
+          <div class="card metric">
+            <div class="metric-label">Modelo tecnico</div>
+            <div class="metric-value">Flutter + Supabase</div>
+            <div class="metric-foot">Auth, Postgres, Realtime e sync de jornada.</div>
+          </div>
+          <div class="card metric">
+            <div class="metric-label">Mudanca tributaria</div>
+            <div class="metric-value">16 mil pagantes</div>
+            <div class="metric-foot">Acima disso, o teto anual de R$ 4,8 mi do Simples estoura.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-number">Slide 02</div>
+      <p class="eyebrow">Base da conta</p>
+      <div class="split-title">
+        <h2>O que entra no custo do aplicativo</h2>
+        <span class="tag">Premissas usadas</span>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size: 28px; margin-bottom: 14px;">Infraestrutura recorrente</h3>
+          <div class="list">
+            <div class="list-item">Supabase com Auth, banco Postgres e Realtime.</div>
+            <div class="list-item">Compute escalando gradualmente conforme o volume de usuarios.</div>
+            <div class="list-item">Egress e conexoes realtime embutidos na conta de infraestrutura.</div>
+            <div class="list-item">Custo do app em si considerado como stack operacional, sem equipe.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 28px; margin-bottom: 14px;">Custos comerciais recorrentes</h3>
+          <div class="list">
+            <div class="list-item">Google Play: 15% sobre cada assinatura processada.</div>
+            <div class="list-item">Impostos no Brasil sobre a receita bruta.</div>
+            <div class="list-item">Nao inclui marketing, salario, contador, suporte humano ou anuncios.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 20px;">
+        <div class="card metric">
+          <div class="metric-label">Supabase + app</div>
+          <div class="metric-value">R$ 134 a R$ 2.009</div>
+          <div class="metric-foot">Faixa estimada do menor ao maior cenario analisado.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Google Play por usuario</div>
+          <div class="metric-value">R$ 3,75</div>
+          <div class="metric-foot">Percentual dominante do custo variavel por assinante.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Imposto efetivo</div>
+          <div class="metric-value">15,50% a 21,26%</div>
+          <div class="metric-foot">Nos cenarios abaixo do teto do Simples; depois usei 16,33% conservador.</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Premissa</th>
+            <th>Valor adotado</th>
+            <th>Observacao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Preco mensal</td>
+            <td><strong>R$ 25,00</strong></td>
+            <td>Assinatura unica por usuario pagante.</td>
+          </tr>
+          <tr>
+            <td>Google Play</td>
+            <td><strong>15%</strong></td>
+            <td>Equivale a R$ 3,75 por assinante/mês.</td>
+          </tr>
+          <tr>
+            <td>Teto do Simples</td>
+            <td><strong>R$ 4,8 mi/ano</strong></td>
+            <td>No preco de R$ 25, isso acontece perto de 16 mil pagantes.</td>
+          </tr>
+          <tr>
+            <td>Faixas analisadas</td>
+            <td><strong>1k, 5k, 10k, 20k, 50k e 100k</strong></td>
+            <td>Todos considerados como usuarios pagantes no cenario bruto.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="slide">
+      <div class="slide-number">Slide 03</div>
+      <p class="eyebrow">Custos por faixa</p>
+      <h2>Detalhamento custo por custo</h2>
+      <p class="subtitle">
+        Aqui esta o desdobramento completo da receita bruta em Google Play, imposto e infraestrutura.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Usuarios pagantes</th>
+            <th class="right">Receita bruta</th>
+            <th class="right">Google Play</th>
+            <th class="right">Imposto</th>
+            <th class="right">Supabase + app</th>
+            <th class="right">Custo total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1.000</strong></td>
+            <td class="right">R$ 25.000</td>
+            <td class="right">R$ 3.750</td>
+            <td class="right">R$ 3.875</td>
+            <td class="right">R$ 134</td>
+            <td class="right"><strong>R$ 7.759</strong></td>
+          </tr>
+          <tr>
+            <td><strong>5.000</strong></td>
+            <td class="right">R$ 125.000</td>
+            <td class="right">R$ 18.750</td>
+            <td class="right">R$ 24.438</td>
+            <td class="right">R$ 160</td>
+            <td class="right"><strong>R$ 43.348</strong></td>
+          </tr>
+          <tr>
+            <td><strong>10.000</strong></td>
+            <td class="right">R$ 250.000</td>
+            <td class="right">R$ 37.500</td>
+            <td class="right">R$ 53.158</td>
+            <td class="right">R$ 220</td>
+            <td class="right"><strong>R$ 90.878</strong></td>
+          </tr>
+          <tr>
+            <td><strong>20.000</strong></td>
+            <td class="right">R$ 500.000</td>
+            <td class="right">R$ 75.000</td>
+            <td class="right">R$ 81.658</td>
+            <td class="right">R$ 339</td>
+            <td class="right"><strong>R$ 156.997</strong></td>
+          </tr>
+          <tr>
+            <td><strong>50.000</strong></td>
+            <td class="right">R$ 1.250.000</td>
+            <td class="right">R$ 187.500</td>
+            <td class="right">R$ 204.145</td>
+            <td class="right">R$ 949</td>
+            <td class="right"><strong>R$ 392.594</strong></td>
+          </tr>
+          <tr>
+            <td><strong>100.000</strong></td>
+            <td class="right">R$ 2.500.000</td>
+            <td class="right">R$ 375.000</td>
+            <td class="right">R$ 408.290</td>
+            <td class="right">R$ 2.009</td>
+            <td class="right"><strong>R$ 785.299</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid-3" style="margin-top: 24px;">
+        <div class="card">
+          <h3 style="font-size: 26px; margin-bottom: 12px;">Leitura principal</h3>
+          <div class="list">
+            <div class="list-item">O custo dominante nao e o Supabase.</div>
+            <div class="list-item">O peso real da operacao fica em Play Store + imposto.</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 26px; margin-bottom: 12px;">Infra em escala</h3>
+          <div class="list">
+            <div class="list-item">Mesmo com 100 mil pagantes, a infra fica perto de R$ 2 mil/mês.</div>
+            <div class="list-item">A margem continua muito alta se a conversao for real.</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 26px; margin-bottom: 12px;">Ponto de atencao</h3>
+          <div class="list">
+            <div class="list-item">Aos 20 mil pagantes, a estrutura tributaria ja muda de patamar.</div>
+            <div class="list-item">O caixa cresce forte, mas a gestao fiscal precisa subir de nivel.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-number">Slide 04</div>
+      <p class="eyebrow">Lucro</p>
+      <h2>Lucro liquido mensal e anual</h2>
+      <p class="subtitle">
+        O lucro abaixo ja considera todos os custos levantados nesta analise.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Usuarios pagantes</th>
+            <th class="right">Lucro liquido/mês</th>
+            <th class="right">Lucro liquido/ano</th>
+            <th class="right">Margem liquida</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1.000</strong></td>
+            <td class="right success">R$ 17.241</td>
+            <td class="right">R$ 206.892</td>
+            <td class="right">69,0%</td>
+          </tr>
+          <tr>
+            <td><strong>5.000</strong></td>
+            <td class="right success">R$ 81.652</td>
+            <td class="right">R$ 979.824</td>
+            <td class="right">65,3%</td>
+          </tr>
+          <tr>
+            <td><strong>10.000</strong></td>
+            <td class="right success">R$ 159.122</td>
+            <td class="right">R$ 1.909.464</td>
+            <td class="right">63,6%</td>
+          </tr>
+          <tr>
+            <td><strong>20.000</strong></td>
+            <td class="right success">R$ 343.003</td>
+            <td class="right">R$ 4.116.036</td>
+            <td class="right">68,6%</td>
+          </tr>
+          <tr>
+            <td><strong>50.000</strong></td>
+            <td class="right success">R$ 857.406</td>
+            <td class="right">R$ 10.288.872</td>
+            <td class="right">68,6%</td>
+          </tr>
+          <tr>
+            <td><strong>100.000</strong></td>
+            <td class="right success">R$ 1.714.701</td>
+            <td class="right">R$ 20.576.412</td>
+            <td class="right">68,6%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid-4" style="margin-top: 28px;">
+        <div class="card metric">
+          <div class="metric-label">Lucro por 1.000 pagantes</div>
+          <div class="metric-value">R$ 17,2 mil</div>
+          <div class="metric-foot">Base inicial ja e saudavel.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Lucro por 10 mil pagantes</div>
+          <div class="metric-value">R$ 159,1 mil</div>
+          <div class="metric-foot">Negocio ja vira maquina de caixa.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Lucro por 50 mil pagantes</div>
+          <div class="metric-value">R$ 857,4 mil</div>
+          <div class="metric-foot">Escala muito forte sem explodir a infra.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Lucro por 100 mil pagantes</div>
+          <div class="metric-value">R$ 1,71 mi</div>
+          <div class="metric-foot">Nivel de empresa relevante de software.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-number">Slide 05</div>
+      <p class="eyebrow">Potencial de crescimento</p>
+      <h2>Como o negocio cresce na pratica</h2>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size: 30px; margin-bottom: 14px;">Escada de crescimento</h3>
+          <table style="margin-top: 0;">
+            <thead>
+              <tr>
+                <th>Estagio</th>
+                <th class="right">Pagantes</th>
+                <th class="right">Receita/mês</th>
+                <th class="right">Lucro/mês</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Validacao</td>
+                <td class="right">1.000</td>
+                <td class="right">R$ 25 mil</td>
+                <td class="right success">R$ 17,2 mil</td>
+              </tr>
+              <tr>
+                <td>Tração real</td>
+                <td class="right">5.000</td>
+                <td class="right">R$ 125 mil</td>
+                <td class="right success">R$ 81,7 mil</td>
+              </tr>
+              <tr>
+                <td>Operacao forte</td>
+                <td class="right">10.000</td>
+                <td class="right">R$ 250 mil</td>
+                <td class="right success">R$ 159,1 mil</td>
+              </tr>
+              <tr>
+                <td>Escala nacional</td>
+                <td class="right">20.000</td>
+                <td class="right">R$ 500 mil</td>
+                <td class="right success">R$ 343 mil</td>
+              </tr>
+              <tr>
+                <td>Categoria lider</td>
+                <td class="right">50.000</td>
+                <td class="right">R$ 1,25 mi</td>
+                <td class="right success">R$ 857,4 mil</td>
+              </tr>
+              <tr>
+                <td>Referencia de mercado</td>
+                <td class="right">100.000</td>
+                <td class="right">R$ 2,5 mi</td>
+                <td class="right success">R$ 1,71 mi</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 30px; margin-bottom: 14px;">Indice visual de crescimento</h3>
+
+          <div style="margin-top: 18px;">
+            <div style="display:flex; justify-content:space-between; font-size:20px; color:var(--muted);"><span>1.000 pagantes</span><span>R$ 17,2 mil lucro/mês</span></div>
+            <div class="growth-bar"><div class="growth-fill" style="width: 8%;"></div></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div style="display:flex; justify-content:space-between; font-size:20px; color:var(--muted);"><span>5.000 pagantes</span><span>R$ 81,7 mil lucro/mês</span></div>
+            <div class="growth-bar"><div class="growth-fill" style="width: 24%;"></div></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div style="display:flex; justify-content:space-between; font-size:20px; color:var(--muted);"><span>10.000 pagantes</span><span>R$ 159,1 mil lucro/mês</span></div>
+            <div class="growth-bar"><div class="growth-fill" style="width: 40%;"></div></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div style="display:flex; justify-content:space-between; font-size:20px; color:var(--muted);"><span>20.000 pagantes</span><span>R$ 343 mil lucro/mês</span></div>
+            <div class="growth-bar"><div class="growth-fill" style="width: 58%;"></div></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div style="display:flex; justify-content:space-between; font-size:20px; color:var(--muted);"><span>50.000 pagantes</span><span>R$ 857,4 mil lucro/mês</span></div>
+            <div class="growth-bar"><div class="growth-fill" style="width: 82%;"></div></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div style="display:flex; justify-content:space-between; font-size:20px; color:var(--muted);"><span>100.000 pagantes</span><span>R$ 1,71 mi lucro/mês</span></div>
+            <div class="growth-bar"><div class="growth-fill" style="width: 100%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 24px;">
+        <div class="card">
+          <h3 style="font-size: 26px; margin-bottom: 12px;">Motor de escala</h3>
+          <div class="list">
+            <div class="list-item">O produto e software: receita cresce muito mais rapido que a infraestrutura.</div>
+            <div class="list-item">Cada novo pagante adiciona pouca pressao no Supabase comparado ao caixa gerado.</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 26px; margin-bottom: 12px;">Travamento real</h3>
+          <div class="list">
+            <div class="list-item">Seu gargalo nao tende a ser tecnologia no curto prazo.</div>
+            <div class="list-item">Os gargalos mais provaveis sao canal de aquisicao, suporte e estrategia fiscal.</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 26px; margin-bottom: 12px;">Sinal de negocio bom</h3>
+          <div class="list">
+            <div class="list-item">Margem liquida segue alta mesmo depois de loja e imposto.</div>
+            <div class="list-item">Isso da espaco para reinvestir depois, se voce quiser acelerar.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-number">Slide 06</div>
+      <p class="eyebrow">Riscos e decisoes</p>
+      <h2>O que merece atencao antes de escalar forte</h2>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size: 30px; margin-bottom: 14px;">Pontos tecnicos</h3>
+          <div class="list">
+            <div class="list-item">O app usa Supabase direto no mobile para auth, banco e realtime.</div>
+            <div class="list-item">A jornada salva rotas com geolocalizacao e faz upload consolidado depois.</div>
+            <div class="list-item">Os mapas usam OSRM publico e tiles em dominio do Google, o que e um risco para escala e compliance.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 30px; margin-bottom: 14px;">Pontos financeiros</h3>
+          <div class="list">
+            <div class="list-item">Ate aproximadamente <span class="emphasis">16 mil pagantes</span>, o Simples ainda comporta a receita anual.</div>
+            <div class="list-item">Acima disso, a estrutura tributaria precisa ser revista com contador.</div>
+            <div class="list-item">A conta de imposto acima do teto foi estimativa conservadora, nao parecer contabil.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 24px;">
+        <div class="card metric">
+          <div class="metric-label">Custo fixo real da operacao</div>
+          <div class="metric-value">Muito baixo</div>
+          <div class="metric-foot">A stack atual segura bem a fase inicial e media.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Maior custo variavel</div>
+          <div class="metric-value">Google Play</div>
+          <div class="metric-foot">15% da receita bruta sai antes mesmo do lucro.</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Maior risco invisivel</div>
+          <div class="metric-value">Fiscal + compliance</div>
+          <div class="metric-foot">Nao e o backend que mais assusta; e a estrutura ao crescer.</div>
+        </div>
+      </div>
+
+      <p class="note">
+        Conclusao executiva: o negocio tem potencial de margem muito forte com assinatura a R$ 25,00.
+        O Supabase nao parece ser o problema economico da operacao. O que pesa de verdade e
+        <strong>Google Play + imposto</strong>, e o que passa a exigir maturidade ao crescer e a
+        estrutura fiscal e a operacao comercial.
+      </p>
+    </section>
+  </main>
+</body>
+</html>

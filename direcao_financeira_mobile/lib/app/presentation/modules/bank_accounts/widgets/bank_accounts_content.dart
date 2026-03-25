@@ -144,14 +144,28 @@ class _AccountsHero extends StatelessWidget {
                 current.currentBalance >= next.currentBalance ? current : next,
           );
     final isWide = MediaQuery.of(context).size.width >= 760;
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF041B28), Color(0xFF0A3040), Color(0xFF0C3F52)],
+          colors: isDark
+              ? const [Color(0xFF041B28), Color(0xFF0A3040), Color(0xFF0C3F52)]
+              : [
+                  Color.alphaBlend(
+                    AppColors.electricCyan.withValues(alpha: 0.16),
+                    colorScheme.surface,
+                  ),
+                  Color.alphaBlend(
+                    AppColors.sky.withValues(alpha: 0.10),
+                    colorScheme.surface,
+                  ),
+                  colorScheme.surface,
+                ],
         ),
         boxShadow: [
           BoxShadow(
@@ -260,6 +274,14 @@ class _HeroMainColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? Colors.white
+        : context.theme.colorScheme.onSurface;
+    final secondaryTextColor = isDark
+        ? Colors.white.withValues(alpha: 0.78)
+        : context.theme.colorScheme.onSurface.withValues(alpha: 0.72);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -275,7 +297,7 @@ class _HeroMainColumn extends StatelessWidget {
         Text(
           totalLabel,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.68),
+            color: secondaryTextColor,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -284,7 +306,7 @@ class _HeroMainColumn extends StatelessWidget {
         Text(
           totalValue,
           style: TextStyle(
-            color: Colors.white,
+            color: primaryTextColor,
             fontSize: MediaQuery.of(context).size.width >= 600 ? 42 : 36,
             fontWeight: FontWeight.w900,
             height: 0.95,
@@ -294,7 +316,7 @@ class _HeroMainColumn extends StatelessWidget {
         Text(
           description,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.78),
+            color: secondaryTextColor,
             height: 1.55,
             fontSize: 14,
           ),
@@ -339,12 +361,21 @@ class _HeroSidePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,7 +383,9 @@ class _HeroSidePanel extends StatelessWidget {
           Text(
             'Painel tatico',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.72),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.72)
+                  : colorScheme.onSurface.withValues(alpha: 0.68),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -381,8 +414,12 @@ class _HeroSidePanel extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onCreatePressed,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF072A39),
+                backgroundColor: isDark
+                    ? Colors.white
+                    : colorScheme.primary,
+                foregroundColor: isDark
+                    ? const Color(0xFF072A39)
+                    : colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
@@ -1066,22 +1103,29 @@ class _HeroTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final foreground = isDark
+        ? Colors.white
+        : context.theme.colorScheme.onSurface;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: foreground.withValues(alpha: isDark ? 0.10 : 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: foreground.withValues(alpha: isDark ? 0.12 : 0.08),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.white),
+          Icon(icon, size: 16, color: foreground),
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: foreground,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -1105,12 +1149,21 @@ class _HeroCallout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1118,7 +1171,9 @@ class _HeroCallout extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.66),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.66)
+                  : colorScheme.onSurface.withValues(alpha: 0.62),
               fontSize: 12,
             ),
           ),
@@ -1152,36 +1207,47 @@ class _SideMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.theme.brightness == Brightness.dark;
+    final colorScheme = context.theme.colorScheme;
+
     return Row(
       children: [
         Container(
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : colorScheme.onSurface.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Icon(icon, color: Colors.white, size: 18),
+          child: Icon(
+            icon,
+            color: isDark ? Colors.white : colorScheme.onSurface,
+            size: 18,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.64),
-                  fontSize: 12,
-                ),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.64)
+                    : colorScheme.onSurface.withValues(alpha: 0.60),
+                fontSize: 12,
               ),
+            ),
               const SizedBox(height: 2),
               Text(
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : colorScheme.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),

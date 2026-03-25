@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'login_controller.dart';
+
 import '../../../routes/app_pages.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_filled_button.dart';
+import '../../widgets/custom_text_field.dart';
+import 'login_controller.dart';
 import 'widgets/login_header.dart';
 
 class LoginView extends GetView<LoginController> {
@@ -12,32 +12,31 @@ class LoginView extends GetView<LoginController> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          color: context.theme.scaffoldBackgroundColor,
-        ),
+        decoration: BoxDecoration(color: context.theme.scaffoldBackgroundColor),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 40,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const LoginHeader(),
                         const SizedBox(height: 48),
-
-                        // Form Fields
                         CustomTextField(
                           controller: controller.emailController,
                           label: 'E-mail',
@@ -46,17 +45,18 @@ class LoginView extends GetView<LoginController> {
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 16),
-                        
-                        Obx(() => CustomTextField(
-                          controller: controller.passwordController,
-                          label: 'Senha',
-                          hint: '••••••',
-                          icon: Icons.lock_outline,
-                          isPassword: true,
-                          obscureText: !controller.isPasswordVisible.value,
-                          onTogglePassword: controller.togglePasswordVisibility,
-                        )),
-                        
+                        Obx(
+                          () => CustomTextField(
+                            controller: controller.passwordController,
+                            label: 'Senha',
+                            hint: '••••••',
+                            icon: Icons.lock_outline,
+                            isPassword: true,
+                            obscureText: !controller.isPasswordVisible.value,
+                            onTogglePassword:
+                                controller.togglePasswordVisibility,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Align(
                           alignment: Alignment.centerRight,
@@ -64,33 +64,36 @@ class LoginView extends GetView<LoginController> {
                             onPressed: () {},
                             child: Text(
                               'Esqueceu a senha?',
-                              style: TextStyle(color: AppColors.sand.withValues(alpha: 0.8)),
+                              style: TextStyle(color: colorScheme.primary),
                             ),
                           ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Login Button
-                        Obx(() => CustomFilledButton(
-                          text: 'ENTRAR NO PAINEL',
-                          isLoading: controller.isLoading.value,
-                          onPressed: controller.login,
-                        )),
-                        
+                        Obx(
+                          () => CustomFilledButton(
+                            text: 'ENTRAR NO PAINEL',
+                            isLoading: controller.isLoading.value,
+                            onPressed: controller.login,
+                          ),
+                        ),
                         const SizedBox(height: 32),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
+                            Text(
                               'Ainda não tem conta?',
-                              style: TextStyle(color: AppColors.textSecondaryDark),
+                              style: TextStyle(
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.68,
+                                ),
+                              ),
                             ),
                             TextButton(
                               onPressed: () => Get.toNamed(AppRoutes.register),
-                              child: const Text(
+                              child: Text(
                                 'Cadastre-se',
                                 style: TextStyle(
-                                  color: AppColors.royalBlue,
+                                  color: colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

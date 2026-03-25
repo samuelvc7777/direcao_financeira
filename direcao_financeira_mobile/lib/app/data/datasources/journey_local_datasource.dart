@@ -64,6 +64,8 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       currentDrivenKm: 0,
       idleTimeSeconds: 0,
       pausedAt: null,
+      lowSpeedSince: null,
+      lastMotionIdleCheckpointAt: null,
     );
 
     await saveActiveShift(shift);
@@ -88,6 +90,8 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       currentDrivenKm: shift.currentDrivenKm,
       idleTimeSeconds: shift.idleTimeSeconds,
       pausedAt: DateTime.now(),
+      lowSpeedSince: null,
+      lastMotionIdleCheckpointAt: null,
     );
 
     await saveActiveShift(updatedShift);
@@ -114,6 +118,8 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       currentDrivenKm: shift.currentDrivenKm,
       idleTimeSeconds: shift.idleTimeSeconds + pausedSeconds,
       pausedAt: null,
+      lowSpeedSince: null,
+      lastMotionIdleCheckpointAt: null,
     );
 
     await saveActiveShift(updatedShift);
@@ -160,13 +166,16 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       return [];
     }
 
-    final pendingShifts = raw
-        .whereType<Map>()
-        .map((item) => PendingFinishedShiftModel.fromJson(
-              Map<String, dynamic>.from(item),
-            ))
-        .toList()
-      ..sort((a, b) => b.endTime.compareTo(a.endTime));
+    final pendingShifts =
+        raw
+            .whereType<Map>()
+            .map(
+              (item) => PendingFinishedShiftModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.endTime.compareTo(a.endTime));
 
     final serialized = pendingShifts.map((item) => item.toJson()).toList();
     await storage.write(_pendingShiftsKey, serialized);
@@ -177,8 +186,9 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
   @override
   Future<void> removePendingFinishedShift(int localId) async {
     final pendingShifts = await getPendingFinishedShifts();
-    final updatedShifts =
-        pendingShifts.where((item) => item.localId != localId).toList();
+    final updatedShifts = pendingShifts
+        .where((item) => item.localId != localId)
+        .toList();
     await storage.write(
       _pendingShiftsKey,
       updatedShifts.map((item) => item.toJson()).toList(),

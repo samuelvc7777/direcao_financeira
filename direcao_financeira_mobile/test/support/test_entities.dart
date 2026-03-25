@@ -150,6 +150,8 @@ ActiveShiftEntity buildActiveShift() {
     createdAt: DateTime(2026, 1, 10, 8),
     currentDrivenKm: 12.5,
     idleTimeSeconds: 300,
+    lowSpeedSince: null,
+    lastMotionIdleCheckpointAt: null,
   );
 }
 
@@ -160,6 +162,8 @@ LocationTrackingStatusEntity buildTrackingStatus({
   bool hasBackgroundPermission = true,
   bool isPreciseLocation = true,
   bool isPaused = false,
+  double totalDistanceMeters = 1000,
+  int idleTimeSeconds = 300,
 }) {
   return LocationTrackingStatusEntity(
     isTrackingActive: isTrackingActive,
@@ -168,7 +172,8 @@ LocationTrackingStatusEntity buildTrackingStatus({
     hasBackgroundPermission: hasBackgroundPermission,
     isPreciseLocation: isPreciseLocation,
     isPaused: isPaused,
-    totalDistanceMeters: 1000,
+    totalDistanceMeters: totalDistanceMeters,
+    idleTimeSeconds: idleTimeSeconds,
   );
 }
 
@@ -179,7 +184,8 @@ JourneyStatisticsEntity buildJourneyStatistics() {
     averageTime: '01:00:00',
     idleTime: '00:10:00',
     drivenKm: '10.0 km',
-    averageKmh: '20.0 km/h',
+    totalDrivenKmValue: 10.0,
+    averageKmh: '10.0 km/h',
     rideStats: RideStatisticsEntity(
       totalRides: 1,
       grossEarningsCents: 5000,
@@ -209,6 +215,7 @@ RideEntity buildRide() {
     id: 1,
     status: 'FINISHED',
     appName: 'Uber',
+    paymentMethod: null,
     grossValueCents: 3200,
     date: '10/01/2026',
     time: '08:30',

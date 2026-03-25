@@ -6,6 +6,7 @@ class LocationTrackingStatusEntity {
   final bool isPreciseLocation;
   final bool isPaused;
   final double totalDistanceMeters;
+  final int idleTimeSeconds;
   final String? issueMessage;
 
   const LocationTrackingStatusEntity({
@@ -16,6 +17,7 @@ class LocationTrackingStatusEntity {
     required this.isPreciseLocation,
     required this.isPaused,
     required this.totalDistanceMeters,
+    required this.idleTimeSeconds,
     this.issueMessage,
   });
 

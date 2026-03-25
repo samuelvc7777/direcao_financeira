@@ -44,6 +44,8 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
 
       return LayoutBuilder(
         builder: (context, constraints) {
+          final colorScheme = context.theme.colorScheme;
+          final isDark = context.theme.brightness == Brightness.dark;
           final sectionPadding = Responsive.hp(context, 2.1).clamp(8.0, 10.0);
           final titleSize = Responsive.sp(context, 16).clamp(15.0, 16.0);
           final titleGap = Responsive.hp(context, 1.8).clamp(6.0, 8.0);
@@ -63,12 +65,16 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
             margin: const EdgeInsets.symmetric(vertical: 8),
             padding: EdgeInsets.all(sectionPadding),
             decoration: BoxDecoration(
-              color: const Color(0xFF1F222B),
+              color: isDark ? const Color(0xFF1F222B) : colorScheme.surface,
               borderRadius: BorderRadius.circular(sectionRadius),
-              border: Border.all(color: const Color(0xFF2F4367)),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF2F4367)
+                    : colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -90,15 +96,15 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                           width: iconBoxSize,
                           height: iconBoxSize,
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF4C2A77,
-                            ), // Violet shade for Credit Cards
+                            color: isDark
+                                ? const Color(0xFF4C2A77)
+                                : AppColors.violet.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.credit_card_rounded,
                             size: Responsive.sp(context, 16).clamp(15.0, 17.0),
-                            color: const Color(0xFFD4A5FF),
+                            color: isDark ? const Color(0xFFD4A5FF) : AppColors.violet,
                           ),
                         ),
                         SizedBox(width: titleGap),
@@ -116,13 +122,17 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                           width: arrowBoxSize,
                           height: arrowBoxSize,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF24364E),
+                            color: isDark
+                                ? const Color(0xFF24364E)
+                                : colorScheme.onSurface.withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(7),
                           ),
                           child: Icon(
                             Icons.chevron_right_rounded,
                             size: Responsive.sp(context, 16).clamp(15.0, 17.0),
-                            color: const Color(0xFF78AFFF),
+                            color: isDark
+                                ? const Color(0xFF78AFFF)
+                                : colorScheme.onSurface.withValues(alpha: 0.62),
                           ),
                         ),
                       ],
@@ -194,7 +204,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                 SizedBox(height: contentGap),
                 Container(
                   height: 1,
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: colorScheme.onSurface.withValues(alpha: 0.08),
                 ),
                 SizedBox(height: contentGap),
                 Row(
@@ -244,9 +254,19 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF24364E) : Colors.transparent,
+        color: isActive
+            ? (context.theme.brightness == Brightness.dark
+                ? const Color(0xFF24364E)
+                : context.theme.colorScheme.onSurface.withValues(alpha: 0.06))
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: isActive ? Border.all(color: const Color(0xFF2F4367)) : null,
+        border: isActive
+            ? Border.all(
+                color: context.theme.brightness == Brightness.dark
+                    ? const Color(0xFF2F4367)
+                    : context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              )
+            : null,
       ),
       child: Text(
         text,

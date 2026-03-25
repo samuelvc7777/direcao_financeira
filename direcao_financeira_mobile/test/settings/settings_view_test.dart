@@ -1,3 +1,4 @@
+import 'package:direcao_financeira_mobile/app/core/app_bubble/app_bubble_service.dart';
 import 'package:dartz/dartz.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/preferences/app_preferences.dart';
@@ -65,6 +66,23 @@ class _FakePreferences implements AppPreferences {
   Future<void> writeBool(String key, bool value) async {}
 }
 
+class _FakeAppBubbleService implements AppBubbleService {
+  @override
+  Future<bool> isBubbleRunning() async => false;
+
+  @override
+  Future<bool> isOverlayPermissionGranted() async => true;
+
+  @override
+  Future<void> openOverlayPermissionSettings() async {}
+
+  @override
+  Future<void> startBubble() async {}
+
+  @override
+  Future<void> stopBubble() async {}
+}
+
 void main() {
   setUp(() {
     Get.testMode = true;
@@ -86,7 +104,9 @@ void main() {
       );
 
     final preferences = _FakePreferences(initialValue: true);
+    final appBubbleService = _FakeAppBubbleService();
     final controller = SettingsController(
+      appBubbleService: appBubbleService,
       preferences: preferences,
       getStoredUserUseCase: GetStoredUserUseCase(repository),
       logoutUseCase: LogoutUseCase(repository),
@@ -113,7 +133,9 @@ void main() {
   testWidgets('cta Ver plano navega para rota de assinatura', (tester) async {
     final repository = _FakeAuthRepository();
     final preferences = _FakePreferences(initialValue: true);
+    final appBubbleService = _FakeAppBubbleService();
     final controller = SettingsController(
+      appBubbleService: appBubbleService,
       preferences: preferences,
       getStoredUserUseCase: GetStoredUserUseCase(repository),
       logoutUseCase: LogoutUseCase(repository),

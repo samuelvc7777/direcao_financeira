@@ -11,13 +11,15 @@ class SettingsSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'PERSONALIZACAO',
           style: TextStyle(
-            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -29,12 +31,10 @@ class SettingsSwitchTile extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: context.theme.colorScheme.surface,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: context.theme.colorScheme.onSurface.withValues(
-                  alpha: 0.08,
-                ),
+                color: colorScheme.onSurface.withValues(alpha: 0.08),
               ),
             ),
             child: Row(
@@ -53,7 +53,7 @@ class SettingsSwitchTile extends StatelessWidget {
                       ],
                     ),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.24),
+                      color: colorScheme.onPrimary.withValues(alpha: 0.24),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -72,15 +72,17 @@ class SettingsSwitchTile extends StatelessWidget {
                           width: 10,
                           height: 10,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.82),
+                            color: colorScheme.onPrimary.withValues(
+                              alpha: 0.82,
+                            ),
                             shape: BoxShape.circle,
                           ),
                         ),
                       ),
-                      const Center(
+                      Center(
                         child: Icon(
                           Icons.dark_mode_rounded,
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                           size: 22,
                         ),
                       ),
@@ -95,7 +97,7 @@ class SettingsSwitchTile extends StatelessWidget {
                       Text(
                         'Tema ',
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface,
+                          color: colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -106,9 +108,7 @@ class SettingsSwitchTile extends StatelessWidget {
                             ? 'Toque para mudar para claro'
                             : 'Toque para mudar para escuro',
                         style: TextStyle(
-                          color: context.theme.colorScheme.onSurface.withValues(
-                            alpha: 0.62,
-                          ),
+                          color: colorScheme.onSurface.withValues(alpha: 0.62),
                           fontSize: 13,
                         ),
                       ),
@@ -118,12 +118,14 @@ class SettingsSwitchTile extends StatelessWidget {
                 Switch(
                   value: controller.isDarkModeEnabled.value,
                   onChanged: controller.toggleTheme,
-                  activeThumbColor: AppColors.aqua,
-                  activeTrackColor: AppColors.royalBlue.withValues(alpha: 0.3),
-                  inactiveThumbColor: context.theme.colorScheme.onSurface
-                      .withValues(alpha: 0.5),
-                  inactiveTrackColor: context.theme.colorScheme.onSurface
-                      .withValues(alpha: 0.1),
+                  activeThumbColor: colorScheme.primary,
+                  activeTrackColor: colorScheme.primary.withValues(alpha: 0.3),
+                  inactiveThumbColor: colorScheme.onSurface.withValues(
+                    alpha: 0.5,
+                  ),
+                  inactiveTrackColor: colorScheme.onSurface.withValues(
+                    alpha: 0.1,
+                  ),
                 ),
               ],
             ),

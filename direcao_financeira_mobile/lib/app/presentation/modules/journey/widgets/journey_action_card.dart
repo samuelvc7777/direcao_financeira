@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../journey_controller.dart';
 
@@ -10,34 +11,27 @@ class JourneyActionCard extends GetView<JourneyController> {
   Widget build(BuildContext context) {
     return Obx(() {
       final isActive = controller.hasActiveShift;
-
-      if (!isActive) {
-        return _buildInactiveView(context);
-      }
-
-      return _buildActiveView(context);
+      return isActive ? _buildActiveView(context) : _buildInactiveView(context);
     });
   }
 
   Widget _buildInactiveView(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: AppColors.midnight,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 1,
-        ),
+        border: Border.all(color: colorScheme.outlineVariant, width: 1),
       ),
       child: Column(
         children: [
-          // Status Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -46,16 +40,16 @@ class JourneyActionCard extends GetView<JourneyController> {
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.grey,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Inativo',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -63,28 +57,19 @@ class JourneyActionCard extends GetView<JourneyController> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Iniciar Turno Button
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
               onPressed: controller.startShift,
-              icon: const Icon(
-                Icons.my_location_rounded,
-                size: 24,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.my_location_rounded, size: 24),
               label: const Text(
                 'Iniciar Turno',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.emerald.withValues(alpha: 0.9),
+                backgroundColor: AppColors.emerald,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -93,22 +78,16 @@ class JourneyActionCard extends GetView<JourneyController> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Ativar SemÃ¡foro Button
           TextButton.icon(
             onPressed: controller.activateTrafficLight,
-            icon: const Icon(Icons.traffic_rounded, color: Colors.white),
+            icon: const Icon(Icons.traffic_rounded),
             label: const Text(
-              'Ativar SemÃ¡foro',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
+              'Ativar semáforo',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.royalBlue,
             ),
           ),
         ],
@@ -117,14 +96,26 @@ class JourneyActionCard extends GetView<JourneyController> {
   }
 
   Widget _buildActiveView(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
+    final panelColor = isDark
+        ? const Color(0xFF1B873F)
+        : Color.alphaBlend(
+            AppColors.emerald.withValues(alpha: 0.18),
+            colorScheme.surface,
+          );
+    final primaryTextColor = isDark ? Colors.white : colorScheme.onSurface;
+    final secondaryTextColor = isDark
+        ? Colors.white70
+        : colorScheme.onSurface.withValues(alpha: 0.72);
+
     return Column(
       children: [
-        // Timer Card (Green)
         Container(
           margin: const EdgeInsets.symmetric(vertical: 4.0),
           padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
           decoration: BoxDecoration(
-            color: const Color(0xFF1B873F), // Verde do print
+            color: panelColor,
             borderRadius: BorderRadius.circular(28),
           ),
           child: Column(
@@ -135,16 +126,16 @@ class JourneyActionCard extends GetView<JourneyController> {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: primaryTextColor,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Timer Rodando',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: primaryTextColor,
                       fontWeight: FontWeight.w500,
                       fontSize: 16,
                     ),
@@ -155,40 +146,40 @@ class JourneyActionCard extends GetView<JourneyController> {
               Obx(
                 () => Text(
                   controller.formattedElapsed,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: primaryTextColor,
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
                   ),
                 ),
               ),
-              const Text(
+              Text(
                 'Tempo decorrido',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                style: TextStyle(color: secondaryTextColor, fontSize: 16),
               ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.play_circle_outline,
-                    color: Colors.white70,
+                    color: secondaryTextColor,
                     size: 24,
                   ),
                   const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'InÃ­cio',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      Text(
+                        'Início',
+                        style: TextStyle(color: secondaryTextColor, fontSize: 12),
                       ),
                       Obx(
                         () => Text(
                           controller.startTimeStr.value,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: primaryTextColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -197,24 +188,24 @@ class JourneyActionCard extends GetView<JourneyController> {
                     ],
                   ),
                   const SizedBox(width: 40),
-                  const Icon(
+                  Icon(
                     Icons.route_outlined,
-                    color: Colors.white70,
+                    color: secondaryTextColor,
                     size: 24,
                   ),
                   const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Km',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                        style: TextStyle(color: secondaryTextColor, fontSize: 12),
                       ),
                       Obx(
                         () => Text(
                           controller.currentKm.value.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: primaryTextColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -227,18 +218,13 @@ class JourneyActionCard extends GetView<JourneyController> {
             ],
           ),
         ),
-
-        // Actions Card (Dark)
         Container(
           margin: const EdgeInsets.symmetric(vertical: 12.0),
           padding: const EdgeInsets.all(20.0),
           decoration: BoxDecoration(
-            color: AppColors.midnight,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05),
-              width: 1,
-            ),
+            border: Border.all(color: colorScheme.outlineVariant, width: 1),
           ),
           child: Column(
             children: [
@@ -248,7 +234,7 @@ class JourneyActionCard extends GetView<JourneyController> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -257,16 +243,16 @@ class JourneyActionCard extends GetView<JourneyController> {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Em andamento',
                       style: TextStyle(
-                        color: Colors.green,
+                        color: colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -281,7 +267,7 @@ class JourneyActionCard extends GetView<JourneyController> {
                       onPressed: controller.pauseShift,
                       icon: Icons.pause,
                       label: 'Pausar',
-                      color: const Color(0xFFF2994A), // Laranja do print
+                      color: const Color(0xFFF2994A),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -290,7 +276,7 @@ class JourneyActionCard extends GetView<JourneyController> {
                       onPressed: controller.finishShift,
                       icon: Icons.stop,
                       label: 'Parar',
-                      color: const Color(0xFFEB5757), // Vermelho do print
+                      color: const Color(0xFFEB5757),
                     ),
                   ),
                 ],
@@ -300,13 +286,13 @@ class JourneyActionCard extends GetView<JourneyController> {
                 onTap: controller.activateTrafficLight,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.traffic_rounded, color: Colors.white),
-                    SizedBox(width: 12),
+                  children: [
+                    Icon(Icons.traffic_rounded, color: colorScheme.onSurface),
+                    const SizedBox(width: 12),
                     Text(
-                      'Ativar SemÃ¡foro',
+                      'Ativar semáforo',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: colorScheme.onSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -333,6 +319,7 @@ class JourneyActionCard extends GetView<JourneyController> {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -357,5 +344,3 @@ class JourneyActionCard extends GetView<JourneyController> {
     );
   }
 }
-
-

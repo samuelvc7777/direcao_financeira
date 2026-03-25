@@ -483,7 +483,6 @@ class SubscriptionController extends GetxController {
       backgroundColor: isError
           ? const Color(0xFFBF4124).withValues(alpha: 0.12)
           : const Color(0xFF03A696).withValues(alpha: 0.12),
-      colorText: Colors.white,
       margin: const EdgeInsets.all(16),
     );
   }

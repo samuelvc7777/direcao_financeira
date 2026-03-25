@@ -9,16 +9,19 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.direcao_financeira/accessibility"
+    private val accessibilityChannelName = "com.direcao_financeira/accessibility"
+    private val appBubbleChannelName = "com.direcao_financeira/app_bubble"
+    private val appBubbleActionsChannelName = "com.direcao_financeira/app_bubble_actions"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         SettingsManager.initialize(this)
         
-        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-        ScreenReaderService.setMethodChannel(channel)
+        val accessibilityChannel =
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, accessibilityChannelName)
+        ScreenReaderService.setMethodChannel(accessibilityChannel)
         
-        channel.setMethodCallHandler { call, result ->
+        accessibilityChannel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "isServiceEnabled" -> {
                     result.success(isAccessibilityServiceEnabled(this, ScreenReaderService::class.java))
@@ -55,6 +58,81 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, appBubbleChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isOverlayPermissionGranted" -> {
+                        result.success(Settings.canDrawOverlays(this))
+                    }
+                    "openOverlayPermissionSettings" -> {
+                        startActivity(AppBubbleService.createOverlayPermissionIntent(this))
+                        result.success(true)
+                    }
+                    "isBubbleRunning" -> {
+                        result.success(AppBubbleService.isRunning())
+                    }
+                    "startBubble" -> {
+                        if (!Settings.canDrawOverlays(this)) {
+                            result.error(
+                                "PERMISSION_DENIED",
+                                "A permissao de sobreposicao nao foi concedida.",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
+                        AppBubbleService.start(this)
+                        result.success(true)
+                    }
+                    "stopBubble" -> {
+                        AppBubbleService.stop(this)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        AppBubbleActionBridge.attach(
+            MethodChannel(
+                flutterEngine.dartExecutor.binaryMessenger,
+                appBubbleActionsChannelName,
+            ),
+        )
+        handleAppBubbleIntent(intent, deliverImmediately = false)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAppBubbleIntent(intent, deliverImmediately = true)
+    }
+
+    private fun handleAppBubbleIntent(
+        intent: Intent?,
+        deliverImmediately: Boolean,
+    ) {
+        val rawAction = intent?.getStringExtra(AppBubbleService.EXTRA_BUBBLE_ACTION)
+        if (rawAction.isNullOrBlank()) {
+            return
+        }
+
+        val action =
+            when (rawAction) {
+                AppBubbleService.ACTION_OPEN_JOURNEY_SHIFTS -> "open_journey_shifts"
+                AppBubbleService.ACTION_OPEN_JOURNEY_RIDES -> "open_journey_rides"
+                AppBubbleService.ACTION_TOGGLE_TRAFFIC_LIGHT -> "toggle_traffic_light"
+                else -> null
+            }
+
+        if (action != null) {
+            val payload = mapOf("action" to action)
+            if (deliverImmediately) {
+                AppBubbleActionBridge.dispatch(payload)
+            } else {
+                AppBubbleActionBridge.setPending(payload)
+            }
+        }
+        intent.removeExtra(AppBubbleService.EXTRA_BUBBLE_ACTION)
     }
 
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<out android.accessibilityservice.AccessibilityService?>): Boolean {
@@ -71,5 +149,37 @@ class MainActivity : FlutterActivity() {
             }
         }
         return false
+    }
+}
+
+private object AppBubbleActionBridge {
+    private var channel: MethodChannel? = null
+    private var pendingPayload: Map<String, Any?>? = null
+
+    fun attach(methodChannel: MethodChannel) {
+        channel = methodChannel
+        methodChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "consumePendingAction" -> {
+                    result.success(pendingPayload)
+                    pendingPayload = null
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    fun dispatch(payload: Map<String, Any?>) {
+        val currentChannel = channel
+        if (currentChannel == null) {
+            pendingPayload = payload
+            return
+        }
+
+        currentChannel.invokeMethod("onBubbleAction", payload)
+    }
+
+    fun setPending(payload: Map<String, Any?>) {
+        pendingPayload = payload
     }
 }

@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../datasources/i_ride_datasource.dart';
 import '../../../../domain/entities/detected_ride_draft_entity.dart';
+import '../../../../domain/entities/paged_result_entity.dart';
 import '../../../models/ride_model.dart';
 import '../shared/supabase_table_names.dart';
 import '../shared/supabase_time_filter.dart';
@@ -15,10 +16,13 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
   final SupabaseUserScope userScope;
 
   @override
-  Future<List<RideModel>> getRides({
+  Future<PagedResultEntity<RideModel>> getRides({
     String period = 'day',
     String? date,
     String? endDate,
+    String? status,
+    int offset = 0,
+    int limit = 20,
   }) async {
     final userId = await userScope.getCurrentUserId();
     final range = SupabaseTimeFilter.resolve(
@@ -27,17 +31,22 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
       endDate: endDate,
     );
 
-    final rows = await client
-        .from(SupabaseTableNames.rides)
-        .select()
-        .eq('userId', userId)
-        .gte('createdAt', range.start.toUtc().toIso8601String())
-        .lt('createdAt', range.endExclusive.toUtc().toIso8601String())
-        .order('createdAt', ascending: false);
+    final response =
+        await _buildRideQuery(userId: userId, range: range, status: status)
+            .order('createdAt', ascending: false)
+            .range(offset, offset + limit - 1)
+            .count(CountOption.exact);
 
-    return (rows as List)
-        .map((row) => RideModel.fromJson(Map<String, dynamic>.from(row as Map)))
-        .toList();
+    return PagedResultEntity<RideModel>(
+      items: response.data
+          .map(
+            (row) => RideModel.fromJson(Map<String, dynamic>.from(row as Map)),
+          )
+          .toList(),
+      totalCount: response.count,
+      offset: offset,
+      limit: limit,
+    );
   }
 
   @override
@@ -100,5 +109,24 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
         })
         .eq('id', rideId)
         .eq('userId', userId);
+  }
+
+  PostgrestTransformBuilder<PostgrestList> _buildRideQuery({
+    required int userId,
+    required SupabaseTimeRange range,
+    required String? status,
+  }) {
+    var query = client
+        .from(SupabaseTableNames.rides)
+        .select()
+        .eq('userId', userId)
+        .gte('createdAt', range.start.toUtc().toIso8601String())
+        .lt('createdAt', range.endExclusive.toUtc().toIso8601String());
+
+    if (status == null || status.isEmpty) {
+      return query;
+    }
+
+    return query.eq('status', status);
   }
 }

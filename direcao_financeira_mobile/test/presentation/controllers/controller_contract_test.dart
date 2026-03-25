@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dartz/dartz.dart';
+import 'package:direcao_financeira_mobile/app/core/app_bubble/app_bubble_service.dart';
 import 'package:direcao_financeira_mobile/app/core/accessibility/accessibility_service.dart';
 import 'package:direcao_financeira_mobile/app/core/dashboard/dashboard_refresh_notifier.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
@@ -9,6 +10,7 @@ import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart'
 import 'package:direcao_financeira_mobile/app/domain/entities/finish_shift_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/paged_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/active_shift_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
@@ -213,8 +215,11 @@ class _FakeTransactionRepository implements ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
-  }) async =>
-      Right(buildTransaction(id: 99, type: type, date: transactionDate));
+  }) async {
+    final created = buildTransaction(id: 99, type: type, date: transactionDate);
+    transactions = [created, ...transactions];
+    return Right(created);
+  }
 
   @override
   Future<Either<Failure, void>> deleteTransaction(
@@ -312,6 +317,8 @@ class _FakeSubscriptionRepository implements ISubscriptionRepository {
 class _FakeJourneyRepository implements IJourneyRepository {
   ActiveShiftEntity? activeShift;
   LocationTrackingStatusEntity trackingStatus = buildTrackingStatus();
+  final StreamController<LocationTrackingStatusEntity> trackingController =
+      StreamController<LocationTrackingStatusEntity>.broadcast();
 
   @override
   Future<Either<Failure, LocationTrackingStatusEntity>>
@@ -343,11 +350,20 @@ class _FakeJourneyRepository implements IJourneyRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, List<ShiftEntity>>> getShiftHistory({
+  Future<Either<Failure, PagedResultEntity<ShiftEntity>>> getShiftHistory({
     String filter = 'day',
     String? date,
     String? endDate,
-  }) async => Right([buildShift()]);
+    int offset = 0,
+    int limit = 20,
+  }) async => Right(
+    PagedResultEntity(
+      items: [buildShift()],
+      totalCount: 1,
+      offset: offset,
+      limit: limit,
+    ),
+  );
 
   @override
   Future<Either<Failure, void>> pauseShift() async => const Right(null);
@@ -363,7 +379,11 @@ class _FakeJourneyRepository implements IJourneyRepository {
 
   @override
   Stream<LocationTrackingStatusEntity> watchLocationTrackingStatus() =>
-      Stream<LocationTrackingStatusEntity>.empty();
+      trackingController.stream;
+
+  Future<void> dispose() async {
+    await trackingController.close();
+  }
 }
 
 class _FakeRideRepository implements IRideRepository {
@@ -373,11 +393,33 @@ class _FakeRideRepository implements IRideRepository {
   ) async => const Right(unit);
 
   @override
-  Future<Either<Failure, List<RideEntity>>> getRides({
+  Future<Either<Failure, PagedResultEntity<RideEntity>>> getRides({
     String period = 'day',
     String? date,
     String? endDate,
-  }) async => Right([buildRide()]);
+    String? status,
+    int offset = 0,
+    int limit = 20,
+  }) async => Right(
+    PagedResultEntity(
+      items: [buildRide()],
+      totalCount: 1,
+      offset: offset,
+      limit: limit,
+    ),
+  );
+
+  @override
+  Future<Either<Failure, Unit>> finishRide({
+    required int rideId,
+    required String paymentMethod,
+  }) async => const Right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> cancelRide({
+    required int rideId,
+    required String cancelReason,
+  }) async => const Right(unit);
 }
 
 class _FakeHomeTabNavigation implements HomeTabNavigation {
@@ -445,13 +487,27 @@ class _FakeJourneyRealtimeBridge implements JourneyRealtimeBridge {
   final RxBool isOnline = true.obs;
 
   @override
-  void bind({
-    required VoidCallback onShiftChanged,
-    required VoidCallback onRideChanged,
-  }) {}
+  void bind({required VoidCallback onRideChanged}) {}
 
   @override
   void unbind() {}
+}
+
+class _FakeAppBubbleService implements AppBubbleService {
+  @override
+  Future<bool> isBubbleRunning() async => false;
+
+  @override
+  Future<bool> isOverlayPermissionGranted() async => true;
+
+  @override
+  Future<void> openOverlayPermissionSettings() async {}
+
+  @override
+  Future<void> startBubble() async {}
+
+  @override
+  Future<void> stopBubble() async {}
 }
 
 void main() {
@@ -694,6 +750,7 @@ void main() {
       final rideRepository = _FakeRideRepository();
       final accessibilityService = _FakeAccessibilityService();
       final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
       final controller = JourneyController(
         getActiveShift: GetActiveShiftUseCase(journeyRepository),
         getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
@@ -713,7 +770,9 @@ void main() {
           journeyRepository,
         ),
         getRidesUseCase: GetRidesUseCase(rideRepository),
+        getCostsGainsSettings: null,
         journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
         accessibilityService: accessibilityService,
       );
 
@@ -726,6 +785,228 @@ void main() {
       expect(accessibilityService.lastTrafficLightValue, isTrue);
 
       controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController atualiza Km Rodados com km local em blocos de 1 km',
+    () async {
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = buildActiveShift().copyWith(currentDrivenKm: 0)
+        ..trackingStatus = buildTrackingStatus(totalDistanceMeters: 0);
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = JourneyController(
+        getActiveShift: GetActiveShiftUseCase(journeyRepository),
+        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
+        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
+        startShiftUseCase: StartShiftUseCase(journeyRepository),
+        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
+        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
+        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
+        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
+        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
+          journeyRepository,
+        ),
+        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
+          journeyRepository,
+        ),
+        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
+          journeyRepository,
+        ),
+        getRidesUseCase: GetRidesUseCase(rideRepository),
+        getCostsGainsSettings: null,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+        accessibilityService: accessibilityService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.drivenKm.value, '10.0 km');
+
+      journeyRepository.trackingController.add(
+        buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 400),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.drivenKm.value, '10.0 km');
+
+      journeyRepository.trackingController.add(
+        buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 1100),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.drivenKm.value, '11.0 km');
+
+      journeyRepository.trackingController.add(
+        buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 1900),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.drivenKm.value, '11.0 km');
+
+      journeyRepository.trackingController.add(
+        buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 2000),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.drivenKm.value, '12.0 km');
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController atualiza Tempo Total e Velocidade Media com turno ativo local',
+    () async {
+      final now = DateTime.now();
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = buildActiveShift().copyWith(
+          startTime: now.subtract(const Duration(hours: 2)),
+          createdAt: now.subtract(const Duration(hours: 2)),
+          currentDrivenKm: 0,
+          idleTimeSeconds: 3600,
+        )
+        ..trackingStatus = buildTrackingStatus(
+          isTrackingActive: true,
+          totalDistanceMeters: 1100,
+          idleTimeSeconds: 3600,
+        );
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = JourneyController(
+        getActiveShift: GetActiveShiftUseCase(journeyRepository),
+        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
+        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
+        startShiftUseCase: StartShiftUseCase(journeyRepository),
+        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
+        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
+        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
+        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
+        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
+          journeyRepository,
+        ),
+        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
+          journeyRepository,
+        ),
+        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
+          journeyRepository,
+        ),
+        getRidesUseCase: GetRidesUseCase(rideRepository),
+        getCostsGainsSettings: null,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+        accessibilityService: accessibilityService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.totalTime.value, '02:00:00');
+      expect(controller.drivenKm.value, '11.0 km');
+      expect(controller.averageKmh.value, '5.5 km/h');
+
+      journeyRepository.trackingController.add(
+        buildTrackingStatus(
+          isTrackingActive: true,
+          totalDistanceMeters: 1900,
+          idleTimeSeconds: 3600,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.totalTime.value, '02:00:00');
+      expect(controller.drivenKm.value, '11.0 km');
+      expect(controller.averageKmh.value, '5.5 km/h');
+
+      journeyRepository.trackingController.add(
+        buildTrackingStatus(
+          isTrackingActive: true,
+          totalDistanceMeters: 2000,
+          idleTimeSeconds: 3600,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.totalTime.value, '02:00:00');
+      expect(controller.drivenKm.value, '12.0 km');
+      expect(controller.averageKmh.value, '6.0 km/h');
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController atualiza Tempo Total e Tempo Medio em blocos de 30s nas estatisticas',
+    () async {
+      final now = DateTime.now();
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = buildActiveShift().copyWith(
+          startTime: now.subtract(const Duration(hours: 2)),
+          createdAt: now.subtract(const Duration(hours: 2)),
+          currentDrivenKm: 0,
+          idleTimeSeconds: 3600,
+          pausedAt: now,
+        )
+        ..trackingStatus = buildTrackingStatus(
+          isTrackingActive: false,
+          isPaused: true,
+          totalDistanceMeters: 0,
+          idleTimeSeconds: 3600,
+        );
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = JourneyController(
+        getActiveShift: GetActiveShiftUseCase(journeyRepository),
+        getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
+        getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
+        startShiftUseCase: StartShiftUseCase(journeyRepository),
+        pauseShiftUseCase: PauseShiftUseCase(journeyRepository),
+        resumeShiftUseCase: ResumeShiftUseCase(journeyRepository),
+        finishShiftUseCase: FinishShiftUseCase(journeyRepository),
+        syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
+        ensureReadyForShiftStartUseCase: EnsureReadyForShiftStartUseCase(
+          journeyRepository,
+        ),
+        getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
+          journeyRepository,
+        ),
+        watchLocationTrackingStatusUseCase: WatchLocationTrackingStatusUseCase(
+          journeyRepository,
+        ),
+        getRidesUseCase: GetRidesUseCase(rideRepository),
+        getCostsGainsSettings: null,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+        accessibilityService: accessibilityService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      controller.totalShifts.value = '2';
+      controller.elapsedSeconds.value = 89;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.totalTime.value, '01:01:00');
+      expect(controller.averageTime.value, '00:30:30');
+
+      controller.elapsedSeconds.value = 119;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.totalTime.value, '01:01:30');
+      expect(controller.averageTime.value, '00:30:45');
+
+      controller.onClose();
+      await journeyRepository.dispose();
     },
   );
 }

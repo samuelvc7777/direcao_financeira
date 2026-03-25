@@ -1,4 +1,5 @@
 import '../../../datasources/i_journey_datasource.dart';
+import '../../../../domain/entities/paged_result_entity.dart';
 import '../../../models/active_shift_model.dart';
 import '../../../models/journey_statistics_model.dart';
 import '../../../models/pending_finished_shift_model.dart';
@@ -115,6 +116,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
       averageTime: _formatDuration(averageSeconds),
       idleTime: _formatDuration(totalIdleSeconds),
       drivenKm: '${totalDrivenKm.toStringAsFixed(1)} km',
+      totalDrivenKmValue: totalDrivenKm,
       averageKmh: '${averageKmh.toStringAsFixed(1)} km/h',
       rideStats: RideStatisticsModel(
         totalRides: totalRides,
@@ -128,10 +130,12 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
   }
 
   @override
-  Future<List<ShiftModel>> getShiftHistory({
+  Future<PagedResultEntity<ShiftModel>> getShiftHistory({
     String filter = 'day',
     String? date,
     String? endDate,
+    int offset = 0,
+    int limit = 20,
   }) async {
     final userId = await userScope.getCurrentUserId();
     final range = SupabaseTimeFilter.resolve(
@@ -139,7 +143,13 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
       date: date,
       endDate: endDate,
     );
-    final rows = await _loadShiftRows(userId, range);
+    final page = await _loadShiftPage(
+      userId,
+      range,
+      offset: offset,
+      limit: limit,
+    );
+    final rows = page.rows;
 
     final shiftIds = rows.map((row) => row['id'] as int).toList();
     final routesByShiftId = <int, Map<String, dynamic>>{};
@@ -154,7 +164,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
       }
     }
 
-    return rows.asMap().entries.map((entry) {
+    final items = rows.asMap().entries.map((entry) {
       final index = entry.key + 1;
       final row = entry.value;
       final start = DateTime.parse(row['startTime'] as String).toLocal();
@@ -185,6 +195,13 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         routePointCount: route?['pointCount'] as int? ?? 0,
       );
     }).toList();
+
+    return PagedResultEntity<ShiftModel>(
+      items: items,
+      totalCount: page.totalCount,
+      offset: offset,
+      limit: limit,
+    );
   }
 
   @override
@@ -269,6 +286,44 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
+  }
+
+  Future<({List<Map<String, dynamic>> rows, int totalCount})> _loadShiftPage(
+    int userId,
+    SupabaseTimeRange range, {
+    required int offset,
+    required int limit,
+  }) async {
+    if (limit <= 0) {
+      final countResponse = await client
+          .from(SupabaseTableNames.shifts)
+          .select()
+          .eq('userId', userId)
+          .gte('startTime', range.start.toUtc().toIso8601String())
+          .lt('startTime', range.endExclusive.toUtc().toIso8601String())
+          .count(CountOption.exact);
+      return (
+        rows: const <Map<String, dynamic>>[],
+        totalCount: countResponse.count,
+      );
+    }
+
+    final response = await client
+        .from(SupabaseTableNames.shifts)
+        .select()
+        .eq('userId', userId)
+        .gte('startTime', range.start.toUtc().toIso8601String())
+        .lt('startTime', range.endExclusive.toUtc().toIso8601String())
+        .order('startTime', ascending: false)
+        .range(offset, offset + limit - 1)
+        .count(CountOption.exact);
+
+    return (
+      rows: response.data
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList(),
+      totalCount: response.count,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _loadRideRows(

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../datasources/i_ride_datasource.dart';
 import '../../../../domain/entities/detected_ride_draft_entity.dart';
+import '../../../../domain/entities/paged_result_entity.dart';
 import '../../../models/ride_model.dart';
 
 class NestRideRemoteDataSource implements IRideDataSource {
@@ -10,25 +11,57 @@ class NestRideRemoteDataSource implements IRideDataSource {
   final Dio dio;
 
   @override
-  Future<List<RideModel>> getRides({
+  Future<PagedResultEntity<RideModel>> getRides({
     String period = 'day',
     String? date,
     String? endDate,
+    String? status,
+    int offset = 0,
+    int limit = 20,
   }) async {
     final response = await dio.get(
       '/rides',
-      queryParameters: {'period': period, 'date': date, 'endDate': endDate},
+      queryParameters: {
+        'period': period,
+        'date': date,
+        'endDate': endDate,
+        'status': status,
+      },
     );
 
     final data = response.data;
     if (data is! List) {
-      return [];
+      return PagedResultEntity<RideModel>(
+        items: const [],
+        totalCount: 0,
+        offset: offset,
+        limit: limit,
+      );
     }
 
-    return data
+    final rides = data
         .whereType<Map>()
         .map((json) => RideModel.fromJson(Map<String, dynamic>.from(json)))
+        .where((ride) {
+          if (status == null || status.isEmpty) {
+            return true;
+          }
+          if (status == 'CANCELED') {
+            return ride.status == 'CANCELED' || ride.status == 'CANCELLED';
+          }
+          return ride.status == status;
+        })
         .toList();
+
+    final safeOffset = offset.clamp(0, rides.length);
+    final safeEnd = (safeOffset + limit).clamp(0, rides.length);
+
+    return PagedResultEntity<RideModel>(
+      items: rides.sublist(safeOffset, safeEnd),
+      totalCount: rides.length,
+      offset: offset,
+      limit: limit,
+    );
   }
 
   @override

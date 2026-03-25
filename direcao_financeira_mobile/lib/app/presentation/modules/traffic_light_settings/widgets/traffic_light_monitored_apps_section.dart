@@ -10,17 +10,19 @@ class TrafficLightMonitoredAppsSection
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Obx(
       () => Container(
         width: double.infinity,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+          border: Border.all(color: colorScheme.outlineVariant),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.06),
+              color: colorScheme.shadow.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -29,7 +31,7 @@ class TrafficLightMonitoredAppsSection
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionHeader(),
+            _SectionHeader(colorScheme: colorScheme),
             const SizedBox(height: 8),
             _SelectionInfo(count: controller.selectedMonitoredAppsCount),
             const SizedBox(height: 8),
@@ -54,7 +56,9 @@ class TrafficLightMonitoredAppsSection
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader();
+  const _SectionHeader({required this.colorScheme});
+
+  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
@@ -64,19 +68,12 @@ class _SectionHeader extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: AppColors.primary.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.16),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
           ),
           child: const Icon(
             Icons.grid_view_rounded,
-            color: Colors.white,
+            color: AppColors.primary,
             size: 16,
           ),
         ),
@@ -88,14 +85,14 @@ class _SectionHeader extends StatelessWidget {
               Text(
                 'Apps monitorados',
                 style: context.textTheme.bodyLarge?.copyWith(
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               Text(
-                'Escolha os apps monitorados pelo semaforo.',
+                'Escolha os apps monitorados pelo semáforo.',
                 style: context.textTheme.labelMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.60),
+                  color: colorScheme.onSurfaceVariant,
                   height: 1.2,
                 ),
               ),
@@ -114,21 +111,27 @@ class _SelectionInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: colorScheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 14),
+          Icon(
+            Icons.check_circle_rounded,
+            color: colorScheme.primary,
+            size: 14,
+          ),
           const SizedBox(width: 5),
           Expanded(
             child: Text(
               '$count app(s) selecionado(s)',
               style: context.textTheme.labelLarge?.copyWith(
-                color: Colors.white,
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -152,6 +155,8 @@ class _AppChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -162,11 +167,11 @@ class _AppChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.04),
+              : colorScheme.surfaceContainerHighest,
           border: Border.all(
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.36)
-                : Colors.white.withValues(alpha: 0.08),
+                : colorScheme.outlineVariant,
           ),
         ),
         child: Row(
@@ -182,7 +187,7 @@ class _AppChip extends StatelessWidget {
                 border: Border.all(
                   color: isSelected
                       ? AppColors.primary
-                      : Colors.white.withValues(alpha: 0.24),
+                      : colorScheme.outlineVariant,
                 ),
               ),
               child: isSelected
@@ -199,7 +204,7 @@ class _AppChip extends StatelessWidget {
               style: context.textTheme.bodySmall?.copyWith(
                 color: isSelected
                     ? AppColors.primary
-                    : Colors.white.withValues(alpha: 0.78),
+                    : colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w700,
               ),
             ),

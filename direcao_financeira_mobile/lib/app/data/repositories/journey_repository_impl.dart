@@ -8,6 +8,7 @@ import '../../domain/entities/active_shift_entity.dart';
 import '../../domain/entities/finish_shift_result_entity.dart';
 import '../../domain/entities/journey_statistics_entity.dart';
 import '../../domain/entities/location_tracking_status_entity.dart';
+import '../../domain/entities/paged_result_entity.dart';
 import '../../domain/entities/shift_route_entity.dart';
 import '../../domain/entities/shift_entity.dart';
 import '../../domain/repositories/i_journey_repository.dart';
@@ -107,24 +108,99 @@ class JourneyRepositoryImpl implements IJourneyRepository {
   }
 
   @override
-  Future<Either<Failure, List<ShiftEntity>>> getShiftHistory({
+  Future<Either<Failure, PagedResultEntity<ShiftEntity>>> getShiftHistory({
     String filter = 'day',
     String? date,
     String? endDate,
+    int offset = 0,
+    int limit = 20,
   }) async {
     try {
       await syncService.syncPendingShiftsIfOnline();
+      final pendingShifts = await syncService.getPendingShiftHistoryEntities();
+      final pendingCount = pendingShifts.length;
 
-      final shifts = await remoteDataSource.getShiftHistory(
+      final pendingStart = offset.clamp(0, pendingCount);
+      final pendingEnd = (offset + limit).clamp(0, pendingCount);
+      final pendingSlice = pendingStart < pendingEnd
+          ? pendingShifts.sublist(pendingStart, pendingEnd)
+          : const <ShiftEntity>[];
+
+      final remainingLimit = limit - pendingSlice.length;
+      final remoteOffset = offset > pendingCount ? offset - pendingCount : 0;
+
+      final remotePage = await remoteDataSource.getShiftHistory(
         filter: filter,
         date: date,
         endDate: endDate,
+        offset: remoteOffset,
+        limit: remainingLimit <= 0 ? 0 : remainingLimit,
       );
-      return Right(await syncService.mergePendingShiftHistory(shifts));
+
+      final mergedItems = <ShiftEntity>[...pendingSlice, ...remotePage.items]
+          .asMap()
+          .entries
+          .map((entry) {
+            final shift = entry.value;
+            return ShiftEntity(
+              index: offset + entry.key + 1,
+              localId: shift.localId,
+              remoteShiftId: shift.remoteShiftId,
+              date: shift.date,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+              duration: shift.duration,
+              drivenKm: shift.drivenKm,
+              isPendingSync: shift.isPendingSync,
+              hasRoute: shift.hasRoute,
+              trackedDistanceKm: shift.trackedDistanceKm,
+              routePointCount: shift.routePointCount,
+            );
+          })
+          .toList();
+
+      return Right(
+        PagedResultEntity<ShiftEntity>(
+          items: mergedItems,
+          totalCount: pendingCount + remotePage.totalCount,
+          offset: offset,
+          limit: limit,
+        ),
+      );
     } catch (e) {
       final pendingShifts = await localDataSource.getPendingFinishedShifts();
       if (pendingShifts.isNotEmpty) {
-        return Right(await syncService.mergePendingShiftHistory(const []));
+        final pendingEntities = await syncService
+            .getPendingShiftHistoryEntities();
+        final start = offset.clamp(0, pendingEntities.length);
+        final end = (offset + limit).clamp(0, pendingEntities.length);
+        final items = start < end
+            ? pendingEntities.sublist(start, end)
+            : const <ShiftEntity>[];
+        return Right(
+          PagedResultEntity<ShiftEntity>(
+            items: items.asMap().entries.map((entry) {
+              final shift = entry.value;
+              return ShiftEntity(
+                index: offset + entry.key + 1,
+                localId: shift.localId,
+                remoteShiftId: shift.remoteShiftId,
+                date: shift.date,
+                startTime: shift.startTime,
+                endTime: shift.endTime,
+                duration: shift.duration,
+                drivenKm: shift.drivenKm,
+                isPendingSync: shift.isPendingSync,
+                hasRoute: shift.hasRoute,
+                trackedDistanceKm: shift.trackedDistanceKm,
+                routePointCount: shift.routePointCount,
+              );
+            }).toList(),
+            totalCount: pendingEntities.length,
+            offset: offset,
+            limit: limit,
+          ),
+        );
       }
 
       apiRequestLogger.logRepositoryFailure(

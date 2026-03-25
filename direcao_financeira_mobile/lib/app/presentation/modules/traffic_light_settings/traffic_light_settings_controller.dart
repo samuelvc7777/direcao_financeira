@@ -263,18 +263,16 @@ class TrafficLightSettingsController extends GetxController {
   }
 
   void _goBackToSettings() {
-    var foundSettings = false;
+    // A tela de configuracoes vive na aba 3 de /initial no fluxo real do app.
+    // Recriar esse estado evita esvaziar a pilha procurando uma rota /settings
+    // que muitas vezes nao existe no navigator atual.
+    Future<void>.microtask(() {
+      if (Get.key.currentState == null) return;
 
-    Get.until((route) {
-      final isSettingsRoute = route.settings.name == AppRoutes.settings;
-      if (isSettingsRoute) {
-        foundSettings = true;
-      }
-      return isSettingsRoute;
+      Get.offAllNamed(
+        AppRoutes.initial,
+        arguments: const {'initialIndex': 3},
+      );
     });
-
-    if (!foundSettings) {
-      Get.offNamed(AppRoutes.settings);
-    }
   }
 }

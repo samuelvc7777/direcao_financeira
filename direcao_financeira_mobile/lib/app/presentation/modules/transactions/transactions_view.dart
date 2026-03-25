@@ -11,7 +11,6 @@ import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'transactions_controller.dart';
 import 'widgets/transaction_type_selector_sheet.dart';
-import 'widgets/transactions_add_button.dart';
 import 'widgets/transactions_day_group_section.dart';
 import 'widgets/transactions_empty_state.dart';
 import 'widgets/transactions_filter_tabs.dart';
@@ -22,6 +21,8 @@ class TransactionsView extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Scaffold(
       backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: PreferredSize(
@@ -35,9 +36,11 @@ class TransactionsView extends GetView<TransactionsController> {
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: TransactionsAddButton(
-        onTap: _openCreateTransactionFlow,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openCreateTransactionFlow,
+        backgroundColor: colorScheme.primary,
+        elevation: 8,
+        child: Icon(Icons.add_rounded, color: colorScheme.onPrimary, size: 28),
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -149,8 +152,7 @@ class TransactionsView extends GetView<TransactionsController> {
     );
   }
 
-  Future<void> _openCreateTransactionFlow() async {
-    await controller.loadData(silent: true);
+  void _openCreateTransactionFlow() {
     Get.bottomSheet(
       const TransactionTypeSelectorSheet(),
       isScrollControlled: true,
@@ -168,21 +170,27 @@ class TransactionsView extends GetView<TransactionsController> {
 
   void _onDeleteTransaction(TransactionEntity transaction) {
     final isInstallment = transaction.installmentGroupId != null;
+    final theme = Get.theme;
+    final colorScheme = theme.colorScheme;
+    final surfaceColor = colorScheme.surface;
+    final titleColor = colorScheme.onSurface;
+    final bodyColor = colorScheme.onSurface.withValues(alpha: 0.72);
+    final secondaryActionColor = colorScheme.errorContainer;
     Get.closeAllSnackbars();
 
     Get.dialog(
       AlertDialog(
-        backgroundColor: AppColors.midnight,
+        backgroundColor: surfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
+        title: Text(
           'Excluir Transacao',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: titleColor, fontWeight: FontWeight.bold),
         ),
         content: Text(
           isInstallment
               ? 'Esta transacao faz parte de uma compra parcelada. O que deseja fazer?'
               : 'Deseja realmente excluir esta transacao?',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+          style: TextStyle(color: bodyColor),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -190,7 +198,9 @@ class TransactionsView extends GetView<TransactionsController> {
             onPressed: () => Get.back(),
             child: Text(
               'Cancelar',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+              style: TextStyle(
+                color: colorScheme.onSurface.withValues(alpha: 0.62),
+              ),
             ),
           ),
           if (isInstallment)
@@ -208,8 +218,8 @@ class TransactionsView extends GetView<TransactionsController> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.rose.withValues(alpha: 0.1),
-                foregroundColor: AppColors.rose,
+                backgroundColor: secondaryActionColor,
+                foregroundColor: colorScheme.onErrorContainer,
                 elevation: 0,
               ),
               child: const Text('Todas Parcelas'),
@@ -228,8 +238,8 @@ class TransactionsView extends GetView<TransactionsController> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.rose,
-              foregroundColor: Colors.white,
+              backgroundColor: colorScheme.error,
+              foregroundColor: colorScheme.onError,
               elevation: 0,
             ),
             child: Text(isInstallment ? 'Apenas esta' : 'Excluir'),

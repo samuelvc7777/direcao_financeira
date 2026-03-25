@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../journey_controller.dart';
 
@@ -8,20 +9,18 @@ class DailyStatisticsSection extends GetView<JourneyController> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       decoration: BoxDecoration(
-        color: AppColors.midnight,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 1,
-        ),
+        border: Border.all(color: colorScheme.outlineVariant, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -42,7 +41,7 @@ class DailyStatisticsSection extends GetView<JourneyController> {
                           'Estatísticas',
                           style: context.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -66,15 +65,13 @@ class DailyStatisticsSection extends GetView<JourneyController> {
                   return Text(
                     label,
                     style: context.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   );
                 }),
               ],
             ),
           ),
-
-          // Grid
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             child: GridView.count(
@@ -86,38 +83,44 @@ class DailyStatisticsSection extends GetView<JourneyController> {
               childAspectRatio: 1.3,
               children: [
                 _buildStatCard(
+                  context,
                   icon: Icons.work_outline_rounded,
                   title: 'Total de Turnos',
                   value: controller.totalShifts,
                   color: AppColors.royalBlue,
                 ),
                 _buildStatCard(
+                  context,
                   icon: Icons.schedule_rounded,
                   title: 'Tempo Total',
                   value: controller.totalTime,
                   color: AppColors.emerald,
                 ),
                 _buildStatCard(
+                  context,
                   icon: Icons.update_rounded,
                   title: 'Tempo Médio',
                   value: controller.averageTime,
                   color: AppColors.amber,
                 ),
                 _buildStatCard(
+                  context,
                   icon: Icons.pause_circle_outline_rounded,
                   title: 'Tempo Parado',
                   value: controller.idleTime,
                   color: AppColors.royalBlue,
                 ),
                 _buildStatCard(
+                  context,
                   icon: Icons.route_rounded,
                   title: 'Km Rodados',
                   value: controller.drivenKm,
                   color: AppColors.electricCyan,
                 ),
                 _buildStatCard(
+                  context,
                   icon: Icons.speed_rounded,
-                  title: 'Km/h Médio',
+                  title: 'Velocidade Média',
                   value: controller.averageKmh,
                   color: AppColors.rose,
                 ),
@@ -129,17 +132,21 @@ class DailyStatisticsSection extends GetView<JourneyController> {
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildStatCard(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required RxString value,
     required Color color,
   }) {
+    final colorScheme = context.theme.colorScheme;
+    final isDark = context.theme.brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.deepNavy.withValues(alpha: 0.5),
+        color: isDark ? Colors.black : colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.24), width: 1),
       ),
       padding: const EdgeInsets.all(12.0),
       child: Column(
@@ -149,8 +156,8 @@ class DailyStatisticsSection extends GetView<JourneyController> {
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
-              color: AppColors.textSecondaryDark,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -176,5 +183,3 @@ class DailyStatisticsSection extends GetView<JourneyController> {
     );
   }
 }
-
-

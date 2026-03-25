@@ -1,0 +1,111 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
+
+import '../../presentation/modules/journey/journey_binding.dart';
+import '../../presentation/modules/journey/journey_controller.dart';
+import '../../routes/app_pages.dart';
+
+class AppBubbleActionController extends GetxController {
+  static const MethodChannel _platform = MethodChannel(
+    'com.direcao_financeira/app_bubble_actions',
+  );
+
+  @override
+  void onInit() {
+    super.onInit();
+    _platform.setMethodCallHandler(_handleMethodCall);
+    unawaited(_consumePendingAction());
+  }
+
+  Future<void> _consumePendingAction() async {
+    try {
+      final payload = await _platform.invokeMapMethod<String, dynamic>(
+        'consumePendingAction',
+      );
+      if (payload == null || payload.isEmpty) {
+        return;
+      }
+      await _handleAction(payload);
+    } on PlatformException catch (e) {
+      developer.log('Erro ao consumir acao pendente da bolinha: ${e.message}');
+    }
+  }
+
+  Future<void> _handleMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onBubbleAction':
+        final rawArgs = call.arguments;
+        if (rawArgs is Map) {
+          await _handleAction(Map<String, dynamic>.from(rawArgs));
+        }
+        break;
+      default:
+        developer.log('Acao da bolinha nao implementada: ${call.method}');
+    }
+  }
+
+  Future<void> _handleAction(Map<String, dynamic> payload) async {
+    await _waitForNavigationReady();
+
+    final action = payload['action']?.toString();
+    if (action == null || action.isEmpty) {
+      return;
+    }
+
+    switch (action) {
+      case 'open_journey_shifts':
+        await _openJourney(initialTabIndex: 0);
+        break;
+      case 'open_journey_rides':
+        await _openJourney(initialTabIndex: 1);
+        break;
+      case 'toggle_traffic_light':
+        await _toggleTrafficLight();
+        break;
+      default:
+        developer.log('Acao da bolinha desconhecida: $action');
+    }
+  }
+
+  Future<void> _openJourney({required int initialTabIndex}) async {
+    await Get.offAllNamed(
+      AppRoutes.initial,
+      arguments: {'initialIndex': 2, 'journeyInitialTabIndex': initialTabIndex},
+    );
+  }
+
+  Future<void> _toggleTrafficLight() async {
+    JourneyBinding().dependencies();
+
+    await Get.offAllNamed(
+      AppRoutes.initial,
+      arguments: const {'initialIndex': 2, 'journeyInitialTabIndex': 0},
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
+    if (!Get.isRegistered<JourneyController>()) {
+      return;
+    }
+
+    await Get.find<JourneyController>().toggleTrafficLight();
+  }
+
+  Future<void> _waitForNavigationReady() async {
+    if (Get.context != null) {
+      return;
+    }
+
+    final completer = Completer<void>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
+    await completer.future;
+  }
+}

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class CustomFilledButton extends StatelessWidget {
   final String text;
@@ -19,25 +18,39 @@ class CustomFilledButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final effectiveBackground = backgroundColor ?? colorScheme.primary;
+    final effectiveForeground = backgroundColor == null
+        ? colorScheme.onPrimary
+        : ThemeData.estimateBrightnessForColor(effectiveBackground) ==
+                Brightness.dark
+            ? Colors.white
+            : colorScheme.onSurface;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.royalBlue,
-          foregroundColor: Colors.white,
+          backgroundColor: effectiveBackground,
+          foregroundColor: effectiveForeground,
           padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 0,
-          disabledBackgroundColor: (backgroundColor ?? AppColors.royalBlue).withValues(alpha: 0.4),
+          disabledBackgroundColor: effectiveBackground.withValues(alpha: 0.4),
+          disabledForegroundColor: effectiveForeground.withValues(alpha: 0.8),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    effectiveForeground,
+                  ),
                 ),
               )
             : Row(

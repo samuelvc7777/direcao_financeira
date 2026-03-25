@@ -50,18 +50,7 @@ class JourneySyncService {
   Future<List<ShiftEntity>> mergePendingShiftHistory(
     List<ShiftEntity> remoteShifts,
   ) async {
-    final pendingShifts = await localDataSource.getPendingFinishedShifts();
-    final pendingEntities = <ShiftEntity>[];
-
-    for (final entry in pendingShifts.asMap().entries) {
-      final route = await routeLocalDataSource.getRouteByLocalShiftId(
-        entry.value.localId,
-        includePoints: false,
-      );
-      pendingEntities.add(
-        entry.value.toShiftEntity(index: entry.key + 1, route: route),
-      );
-    }
+    final pendingEntities = await getPendingShiftHistoryEntities();
 
     final merged = <ShiftEntity>[...pendingEntities, ...remoteShifts];
 
@@ -85,6 +74,23 @@ class JourneySyncService {
           ),
         )
         .toList();
+  }
+
+  Future<List<ShiftEntity>> getPendingShiftHistoryEntities() async {
+    final pendingShifts = await localDataSource.getPendingFinishedShifts();
+    final pendingEntities = <ShiftEntity>[];
+
+    for (final entry in pendingShifts.asMap().entries) {
+      final route = await routeLocalDataSource.getRouteByLocalShiftId(
+        entry.value.localId,
+        includePoints: false,
+      );
+      pendingEntities.add(
+        entry.value.toShiftEntity(index: entry.key + 1, route: route),
+      );
+    }
+
+    return pendingEntities;
   }
 
   Future<ActiveShiftEntity> enrichLocalActiveShift(
