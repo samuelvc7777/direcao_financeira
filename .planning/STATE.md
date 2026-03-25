@@ -1,22 +1,22 @@
 # Project State
 
 **Initialized:** 2026-03-25
-**Last activity:** 2026-03-25 - Executed Phase 1 architecture artifacts
-**Status:** Phase 1 executed, ready for review or Phase 2 discussion
+**Last activity:** 2026-03-25 - Captured context for Phase 2
+**Status:** Ready for Phase 2 planning
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-25)
 
 **Core value:** A tela de turnos deve continuar funcionando para o usuario final enquanto a arquitetura interna fica clara o suficiente para evoluir novas funcionalidades sem concentrar tudo no `JourneyController`.
-**Current focus:** Phase 1 - Mapear limites e contratos
+**Current focus:** Phase 2 - Extrair orquestracao operacional
 
 ## Current Roadmap
 
 | Phase | Name | Status | Notes |
 |-------|------|--------|-------|
 | 1 | Mapear limites e contratos | Completed | Artefatos arquiteturais gerados e sequencia definida |
-| 2 | Extrair orquestracao operacional | Pending | Tirar ciclo de vida e integracoes do controller monolitico |
+| 2 | Extrair orquestracao operacional | Pending | Contexto capturado para extrair ciclo de vida, runtime e side effects operacionais |
 | 3 | Reorganizar estado da feature e presentation | Pending | Limpar estado exposto para UI e composicao |
 | 4 | Blindar com testes e validacao | Pending | Consolidar seguranca da refatoracao |
 
@@ -32,11 +32,13 @@ See: `.planning/PROJECT.md` (updated 2026-03-25)
 - Boundary map: `.planning/phases/01-mapear-limites-e-contratos/01-BOUNDARY-MAP.md`
 - Target architecture: `.planning/phases/01-mapear-limites-e-contratos/01-TARGET-ARCHITECTURE.md`
 - Extraction sequence: `.planning/phases/01-mapear-limites-e-contratos/01-EXTRACTION-SEQUENCE.md`
+- Contexto da Fase 2: `.planning/phases/02-extrair-orquestracao-operacional/02-CONTEXT.md`
+- Log da discussao da Fase 2: `.planning/phases/02-extrair-orquestracao-operacional/02-DISCUSSION-LOG.md`
 
 ## Continuity Note
 
-- A Fase 1 documentou o que permanece no `JourneyController`, o que sera extraido nas Fases 2 e 3 e como preservar compatibilidade com `nest` e `supabase`.
-- O proximo ponto natural de continuidade e discutir a Fase 2 com base nesses artefatos.
+- A Fase 1 documentou os limites da jornada e a Fase 2 agora fixou a ordem e os contratos da extracao operacional.
+- O proximo ponto natural de continuidade e planejar a Fase 2 em cima do `02-CONTEXT.md`.
 
 ### Quick Tasks Completed
 
@@ -46,8 +48,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-25)
 ---
 ## Session Resume
 
-- Resume point: `.planning/phases/01-mapear-limites-e-contratos/01-01-PLAN.md`
-- Stopped at: Phase 1 execution completed with architecture artifacts
+- Resume point: `.planning/phases/02-extrair-orquestracao-operacional/02-CONTEXT.md`
+- Stopped at: Phase 2 context gathered
 
 ---
-*Last updated: 2026-03-25 after phase 1 execution*
+*Last updated: 2026-03-25 after phase 2 context gathering*
