@@ -16,7 +16,7 @@ O milestone anterior foi concluido na fase 4 com a refatoracao da tela de turnos
 
 ## Phases
 
-- [ ] **Phase 5: Integracao real do grafico** - Conectar o bloco existente da home ao Supabase e remover dependencia de dados mockados.
+- [x] **Phase 5: Integracao real do grafico** - Conectar o bloco existente da home ao Supabase e remover dependencia de dados mockados.
 - [ ] **Phase 6: Estados funcionais e atualizacao por periodo** - Garantir loading, vazio, erro e atualizacao correta do grafico ao trocar o mes.
 - [ ] **Phase 7: Blindagem e nao regressao da home** - Fechar o fluxo com testabilidade adequada, cobertura automatizada e protecao dos demais blocos da home.
 
@@ -61,7 +61,7 @@ O milestone anterior foi concluido na fase 4 com a refatoracao da tela de turnos
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 5. Integracao real do grafico | 0/0 | Not started | - |
+| 5. Integracao real do grafico | 1/1 | Complete | 2026-03-25 |
 | 6. Estados funcionais e atualizacao por periodo | 0/0 | Not started | - |
 | 7. Blindagem e nao regressao da home | 0/0 | Not started | - |
 

@@ -28,11 +28,11 @@ A tela de turnos deve continuar funcionando para o usuario final enquanto a arqu
 - ✓ O modulo opera sobre arquitetura em camadas `presentation/domain/data/core` com GetX — existente
 - ✓ O app suporta providers diferentes para a mesma jornada (`nest` e `supabase`) — existente
 - ✓ Existe comportamento offline/sincronizacao local para o modulo de jornada — existente
+- ✓ O grafico principal da home agora busca dados reais por mes com origem no Supabase — validado na Phase 5
+- ✓ O bloco do grafico da home deixou de depender de placeholder fixo e de mapas dinamicos no controller/widget — validado na Phase 5
 
 ### Active
 
-- [ ] Ativar o grafico ja existente na home com dados reais vindos do Supabase
-- [ ] Remover dependencia de dados mockados ou placeholders no bloco de grafico da home
 - [ ] Tratar corretamente estados de loading, vazio e erro para o grafico da home
 - [ ] Deixar o bloco principal de grafico da home pronto para uso funcional real
 
@@ -50,6 +50,8 @@ O repositorio e um monorepo com mobile Flutter, backend NestJS, admin web e land
 O mapeamento da codebase em `.planning/codebase/` mostrou que o maior ponto de acoplamento esta em `direcao_financeira_mobile/lib/app/presentation/modules/journey/journey_controller.dart`, enquanto a `JourneyView` ja aponta para um caminho melhor de composicao com widgets menores. O projeto ja usa interfaces de repositorio e bindings por provider, o que favorece refatoracoes graduais sem reescrever tudo.
 
 Com o milestone anterior encerrado, o proximo ciclo muda o foco para a home do app. A intencao imediata e tornar funcional o grafico que ja existe nessa tela, conectando-o aos dados reais do Supabase e cobrindo os estados necessarios para uso real.
+
+A Phase 5 deste milestone fechou a integracao real do grafico existente da home: o periodo mensal passou a ser propagado pelo contrato de transacoes, a query Supabase foi filtrada na origem e o grafico deixou de depender de placeholder fixo.
 
 ## Constraints
 
@@ -70,7 +72,7 @@ Com o milestone anterior encerrado, o proximo ciclo muda o foco para a home do a
 | Priorizar extracao de responsabilidades do `JourneyController` antes de novas features | Esse e o maior gargalo tecnico identificado no mapa da codebase | — Pending |
 | Preservar providers e comportamento funcional enquanto a arquitetura interna muda | Refatoracao sem equivalencia funcional nao atende o objetivo do projeto | — Pending |
 | Abrir o milestone v1.1 focado na home, nao em novas mudancas na jornada | O milestone anterior estabilizou a base da jornada e agora o proximo ganho visivel esta na home | ✓ Good |
-| Ativar primeiro o grafico que ja existe usando Supabase | Reaproveita a estrutura atual da home e entrega valor funcional sem ampliar escopo cedo demais | — Pending |
+| Ativar primeiro o grafico que ja existe usando Supabase | Reaproveita a estrutura atual da home e entrega valor funcional sem ampliar escopo cedo demais | ✓ Good |
 | Tratar loading, vazio e erro no mesmo milestone | O usuario quer o bloco funcional por completo, nao apenas conectado a dados reais | — Pending |
 
 ## Evolution
@@ -91,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after milestone v1.1 kickoff*
+*Last updated: 2026-03-25 after phase 5 completion*
