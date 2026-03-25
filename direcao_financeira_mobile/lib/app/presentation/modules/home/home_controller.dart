@@ -11,6 +11,7 @@ import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import '../../../routes/app_pages.dart';
+import 'home_expense_chart_item.dart';
 import 'home_tab_navigation.dart';
 
 class HomeController extends GetxController {
@@ -41,15 +42,7 @@ class HomeController extends GetxController {
   final contas = <BankAccountEntity>[].obs;
   final cartoes = <CreditCardEntity>[].obs;
   final ultimasTransacoes = <TransactionEntity>[].obs;
-
-  final gastosPorCategoria = <Map<String, dynamic>>[
-    {
-      'categoria': 'Manutencao',
-      'valor': 250.00,
-      'percentual': 100.0,
-      'cor': const Color(0xFF3B82F6),
-    },
-  ].obs;
+  final gastosPorCategoria = <HomeExpenseChartItem>[].obs;
 
   final metas = <Map<String, dynamic>>[
     {
@@ -96,7 +89,7 @@ class HomeController extends GetxController {
 
     final bankAccountsFuture = loadBankAccountsUseCase();
     final creditCardsFuture = loadCreditCardsUseCase();
-    final transactionsFuture = getTransactionsUseCase();
+    final transactionsFuture = getTransactionsUseCase(selectedMonth.value);
 
     final bankResult = await bankAccountsFuture;
     final cardResult = await creditCardsFuture;
@@ -124,6 +117,7 @@ class HomeController extends GetxController {
         final sortedData = List<TransactionEntity>.from(data)
           ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
         ultimasTransacoes.assignAll(sortedData);
+        gastosPorCategoria.assignAll(_buildExpenseChartItems(sortedData));
       },
     );
 
@@ -160,23 +154,25 @@ class HomeController extends GetxController {
 
   double get totalSaidas => gastosPorCategoria.fold(
     0.0,
-    (total, g) => total + (g['valor'] as double),
+    (total, item) => total + item.amount,
   );
 
   void toggleBalanceVisibility() => isBalanceVisible.toggle();
 
-  void previousMonth() {
+  Future<void> previousMonth() async {
     selectedMonth.value = DateTime(
       selectedMonth.value.year,
       selectedMonth.value.month - 1,
     );
+    await loadDashboardData(silent: true);
   }
 
-  void nextMonth() {
+  Future<void> nextMonth() async {
     selectedMonth.value = DateTime(
       selectedMonth.value.year,
       selectedMonth.value.month + 1,
     );
+    await loadDashboardData(silent: true);
   }
 
   void changeTab(int index) => currentTabIndex.value = index;
@@ -188,5 +184,80 @@ class HomeController extends GetxController {
   Future<void> logout() async {
     await logoutUseCase();
     Get.offAllNamed(AppRoutes.login);
+  }
+
+  List<HomeExpenseChartItem> _buildExpenseChartItems(
+    List<TransactionEntity> transactions,
+  ) {
+    final expenses = transactions
+        .where((transaction) => transaction.type == TransactionType.expense)
+        .toList();
+    if (expenses.isEmpty) {
+      return const [];
+    }
+
+    final totalsByCategory = <int, int>{};
+    final labelsByCategory = <int, String>{};
+    final colorsByCategory = <int, Color>{};
+
+    for (final transaction in expenses) {
+      totalsByCategory.update(
+        transaction.categoryId,
+        (current) => current + transaction.amountCents,
+        ifAbsent: () => transaction.amountCents,
+      );
+      labelsByCategory.putIfAbsent(
+        transaction.categoryId,
+        () => transaction.categoryName ?? 'Categoria #${transaction.categoryId}',
+      );
+      colorsByCategory.putIfAbsent(
+        transaction.categoryId,
+        () => _resolveCategoryColor(transaction),
+      );
+    }
+
+    final totalExpenseCents = totalsByCategory.values.fold<int>(
+      0,
+      (total, amount) => total + amount,
+    );
+
+    final items = totalsByCategory.entries
+        .map(
+          (entry) => HomeExpenseChartItem(
+            categoryId: entry.key,
+            categoryLabel: labelsByCategory[entry.key]!,
+            amountCents: entry.value,
+            percentage: totalExpenseCents == 0
+                ? 0
+                : (entry.value / totalExpenseCents) * 100,
+            color: colorsByCategory[entry.key]!,
+          ),
+        )
+        .toList()
+      ..sort((a, b) => b.amountCents.compareTo(a.amountCents));
+
+    return items;
+  }
+
+  Color _resolveCategoryColor(TransactionEntity transaction) {
+    final rawColor = transaction.categoryColor;
+    if (rawColor != null && rawColor.isNotEmpty) {
+      final normalized = rawColor.replaceFirst('#', '');
+      final hex = normalized.length == 6 ? 'FF$normalized' : normalized;
+      final parsed = int.tryParse(hex, radix: 16);
+      if (parsed != null) {
+        return Color(parsed);
+      }
+    }
+
+    const palette = [
+      Color(0xFF3B82F6),
+      Color(0xFF10B981),
+      Color(0xFFF59E0B),
+      Color(0xFFEF4444),
+      Color(0xFF8B5CF6),
+      Color(0xFF06B6D4),
+    ];
+    return palette[transaction.categoryId.abs() % palette.length];
   }
 }
