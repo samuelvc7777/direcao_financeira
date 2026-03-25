@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../home_controller.dart';
+import '../home_expense_chart_item.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class ExpensesChartSection extends GetView<HomeController> {
@@ -128,7 +129,11 @@ class ExpensesChartSection extends GetView<HomeController> {
     });
   }
 
-  Widget _buildChart(BuildContext context, List<Map<String, dynamic>> gastos, double size) {
+  Widget _buildChart(
+    BuildContext context,
+    List<HomeExpenseChartItem> gastos,
+    double size,
+  ) {
     return SizedBox(
       width: size,
       height: size,
@@ -136,7 +141,7 @@ class ExpensesChartSection extends GetView<HomeController> {
         painter: _DonutChartPainter(gastos),
         child: Center(
           child: Text(
-            '${gastos.isNotEmpty ? gastos.first['percentual'].toStringAsFixed(0) : 0}%',
+            '${gastos.isNotEmpty ? gastos.first.percentage.toStringAsFixed(0) : 0}%',
             style: TextStyle(
               color: context.theme.colorScheme.onSurface,
               fontSize: 20,
@@ -148,7 +153,7 @@ class ExpensesChartSection extends GetView<HomeController> {
     );
   }
 
-  Widget _buildLegend(BuildContext context, List<Map<String, dynamic>> gastos) {
+  Widget _buildLegend(BuildContext context, List<HomeExpenseChartItem> gastos) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: gastos.map((g) {
@@ -160,14 +165,14 @@ class ExpensesChartSection extends GetView<HomeController> {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: g['cor'] as Color,
+                  color: g.color,
                   shape: BoxShape.circle,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  g['categoria'],
+                  g.categoryLabel,
                   style: TextStyle(
                     color: context.theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     fontSize: 13,
@@ -175,7 +180,7 @@ class ExpensesChartSection extends GetView<HomeController> {
                 ),
               ),
               Text(
-                '${(g['percentual'] as double).toStringAsFixed(0)}%',
+                '${g.percentage.toStringAsFixed(0)}%',
                 style: TextStyle(
                   color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
                   fontSize: 13,
@@ -191,7 +196,7 @@ class ExpensesChartSection extends GetView<HomeController> {
 }
 
 class _DonutChartPainter extends CustomPainter {
-  final List<Map<String, dynamic>> data;
+  final List<HomeExpenseChartItem> data;
 
   _DonutChartPainter(this.data);
 
@@ -209,9 +214,9 @@ class _DonutChartPainter extends CustomPainter {
 
     double startAngle = -pi / 2;
     for (final item in data) {
-      final sweepAngle = 2 * pi * ((item['percentual'] as double) / 100);
+      final sweepAngle = 2 * pi * (item.percentage / 100);
       final paint = Paint()
-        ..color = item['cor'] as Color
+        ..color = item.color
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
