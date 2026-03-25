@@ -1,84 +1,71 @@
-# Requirements: Refatoracao da Tela de Turnos
+# Requirements: Milestone v1.1 Home ativa com graficos reais
 
 **Defined:** 2026-03-25
-**Core Value:** A tela de turnos deve continuar funcionando para o usuario final enquanto a arquitetura interna fica clara o suficiente para evoluir novas funcionalidades sem concentrar tudo no `JourneyController`.
+**Core Value:** ativar o grafico ja existente na home com dados reais vindos do Supabase, incluindo estados de loading, vazio, erro e comportamento funcional para uso real.
 
 ## v1 Requirements
 
-### Arquitetura
+### Dados Reais
 
-- [ ] **ARCH-01**: O modulo de jornada deve separar explicitamente responsabilidades de orquestracao, estado de UI e integracoes operacionais hoje concentradas no `JourneyController`
-- [ ] **ARCH-02**: Cada responsabilidade extraida deve ter fronteira clara entre `presentation`, `domain`, `data` e `core`
-- [ ] **ARCH-03**: A tela de turnos deve continuar suportando os providers atuais sem duplicar regra de negocio por provider
+- [ ] **HOME-01**: O grafico ja existente na home deve carregar dados reais vindos do Supabase
+- [ ] **HOME-02**: Os dados exibidos no grafico devem refletir corretamente o mes selecionado na home
+- [ ] **HOME-03**: O bloco do grafico nao deve mais depender de dados hardcoded ou placeholders fixos no `HomeController`
 
-### Comportamento de Jornada
+### Comportamento do Grafico
 
-- [ ] **JORN-01**: O usuario pode continuar iniciando, pausando, retomando e finalizando turno sem regressao funcional
-- [ ] **JORN-02**: O usuario pode continuar vendo historico de turnos, metricas e corridas com os mesmos resultados esperados
-- [ ] **JORN-03**: O usuario pode continuar acessando rota do turno e detalhes de corrida a partir dos fluxos existentes
-- [ ] **JORN-04**: O comportamento offline e a sincronizacao posterior de turnos devem permanecer operacionais
+- [ ] **HOME-04**: Quando houver dados validos, o grafico deve renderizar categorias, percentuais e total de saidas de forma coerente com o periodo selecionado
+- [ ] **HOME-05**: Quando nao houver dados para o periodo selecionado, a home deve exibir um estado vazio claro e utilizavel no lugar do grafico
+- [ ] **HOME-06**: Quando ocorrer falha ao buscar ou transformar os dados do Supabase, a home deve exibir um estado de erro claro sem quebrar a tela
 
-### Integracoes Operacionais
+### Presentation e Fluxo
 
-- [ ] **OPER-01**: Localizacao, tracking, realtime, semaforo e assistente flutuante devem ficar organizados em pontos de orquestracao menores e testaveis
-- [ ] **OPER-02**: Falhas de permissao, conectividade e sincronizacao devem continuar tratadas sem espalhar mensagens e side effects por toda a feature
-- [ ] **OPER-03**: A atualizacao de metricas derivadas da jornada deve continuar coerente com o estado ativo do turno e das corridas
-
-### Presentation
-
-- [ ] **PRES-01**: `JourneyView` deve continuar responsavel apenas pela estrutura macro da tela e navegacao local entre tabs/secoes
-- [ ] **PRES-02**: Widgets visuais da pasta `journey/widgets` devem permanecer ou ficar mais organizados, sem absorver regras de negocio
-- [ ] **PRES-03**: A feature deve expor estados mais claros para a UI, reduzindo dependencia de um controller monolitico
+- [ ] **HOME-07**: A troca de mes na home deve atualizar o bloco do grafico para o novo periodo selecionado
+- [ ] **HOME-08**: O bloco do grafico deve expor um estado de loading compreensivel para o usuario durante o carregamento real
+- [ ] **HOME-09**: A home deve continuar carregando os demais blocos existentes sem regressao funcional enquanto o grafico passa a usar dados reais
 
 ### Qualidade
 
-- [ ] **QUAL-01**: A refatoracao deve aumentar a cobertura automatizada dos fluxos criticos da tela de turnos
-- [ ] **QUAL-02**: Os principais contratos extraidos da jornada devem poder ser testados isoladamente
-- [ ] **QUAL-03**: A base deve permitir adicionar novas funcionalidades na jornada com menor risco de efeito colateral global
+- [ ] **HOME-10**: A integracao do grafico com dados reais deve ficar testavel em camadas adequadas, sem concentrar toda a regra no widget
+- [ ] **HOME-11**: Os cenarios de sucesso, vazio e erro do grafico devem ter cobertura automatizada compativel com a arquitetura atual
 
-## v2 Requirements
+## Future Requirements
 
-### Evolucao
+### Evolucao da Home
 
-- **EVOL-01**: Reavaliar a necessidade de subdividir ainda mais a feature em submodulos de jornada apos a primeira rodada de refatoracao
-- **EVOL-02**: Revisar oportunidades de unificacao adicional entre providers apos estabilizacao da arquitetura interna
-- **EVOL-03**: Expandir testes de widget e fluxos end-to-end da jornada apos estabilizar os contratos internos
+- **HOME-FUT-01**: Expandir a home para outros cards e resumos com dados reais apos estabilizar o grafico principal
+- **HOME-FUT-02**: Revisar filtros adicionais, comparativos e periodos mais ricos para a experiencia analitica da home
+- **HOME-FUT-03**: Evoluir a home com mais de um grafico ou visoes complementares quando a base de dados estiver consolidada
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Reescrever visual completo da jornada | A iniciativa e estrutural, nao de redesign |
-| Migrar GetX para outra solucao | Escopo grande demais para o problema atual |
-| Alterar regras de negocio do produto sem necessidade | O objetivo e preservar comportamento e melhorar arquitetura |
-| Refatorar todo o app mobile de uma vez | A iniciativa e focada na tela de turnos e seus arredores diretos |
+| Ativar todos os blocos da home no mesmo milestone | O foco atual e entregar primeiro o grafico principal com comportamento completo |
+| Redesenhar a home inteira | O objetivo do milestone e funcionalidade real, nao redesign amplo |
+| Trocar a fonte de dados para algo diferente de Supabase | A origem dos dados ja foi decidida para este ciclo |
+| Implementar filtros analiticos avancados alem do mes atual | Isso amplia escopo antes de validar o fluxo principal do grafico |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 1 | Pending |
-| ARCH-03 | Phase 1 | Pending |
-| JORN-01 | Phase 2 | Pending |
-| JORN-02 | Phase 2 | Pending |
-| JORN-03 | Phase 3 | Pending |
-| JORN-04 | Phase 2 | Pending |
-| OPER-01 | Phase 2 | Pending |
-| OPER-02 | Phase 2 | Pending |
-| OPER-03 | Phase 3 | Pending |
-| PRES-01 | Phase 3 | Pending |
-| PRES-02 | Phase 3 | Pending |
-| PRES-03 | Phase 3 | Pending |
-| QUAL-01 | Phase 4 | Pending |
-| QUAL-02 | Phase 4 | Pending |
-| QUAL-03 | Phase 4 | Pending |
+| HOME-01 | Unmapped | Pending |
+| HOME-02 | Unmapped | Pending |
+| HOME-03 | Unmapped | Pending |
+| HOME-04 | Unmapped | Pending |
+| HOME-05 | Unmapped | Pending |
+| HOME-06 | Unmapped | Pending |
+| HOME-07 | Unmapped | Pending |
+| HOME-08 | Unmapped | Pending |
+| HOME-09 | Unmapped | Pending |
+| HOME-10 | Unmapped | Pending |
+| HOME-11 | Unmapped | Pending |
 
 **Coverage:**
-- v1 requirements: 16 total
-- Mapped to phases: 16
-- Unmapped: 0 ✓
+- v1 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after initial definition*
+*Last updated: 2026-03-25 after milestone v1.1 definition*
