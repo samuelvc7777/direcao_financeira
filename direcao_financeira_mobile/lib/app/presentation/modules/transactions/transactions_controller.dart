@@ -25,7 +25,7 @@ enum TransactionsFilter {
       case TransactionsFilter.income:
         return 'Entradas';
       case TransactionsFilter.expense:
-        return 'Saidas';
+        return 'Saídas';
     }
   }
 }
@@ -39,7 +39,7 @@ class TransactionsDayGroup {
   int get totalCents => transactions.fold<int>(
     0,
     (total, transaction) =>
-        total + transaction.amountCents * _signalFor(transaction.type),
+        total + transaction.displayedAmountCents * _signalFor(transaction.type),
   );
 
   static int _signalFor(TransactionType type) {
@@ -173,11 +173,11 @@ class TransactionsController extends GetxController {
 
   int get totalIncomeCents => monthTransactions
       .where((transaction) => transaction.type == TransactionType.income)
-      .fold<int>(0, (total, transaction) => total + transaction.amountCents);
+      .fold<int>(0, (total, transaction) => total + transaction.displayedAmountCents);
 
   int get totalExpenseCents => monthTransactions
       .where((transaction) => transaction.type == TransactionType.expense)
-      .fold<int>(0, (total, transaction) => total + transaction.amountCents);
+      .fold<int>(0, (total, transaction) => total + transaction.displayedAmountCents);
 
   int get balanceCents => totalIncomeCents - totalExpenseCents;
 
@@ -228,18 +228,20 @@ class TransactionsController extends GetxController {
     selectedFilter.value = filter;
   }
 
-  void goToPreviousMonth() {
+  Future<void> goToPreviousMonth() async {
     selectedMonth.value = DateTime(
       selectedMonth.value.year,
       selectedMonth.value.month - 1,
     );
+    await loadData(silent: true);
   }
 
-  void goToNextMonth() {
+  Future<void> goToNextMonth() async {
     selectedMonth.value = DateTime(
       selectedMonth.value.year,
       selectedMonth.value.month + 1,
     );
+    await loadData(silent: true);
   }
 
   Future<bool> createTransaction({

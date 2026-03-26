@@ -3,15 +3,18 @@ import 'package:direcao_financeira_mobile/app/core/dashboard/dashboard_refresh_n
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/transaction_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_bank_account_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/repositories/i_category_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_credit_card_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_transaction_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/auth_session_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/bank_account_use_cases.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/category_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/credit_card_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/transaction_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/home/home_controller.dart';
@@ -91,9 +94,11 @@ class _FakeBankAccountRepository implements IBankAccountRepository {
 }
 
 class _FakeCreditCardRepository implements ICreditCardRepository {
+  List<CreditCardEntity> cards = const [];
+
   @override
   Future<Either<Failure, List<CreditCardEntity>>> getCreditCards() async =>
-      const Right([]);
+      Right(cards);
 
   @override
   Future<Either<Failure, CreditCardEntity>> createCreditCard({
@@ -128,9 +133,58 @@ class _FakeCreditCardRepository implements ICreditCardRepository {
   }) async => throw UnimplementedError();
 }
 
+class _FakeCategoryRepository implements ICategoryRepository {
+  List<CategoryEntity> categories = [];
+  int nextId = 100;
+
+  @override
+  Future<Either<Failure, CategoryEntity>> createCategory({
+    required String name,
+    required CategoryType type,
+    required String color,
+    required String icon,
+  }) async {
+    final category = CategoryEntity(
+      id: nextId++,
+      userId: 1,
+      name: name,
+      type: type,
+      color: color,
+      icon: icon,
+      isActive: true,
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+    );
+    categories = [...categories, category];
+    return Right(category);
+  }
+
+  @override
+  Future<Either<Failure, void>> deactivateCategory(int id) async =>
+      const Right(null);
+
+  @override
+  Future<Either<Failure, List<CategoryEntity>>> getCategories() async =>
+      Right(categories);
+
+  @override
+  Future<Either<Failure, void>> reactivateCategory(int id) async =>
+      const Right(null);
+
+  @override
+  Future<Either<Failure, CategoryEntity>> updateCategory({
+    required int id,
+    required String name,
+    required CategoryType type,
+    required String color,
+    required String icon,
+  }) async => throw UnimplementedError();
+}
+
 class _FakeTransactionRepository implements ITransactionRepository {
   final List<DateTime> requestedMonths = [];
   List<TransactionEntity> response = [];
+  final List<Map<String, dynamic>> createdTransactions = [];
 
   @override
   Future<Either<Failure, List<TransactionEntity>>> getTransactions({
@@ -151,7 +205,68 @@ class _FakeTransactionRepository implements ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
-  }) async => throw UnimplementedError();
+  }) async {
+    createdTransactions.add({
+      'type': type,
+      'assetType': assetType,
+      'amountCents': amountCents,
+      'categoryId': categoryId,
+      'description': description,
+      'transactionDate': transactionDate,
+      'bankAccountId': bankAccountId,
+      'creditCardId': creditCardId,
+      'installmentCount': installmentCount,
+    });
+
+    return Right(
+      TransactionEntity(
+        id: createdTransactions.length,
+        type: type,
+        status: TransactionStatus.cleared,
+        assetType: assetType,
+        amountCents: amountCents,
+        categoryId: categoryId,
+        description: description,
+        transactionDate: transactionDate,
+        bankAccountId: bankAccountId,
+        creditCardId: creditCardId,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async {
+    createdTransactions.add({
+      'type': TransactionType.expense,
+      'assetType': AssetType.bankAccount,
+      'amountCents': amountCents,
+      'categoryId': expenseCategoryId,
+      'description': description,
+      'transactionDate': transactionDate,
+      'bankAccountId': bankAccountId,
+      'creditCardId': null,
+    });
+    createdTransactions.add({
+      'type': TransactionType.income,
+      'assetType': AssetType.creditCard,
+      'amountCents': amountCents,
+      'categoryId': incomeCategoryId,
+      'description': description,
+      'transactionDate': transactionDate,
+      'bankAccountId': null,
+      'creditCardId': creditCardId,
+    });
+
+    return const Right(null);
+  }
 
   @override
   Future<Either<Failure, void>> deleteTransaction(
@@ -204,6 +319,8 @@ void main() {
 
   group('HomeController', () {
     late _FakeTransactionRepository transactionRepository;
+    late _FakeCategoryRepository categoryRepository;
+    late _FakeCreditCardRepository creditCardRepository;
     late HomeController controller;
 
     setUp(() {
@@ -223,12 +340,19 @@ void main() {
             categoryColor: '#FFAA00',
           ),
         ];
+      categoryRepository = _FakeCategoryRepository();
+      creditCardRepository = _FakeCreditCardRepository();
       controller = HomeController(
         getStoredUserUseCase: GetStoredUserUseCase(_FakeAuthRepository()),
         logoutUseCase: LogoutUseCase(_FakeAuthRepository()),
         loadBankAccountsUseCase: LoadBankAccountsUseCase(_FakeBankAccountRepository()),
-        loadCreditCardsUseCase: LoadCreditCardsUseCase(_FakeCreditCardRepository()),
+        loadCreditCardsUseCase: LoadCreditCardsUseCase(creditCardRepository),
+        loadCategoriesUseCase: LoadCategoriesUseCase(categoryRepository),
+        createCategoryUseCase: CreateCategoryUseCase(categoryRepository),
         getTransactionsUseCase: GetTransactionsUseCase(transactionRepository),
+        createInvoicePaymentUseCase: CreateInvoicePaymentUseCase(
+          transactionRepository,
+        ),
         dashboardRefreshNotifier: DefaultDashboardRefreshNotifier(),
         homeTabNavigation: _FakeHomeTabNavigation(),
         realtimeClient: _FakeRealtimeClient(),
@@ -247,13 +371,27 @@ void main() {
     test('previousMonth e nextMonth mudam o mes e fazem nova carga remota', () async {
       controller.selectedMonth.value = DateTime(2026, 3, 1);
 
-      controller.previousMonth();
-      controller.nextMonth();
+      await controller.previousMonth();
+      await controller.nextMonth();
 
       expect(transactionRepository.requestedMonths, [
         DateTime(2026, 2, 1),
         DateTime(2026, 3, 1),
       ]);
+    });
+
+    test('loadDashboardData usa o mes informado como referencia', () async {
+      controller.selectedMonth.value = DateTime(2026, 5, 1);
+
+      final pendingLoad = controller.loadDashboardData(
+        referenceMonth: DateTime(2026, 4, 1),
+        silent: true,
+      );
+      controller.selectedMonth.value = DateTime(2026, 6, 1);
+
+      await pendingLoad;
+
+      expect(transactionRepository.requestedMonths, [DateTime(2026, 4, 1)]);
     });
 
     test('gera o grafico a partir das despesas do retorno mensal sem placeholder', () async {
@@ -262,6 +400,91 @@ void main() {
       expect(controller.gastosPorCategoria, isNotEmpty);
       expect(controller.gastosPorCategoria.single.categoryLabel, 'Combustivel');
       expect(controller.gastosPorCategoria.single.amountCents, 5000);
+    });
+
+    test('ignora pagamento interno de fatura nos resumos da home', () async {
+      transactionRepository.response = [
+        TransactionEntity(
+          id: 1,
+          type: TransactionType.expense,
+          status: TransactionStatus.cleared,
+          assetType: AssetType.bankAccount,
+          amountCents: 9000,
+          categoryId: 7,
+          description: 'Mercado',
+          transactionDate: DateTime(2026, 3, 10),
+        ),
+        TransactionEntity(
+          id: 2,
+          type: TransactionType.expense,
+          status: TransactionStatus.cleared,
+          assetType: AssetType.bankAccount,
+          amountCents: 5000,
+          categoryId: 99,
+          description: '${kInternalInvoicePaymentDescriptionPrefix}1:1',
+          transactionDate: DateTime(2026, 3, 11),
+        ),
+      ];
+
+      await controller.loadDashboardData();
+
+      expect(controller.ultimasTransacoes, hasLength(1));
+      expect(controller.saidas, 90.0);
+    });
+
+    test('paga a fatura criando saida na conta e entrada no cartao', () async {
+      controller.contas.assignAll([
+        BankAccountEntity(
+          id: 10,
+          name: 'Conta Principal',
+          bankName: 'Nubank',
+          color: '#123456',
+          accountType: AccountType.checking,
+          initialBalanceCents: 200000,
+          currentBalanceCents: 200000,
+          isActive: true,
+        ),
+      ]);
+      final card = CreditCardEntity(
+        id: 20,
+        name: 'Visa',
+        brand: 'visa',
+        color: '#654321',
+        limitCents: 500000,
+        availableLimitCents: 300000,
+        closingDay: 10,
+        dueDay: 20,
+        lastFourDigits: '1234',
+        isActive: true,
+        closedInvoiceCents: 120000,
+        payableInvoiceCents: 120000,
+        nextDueDate: DateTime(2026, 3, 25),
+        isInvoiceDueToday: true,
+      );
+
+      await controller.payInvoice(
+        card: card,
+        bankAccount: controller.contas.first,
+      );
+
+      expect(transactionRepository.createdTransactions, hasLength(2));
+      expect(
+        transactionRepository.createdTransactions.first['assetType'],
+        AssetType.bankAccount,
+      );
+      expect(
+        transactionRepository.createdTransactions.first['type'],
+        TransactionType.expense,
+      );
+      expect(
+        transactionRepository.createdTransactions.last['assetType'],
+        AssetType.creditCard,
+      );
+      expect(
+        transactionRepository.createdTransactions.last['type'],
+        TransactionType.income,
+      );
+      expect(categoryRepository.categories, hasLength(2));
     });
   });
 }

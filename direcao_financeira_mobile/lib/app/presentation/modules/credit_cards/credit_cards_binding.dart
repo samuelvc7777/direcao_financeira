@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../core/dashboard/dashboard_refresh_notifier.dart';
 import '../../../domain/repositories/i_credit_card_repository.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
 import 'credit_cards_controller.dart';
@@ -46,6 +47,7 @@ class CreditCardsBinding extends Bindings {
           updateCreditCardUseCase: Get.find<UpdateCreditCardUseCase>(),
           deactivateCreditCardUseCase: Get.find<DeactivateCreditCardUseCase>(),
           reactivateCreditCardUseCase: Get.find<ReactivateCreditCardUseCase>(),
+          dashboardRefreshNotifier: Get.find<DashboardRefreshNotifier>(),
         ),
       );
     }

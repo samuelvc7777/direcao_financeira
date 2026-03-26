@@ -27,9 +27,7 @@ class TransactionsDayGroupSection extends StatelessWidget {
     final colorScheme = context.theme.colorScheme;
     final dayLabel = DateFormat('dd/MM/yyyy', 'pt_BR').format(group.date);
     final totalIsNegative = group.totalCents < 0;
-    final totalLabel = compactAmountFormat.format(
-      (group.totalCents.abs()) / 100,
-    );
+    final totalLabel = compactAmountFormat.format(group.totalCents.abs() / 100);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +132,7 @@ class _TransactionFinanceCard extends StatelessWidget {
       'HH:mm',
       'pt_BR',
     ).format(transaction.transactionDate);
-    final amountLabel = amountFormat.format(transaction.amount);
+    final amountLabel = amountFormat.format(transaction.displayedAmount);
 
     return Container(
       decoration: BoxDecoration(
@@ -203,8 +201,7 @@ class _TransactionFinanceCard extends StatelessWidget {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color:
-                                            context.theme.colorScheme.onSurface,
+                                        color: context.theme.colorScheme.onSurface,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: -0.3,

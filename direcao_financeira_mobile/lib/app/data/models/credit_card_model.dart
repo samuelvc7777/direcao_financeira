@@ -12,6 +12,13 @@ class CreditCardModel extends CreditCardEntity {
     required super.dueDay,
     required super.lastFourDigits,
     required super.isActive,
+    super.openInvoiceCents,
+    super.closedInvoiceCents,
+    super.payableInvoiceCents,
+    super.openInvoiceClosingDate,
+    super.nextDueDate,
+    super.isInvoiceDueToday,
+    super.isInvoiceOverdue,
   });
 
   factory CreditCardModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +33,17 @@ class CreditCardModel extends CreditCardEntity {
       dueDay: json['dueDay'] as int,
       lastFourDigits: json['lastFourDigits'] as String,
       isActive: json['isActive'] as bool? ?? true,
+      openInvoiceCents: json['openInvoiceCents'] as int? ?? 0,
+      closedInvoiceCents: json['closedInvoiceCents'] as int? ?? 0,
+      payableInvoiceCents: json['payableInvoiceCents'] as int? ?? 0,
+      openInvoiceClosingDate: json['openInvoiceClosingDate'] == null
+          ? null
+          : DateTime.tryParse(json['openInvoiceClosingDate'].toString()),
+      nextDueDate: json['nextDueDate'] == null
+          ? null
+          : DateTime.tryParse(json['nextDueDate'].toString()),
+      isInvoiceDueToday: json['isInvoiceDueToday'] as bool? ?? false,
+      isInvoiceOverdue: json['isInvoiceOverdue'] as bool? ?? false,
     );
   }
 
@@ -41,6 +59,13 @@ class CreditCardModel extends CreditCardEntity {
       'dueDay': dueDay,
       'lastFourDigits': lastFourDigits,
       'isActive': isActive,
+      'openInvoiceCents': openInvoiceCents,
+      'closedInvoiceCents': closedInvoiceCents,
+      'payableInvoiceCents': payableInvoiceCents,
+      'openInvoiceClosingDate': openInvoiceClosingDate?.toIso8601String(),
+      'nextDueDate': nextDueDate?.toIso8601String(),
+      'isInvoiceDueToday': isInvoiceDueToday,
+      'isInvoiceOverdue': isInvoiceOverdue,
     };
   }
 }

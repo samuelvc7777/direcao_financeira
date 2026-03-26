@@ -117,12 +117,13 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
         ],
       ),
       child: Obx(() {
-        final lucro = controller.operationalNetEarningsCents;
-        final ganhos = controller.operationalGrossEarningsCents;
-        final custos = controller.operationalTotalCostsCents;
-        final viagens = controller.totalRides.value;
-        final margem = controller.operationalMargin;
-        final isPositivo = lucro >= 0;
+        final summary = controller.operationalSummaryData;
+        final lucro = summary.netEarningsCents;
+        final ganhos = summary.grossEarningsCents;
+        final custos = summary.totalCostsCents;
+        final viagens = summary.totalRides;
+        final margem = summary.margin;
+        final isPositivo = summary.isPositive;
         final mainColor = isPositivo ? AppColors.emerald : AppColors.rose;
         final gradientColors = isPositivo
             ? [
@@ -180,7 +181,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Lucro LÃ­quido',
+                                'Lucro Líquido',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -308,9 +309,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                     ),
                     const SizedBox(width: 8),
                     AnimatedRotation(
-                      turns: controller.isOperationalCostBreakdownExpanded.value
-                          ? 0.5
-                          : 0,
+                      turns: summary.isCostBreakdownExpanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 250),
                       child: Icon(
                         Icons.keyboard_arrow_down_rounded,
@@ -325,8 +324,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
             AnimatedCrossFade(
               firstChild: const SizedBox.shrink(),
               secondChild: _OperationalCostDetails(controller: controller),
-              crossFadeState:
-                  controller.isOperationalCostBreakdownExpanded.value
+              crossFadeState: summary.isCostBreakdownExpanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 250),
@@ -345,6 +343,8 @@ class _OperationalCostDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final breakdown = controller.operationalCostBreakdownData;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -382,17 +382,17 @@ class _OperationalCostDetails extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _CostDetailGroupCard(
-            title: 'Custos VariÃ¡veis',
-            totalCents: controller.operationalVariableCostsCents,
-            items: controller.operationalVariableCostItems,
+            title: 'Custos Variáveis',
+            totalCents: breakdown.variableCostsCents,
+            items: breakdown.variableItems,
             accentColor: const Color(0xFFF2B84B),
             icon: Icons.local_gas_station_outlined,
           ),
           const SizedBox(height: 12),
           _CostDetailGroupCard(
             title: 'Custos Fixos',
-            totalCents: controller.operationalFixedCostsCents,
-            items: controller.operationalFixedCostItems,
+            totalCents: breakdown.fixedCostsCents,
+            items: breakdown.fixedItems,
             accentColor: AppColors.rose,
             icon: Icons.business_outlined,
           ),
@@ -501,40 +501,37 @@ class _PaymentMethodsSectionBody extends StatelessWidget {
     final controller = Get.find<JourneyController>();
 
     return Obx(() {
-      final items = controller.paymentMethodSummary;
-      final totalFinishedRides =
-          controller.paymentMethodFinishedRidesCount.value;
-      final mappedCount = controller.mappedPaymentMethodCount;
+      final state = controller.paymentMethodsSectionState;
 
       return AnimatedCrossFade(
         firstChild: const SizedBox.shrink(),
         secondChild: Column(
           children: [
             const SizedBox(height: 10),
-            if (items.isEmpty)
+            if (state.items.isEmpty)
               const _PaymentMethodsEmptyState()
             else
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
-                  children: items
+                  children: state.items
                       .map(
                         (item) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: _PaymentMethodCard(
                             item: item,
-                            totalFinishedRides: totalFinishedRides,
+                            totalFinishedRides: state.totalFinishedRides,
                           ),
                         ),
                       )
                       .toList(),
                 ),
               ),
-            if (totalFinishedRides > mappedCount) ...[
+            if (state.hasUnmappedRides) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: Text(
-                  '${totalFinishedRides - mappedCount} corridas finalizadas sem forma de pagamento mapeada.',
+                  '${state.unmappedCount} corridas finalizadas sem forma de pagamento mapeada.',
                   style: TextStyle(
                     color: context.theme.colorScheme.onSurface.withValues(
                       alpha: 0.54,
@@ -546,7 +543,7 @@ class _PaymentMethodsSectionBody extends StatelessWidget {
             ],
           ],
         ),
-        crossFadeState: controller.isPaymentMethodSectionExpanded.value
+        crossFadeState: state.isExpanded
             ? CrossFadeState.showSecond
             : CrossFadeState.showFirst,
         duration: const Duration(milliseconds: 220),

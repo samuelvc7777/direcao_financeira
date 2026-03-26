@@ -39,7 +39,13 @@ void main() async {
   final storage = GetStorage();
   final sessionStore = GetStorageSessionStore(storage: storage);
   final token = sessionStore.getToken();
-  final initialRoute = token != null ? AppRoutes.initial : AppRoutes.login;
+  final hasAuthenticatedSession =
+      environment.backendProvider == BackendProviderKind.supabase
+      ? Supabase.instance.client.auth.currentSession != null
+      : token != null && token.isNotEmpty;
+  final initialRoute = hasAuthenticatedSession
+      ? AppRoutes.initial
+      : AppRoutes.login;
 
   await initializeLocationTrackingService(storage);
 

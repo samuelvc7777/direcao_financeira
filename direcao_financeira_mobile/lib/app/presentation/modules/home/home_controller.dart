@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/dashboard/dashboard_refresh_notifier.dart';
+import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/network/realtime_client.dart';
 import '../../../domain/entities/bank_account_entity.dart';
+import '../../../domain/entities/category_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
+import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import '../../../routes/app_pages.dart';
@@ -20,7 +23,10 @@ class HomeController extends GetxController {
     required this.logoutUseCase,
     required this.loadBankAccountsUseCase,
     required this.loadCreditCardsUseCase,
+    required this.loadCategoriesUseCase,
+    required this.createCategoryUseCase,
     required this.getTransactionsUseCase,
+    required this.createInvoicePaymentUseCase,
     required this.dashboardRefreshNotifier,
     required this.homeTabNavigation,
     required this.realtimeClient,
@@ -30,7 +36,10 @@ class HomeController extends GetxController {
   final LogoutUseCase logoutUseCase;
   final LoadBankAccountsUseCase loadBankAccountsUseCase;
   final LoadCreditCardsUseCase loadCreditCardsUseCase;
+  final LoadCategoriesUseCase loadCategoriesUseCase;
+  final CreateCategoryUseCase createCategoryUseCase;
   final GetTransactionsUseCase getTransactionsUseCase;
+  final CreateInvoicePaymentUseCase createInvoicePaymentUseCase;
   final DashboardRefreshNotifier dashboardRefreshNotifier;
   final HomeTabNavigation homeTabNavigation;
   final RealtimeClient realtimeClient;
@@ -43,6 +52,7 @@ class HomeController extends GetxController {
   final cartoes = <CreditCardEntity>[].obs;
   final ultimasTransacoes = <TransactionEntity>[].obs;
   final gastosPorCategoria = <HomeExpenseChartItem>[].obs;
+  final processingInvoiceCardIds = <int>[].obs;
 
   final metas = <Map<String, dynamic>>[
     {
@@ -55,6 +65,11 @@ class HomeController extends GetxController {
 
   final currentTabIndex = 0.obs;
   Worker? _dashboardRefreshWorker;
+  int _dashboardLoadToken = 0;
+  static const _invoicePaymentExpenseCategoryName =
+      'Pagamento interno de fatura';
+  static const _invoicePaymentIncomeCategoryName =
+      'Recebimento interno de fatura';
 
   @override
   void onInit() {
@@ -82,18 +97,28 @@ class HomeController extends GetxController {
     super.onClose();
   }
 
-  Future<void> loadDashboardData({bool silent = false}) async {
+  Future<void> loadDashboardData({
+    bool silent = false,
+    DateTime? referenceMonth,
+  }) async {
+    final month = referenceMonth ?? selectedMonth.value;
+    final loadToken = ++_dashboardLoadToken;
+
     if (!silent) {
       isLoading.value = true;
     }
 
     final bankAccountsFuture = loadBankAccountsUseCase();
     final creditCardsFuture = loadCreditCardsUseCase();
-    final transactionsFuture = getTransactionsUseCase(selectedMonth.value);
+    final transactionsFuture = getTransactionsUseCase(month);
 
     final bankResult = await bankAccountsFuture;
     final cardResult = await creditCardsFuture;
     final transactionResult = await transactionsFuture;
+
+    if (loadToken != _dashboardLoadToken) {
+      return;
+    }
 
     bankResult.fold(
       (failure) => debugPrint(
@@ -116,8 +141,11 @@ class HomeController extends GetxController {
       (data) {
         final sortedData = List<TransactionEntity>.from(data)
           ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
-        ultimasTransacoes.assignAll(sortedData);
-        gastosPorCategoria.assignAll(_buildExpenseChartItems(sortedData));
+        final visibleTransactions = sortedData
+            .where((transaction) => !transaction.isInternalInvoicePayment)
+            .toList();
+        ultimasTransacoes.assignAll(visibleTransactions);
+        gastosPorCategoria.assignAll(_buildExpenseChartItems(visibleTransactions));
       },
     );
 
@@ -159,20 +187,84 @@ class HomeController extends GetxController {
 
   void toggleBalanceVisibility() => isBalanceVisible.toggle();
 
+  bool isProcessingInvoicePayment(int cardId) =>
+      processingInvoiceCardIds.contains(cardId);
+
+  Future<void> payInvoice({
+    required CreditCardEntity card,
+    required BankAccountEntity bankAccount,
+  }) async {
+    if (card.payableInvoiceCents <= 0) {
+      _showFeedback('Atencao', 'Nao ha fatura vencendo para este cartao.');
+      return;
+    }
+    if (isProcessingInvoicePayment(card.id)) {
+      return;
+    }
+
+    processingInvoiceCardIds.add(card.id);
+    final now = DateTime.now();
+    final description =
+        '$kInternalInvoicePaymentDescriptionPrefix${card.id}:${bankAccount.id}:${now.toIso8601String()}';
+
+    try {
+      final expenseCategoryId = await _ensureInternalCategoryId(
+        name: _invoicePaymentExpenseCategoryName,
+        type: CategoryType.expense,
+        color: '#D97706',
+        icon: 'credit_card',
+      );
+      final incomeCategoryId = await _ensureInternalCategoryId(
+        name: _invoicePaymentIncomeCategoryName,
+        type: CategoryType.income,
+        color: '#0891B2',
+        icon: 'sync_alt',
+      );
+      final paymentResult = await createInvoicePaymentUseCase(
+        bankAccountId: bankAccount.id,
+        creditCardId: card.id,
+        amountCents: card.payableInvoiceCents,
+        expenseCategoryId: expenseCategoryId,
+        incomeCategoryId: incomeCategoryId,
+        description: description,
+        transactionDate: now,
+      );
+
+      paymentResult.fold(
+        (failure) => throw _InvoicePaymentException(failure.message),
+        (_) {},
+      );
+
+      await loadDashboardData(silent: true);
+      _showFeedback(
+        'Sucesso',
+        'Fatura do cartao "${card.name}" paga com ${bankAccount.name}.',
+      );
+    } on _InvoicePaymentException catch (error) {
+      _showFeedback('Erro', error.message);
+    } catch (_) {
+      _showFeedback('Erro', 'Nao foi possivel pagar a fatura agora.');
+    } finally {
+      processingInvoiceCardIds.remove(card.id);
+    }
+  }
+
   Future<void> previousMonth() async {
-    selectedMonth.value = DateTime(
+    final previous = DateTime(
       selectedMonth.value.year,
       selectedMonth.value.month - 1,
     );
-    await loadDashboardData(silent: true);
+    selectedMonth.value = previous;
+    await loadDashboardData(silent: true, referenceMonth: previous);
   }
 
   Future<void> nextMonth() async {
-    selectedMonth.value = DateTime(
+    final next = DateTime(
       selectedMonth.value.year,
       selectedMonth.value.month + 1,
     );
-    await loadDashboardData(silent: true);
+    selectedMonth.value = next;
+    await loadDashboardData(silent: true, referenceMonth: next);
   }
 
   void changeTab(int index) => currentTabIndex.value = index;
@@ -260,4 +352,54 @@ class HomeController extends GetxController {
     ];
     return palette[transaction.categoryId.abs() % palette.length];
   }
+
+  Future<int> _ensureInternalCategoryId({
+    required String name,
+    required CategoryType type,
+    required String color,
+    required String icon,
+  }) async {
+    final categoriesResult = await loadCategoriesUseCase();
+    final categories = categoriesResult.fold<List<CategoryEntity>>(
+      (_) => const [],
+      (data) => data,
+    );
+    final existingCategory = categories.firstWhereOrNull(
+      (category) => category.name == name && category.type == type,
+    );
+    if (existingCategory != null) {
+      return existingCategory.id;
+    }
+
+    final createResult = await createCategoryUseCase(
+      name: name,
+      type: type,
+      color: color,
+      icon: icon,
+    );
+
+    return createResult.fold(
+      (failure) => throw _InvoicePaymentException(failure.message),
+      (category) => category.id,
+    );
+  }
+
+  void _showFeedback(String title, String message) {
+    if (Get.testMode) {
+      debugPrint('[HomeController] Feedback teste: $title - $message');
+      return;
+    }
+
+    try {
+      AppSnackbar.show(title, message);
+    } catch (_) {
+      debugPrint('[HomeController] Feedback suprimido: $title - $message');
+    }
+  }
+}
+
+class _InvoicePaymentException implements Exception {
+  _InvoicePaymentException(this.message);
+
+  final String message;
 }

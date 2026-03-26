@@ -206,6 +206,7 @@ class _FakeCreditCardRepository implements ICreditCardRepository {
 
 class _FakeTransactionRepository implements ITransactionRepository {
   List<TransactionEntity> transactions = [];
+  final List<DateTime> requestedMonths = [];
 
   @override
   Future<Either<Failure, TransactionEntity>> createTransaction({
@@ -237,7 +238,21 @@ class _FakeTransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, List<TransactionEntity>>> getTransactions({
     required DateTime referenceMonth,
-  }) async => Right(transactions);
+  }) async {
+    requestedMonths.add(referenceMonth);
+    return Right(transactions);
+  }
+
+  @override
+  Future<Either<Failure, void>> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async => const Right(null);
 
   @override
   Future<Either<Failure, TransactionEntity>> updateTransaction(
@@ -594,6 +609,7 @@ void main() {
         buildCreditCard(isActive: true),
         buildCreditCard(id: 2, isActive: false),
       ];
+    final categoryRepository = _FakeCategoryRepository();
     final transactionRepository = _FakeTransactionRepository()
       ..transactions = [
         buildTransaction(id: 1, date: DateTime(2026, 1, 12)),
@@ -607,7 +623,12 @@ void main() {
       logoutUseCase: LogoutUseCase(authRepository),
       loadBankAccountsUseCase: LoadBankAccountsUseCase(bankRepository),
       loadCreditCardsUseCase: LoadCreditCardsUseCase(cardRepository),
+      loadCategoriesUseCase: LoadCategoriesUseCase(categoryRepository),
+      createCategoryUseCase: CreateCategoryUseCase(categoryRepository),
       getTransactionsUseCase: GetTransactionsUseCase(transactionRepository),
+      createInvoicePaymentUseCase: CreateInvoicePaymentUseCase(
+        transactionRepository,
+      ),
       dashboardRefreshNotifier: notifier,
       homeTabNavigation: navigation,
       realtimeClient: realtimeClient,
@@ -681,12 +702,14 @@ void main() {
         buildCreditCard(isActive: true),
         buildCreditCard(id: 2, isActive: false),
       ];
+    final notifier = DefaultDashboardRefreshNotifier();
     final controller = CreditCardsController(
       loadCreditCardsUseCase: LoadCreditCardsUseCase(repository),
       createCreditCardUseCase: CreateCreditCardUseCase(repository),
       updateCreditCardUseCase: UpdateCreditCardUseCase(repository),
       deactivateCreditCardUseCase: DeactivateCreditCardUseCase(repository),
       reactivateCreditCardUseCase: ReactivateCreditCardUseCase(repository),
+      dashboardRefreshNotifier: notifier,
     );
 
     await controller.loadCreditCards();
@@ -694,6 +717,19 @@ void main() {
     expect(controller.creditCards.length, 2);
     expect(controller.activeCards.length, 1);
     expect(controller.inactiveCards.length, 1);
+
+    final before = notifier.refreshTick.value;
+    await controller.updateCreditCard(
+      id: 1,
+      name: 'Visa',
+      brand: 'visa',
+      color: '#8B5CF6',
+      limitCents: 500000,
+      closingDay: 14,
+      dueDay: 19,
+      lastFourDigits: '1234',
+    );
+    expect(notifier.refreshTick.value, before + 1);
   });
 
   testWidgets('TransactionsController publica refresh ao criar transacao', (
@@ -760,6 +796,47 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'TransactionsController recarrega o mes ao navegar entre periodos',
+    () async {
+      final transactionRepository = _FakeTransactionRepository();
+      final categoryRepository = _FakeCategoryRepository();
+      final bankRepository = _FakeBankAccountRepository();
+      final cardRepository = _FakeCreditCardRepository();
+      final notifier = DefaultDashboardRefreshNotifier();
+      final controller = TransactionsController(
+        createTransactionUseCase: CreateTransactionUseCase(
+          transactionRepository,
+        ),
+        updateTransactionUseCase: UpdateTransactionUseCase(
+          transactionRepository,
+        ),
+        deleteTransactionUseCase: DeleteTransactionUseCase(
+          transactionRepository,
+        ),
+        getTransactionsUseCase: GetTransactionsUseCase(transactionRepository),
+        getCategoriesUseCase: GetCategoriesUseCase(categoryRepository),
+        getBankAccountsUseCase: GetBankAccountsUseCase(bankRepository),
+        getCreditCardsUseCase: GetCreditCardsUseCase(cardRepository),
+        dashboardRefreshNotifier: notifier,
+      );
+
+      controller.selectedMonth.value = DateTime(2026, 3, 1);
+      await controller.loadData();
+      transactionRepository.requestedMonths.clear();
+
+      await controller.goToPreviousMonth();
+      expect(controller.selectedMonth.value, DateTime(2026, 2, 1));
+      expect(transactionRepository.requestedMonths, [DateTime(2026, 2, 1)]);
+
+      transactionRepository.requestedMonths.clear();
+
+      await controller.goToNextMonth();
+      expect(controller.selectedMonth.value, DateTime(2026, 3, 1));
+      expect(transactionRepository.requestedMonths, [DateTime(2026, 3, 1)]);
+    },
+  );
 
   test(
     'SubscriptionController carrega assinatura, planos e catalogo da loja',

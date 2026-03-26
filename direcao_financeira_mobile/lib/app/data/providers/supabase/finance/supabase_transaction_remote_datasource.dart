@@ -78,9 +78,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         .eq('id', id)
         .single();
 
-    final enriched = await _enrichTransactions([
-      Map<String, dynamic>.from(row),
-    ]);
+    final enriched = await _enrichTransactions([Map<String, dynamic>.from(row)]);
     return enriched.first;
   }
 
@@ -151,6 +149,48 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
   }
 
   @override
+  Future<void> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async {
+    final userId = await userScope.getCurrentUserId();
+    final now = DateTime.now().toUtc().toIso8601String();
+    final paymentDate = transactionDate.toUtc().toIso8601String();
+
+    await client!.from(SupabaseTableNames.transactions).insert([
+      {
+        'userId': userId,
+        'type': TransactionTypeCodec.encode(TransactionType.expense),
+        'status': TransactionStatusCodec.encode(TransactionStatus.cleared),
+        'assetType': AssetTypeCodec.encode(AssetType.bankAccount),
+        'amountCents': amountCents,
+        'categoryId': expenseCategoryId,
+        'description': description,
+        'transactionDate': paymentDate,
+        'bankAccountId': bankAccountId,
+        'updatedAt': now,
+      },
+      {
+        'userId': userId,
+        'type': TransactionTypeCodec.encode(TransactionType.income),
+        'status': TransactionStatusCodec.encode(TransactionStatus.cleared),
+        'assetType': AssetTypeCodec.encode(AssetType.creditCard),
+        'amountCents': amountCents,
+        'categoryId': incomeCategoryId,
+        'description': description,
+        'transactionDate': paymentDate,
+        'creditCardId': creditCardId,
+        'updatedAt': now,
+      },
+    ]);
+  }
+
+  @override
   Future<TransactionModel> updateTransaction(
     int id, {
     int? categoryId,
@@ -190,28 +230,29 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         if (amountCents != null) {
           recalculatedPayload['amountCents'] = amountCents;
         }
+
         await client!
             .from(SupabaseTableNames.transactions)
             .update(recalculatedPayload)
             .eq('id', row['id']);
       }
     } else {
-      final payload = <String, dynamic>{};
-      if (categoryId != null) {
-        payload['categoryId'] = categoryId;
-      }
-      if (description != null) {
-        payload['description'] = description;
-      }
-      if (amountCents != null) {
-        payload['amountCents'] = amountCents;
-      }
-      if (transactionDate != null) {
-        payload['transactionDate'] = transactionDate.toUtc().toIso8601String();
-      }
-      payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
       for (final row in rowsToUpdate) {
+        final payload = <String, dynamic>{};
+        if (categoryId != null) {
+          payload['categoryId'] = categoryId;
+        }
+        if (description != null) {
+          payload['description'] = description;
+        }
+        if (amountCents != null) {
+          payload['amountCents'] = amountCents;
+        }
+        if (transactionDate != null) {
+          payload['transactionDate'] = transactionDate.toUtc().toIso8601String();
+        }
+        payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+
         await client!
             .from(SupabaseTableNames.transactions)
             .update(payload)

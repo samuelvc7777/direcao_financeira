@@ -81,6 +81,8 @@ class _FakeRealtimeClient implements RealtimeClient {
   void on(String event, void Function(dynamic payload) handler) {}
 }
 
+class _FakeRemoteSessionException implements Exception {}
+
 UserEntity _buildUser() {
   return UserEntity(
     id: 1,
@@ -140,6 +142,50 @@ void main() {
     expect(sessionStore.token, isNull);
     expect(userCache.user, isNull);
   });
+
+  testWidgets(
+    'restoreSession limpa sessao invalida e redireciona para login',
+    (tester) async {
+      final sessionStore = _FakeSessionStore()..token = 'token-invalido';
+      final userCache = _FakeUserCache()..user = _buildUser();
+      final realtimeClient = _FakeRealtimeClient();
+      final coordinator = DefaultSessionCoordinator(
+        sessionStore: sessionStore,
+        userCache: userCache,
+        realtimeClient: realtimeClient,
+        restoreRemoteSession: (_) async {
+          throw _FakeRemoteSessionException();
+        },
+      );
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          initialRoute: AppRoutes.initial,
+          getPages: [
+            GetPage(
+              name: AppRoutes.initial,
+              page: () => const Scaffold(body: Text('Initial Screen')),
+            ),
+            GetPage(
+              name: AppRoutes.login,
+              page: () => const Scaffold(body: Text('Login Screen')),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await coordinator.restoreSession();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(sessionStore.clearCalled, isTrue);
+      expect(userCache.clearCalled, isTrue);
+      expect(realtimeClient.disconnectCalled, isTrue);
+      expect(Get.currentRoute, AppRoutes.login);
+      expect(find.text('Login Screen'), findsOneWidget);
+    },
+  );
 
   testWidgets('expireSession encerra sessao e redireciona para login', (
     tester,

@@ -237,43 +237,42 @@ class RidesListSection extends GetView<JourneyController> {
                       ),
                     ),
                     child: Obx(
-                      () => Row(
+                      () {
+                        final state = controller.ridesSectionState;
+                        return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildTab(
                             context,
                             'Todos',
                             Icons.layers,
-                            controller.selectedRideStatusFilter.value ==
-                                'Todos',
+                            state.selectedStatusFilter == 'Todos',
                             AppColors.royalBlue,
                           ),
                           _buildTab(
                             context,
                             'Pendentes',
                             Icons.hourglass_empty,
-                            controller.selectedRideStatusFilter.value ==
-                                'Pendentes',
+                            state.selectedStatusFilter == 'Pendentes',
                             AppColors.amber,
                           ),
                           _buildTab(
                             context,
                             'Finalizados',
                             Icons.check_circle_outline,
-                            controller.selectedRideStatusFilter.value ==
-                                'Finalizados',
+                            state.selectedStatusFilter == 'Finalizados',
                             AppColors.emerald,
                           ),
                           _buildTab(
                             context,
                             'Cancelados',
                             Icons.cancel_outlined,
-                            controller.selectedRideStatusFilter.value ==
-                                'Cancelados',
+                            state.selectedStatusFilter == 'Cancelados',
                             AppColors.rose,
                           ),
                         ],
-                      ),
+                      );
+                      },
                     ),
                   ),
                 ),
@@ -282,8 +281,9 @@ class RidesListSection extends GetView<JourneyController> {
                   padding: EdgeInsets.symmetric(
                     horizontal: Responsive.hp(context, 5.0).clamp(16.0, 24.0),
                   ),
-                  child: Obx(
-                    () => Container(
+                  child: Obx(() {
+                    final state = controller.ridesSectionState;
+                    return Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: Responsive.hp(
                           context,
@@ -308,7 +308,7 @@ class RidesListSection extends GetView<JourneyController> {
                             width: Responsive.hp(context, 2.0).clamp(6.0, 10.0),
                           ),
                           Text(
-                            '${controller.ridesHistoryTotalCount.value} corridas',
+                            '${state.totalVisibleCount} corridas',
                             style: TextStyle(
                               color: AppColors.royalBlue,
                               fontSize: Responsive.sp(
@@ -320,7 +320,7 @@ class RidesListSection extends GetView<JourneyController> {
                           ),
                           const Spacer(),
                           Text(
-                            controller.dateLabel,
+                            state.periodLabel,
                             style: TextStyle(
                               color: AppColors.royalBlue.withValues(alpha: 0.85),
                               fontSize: Responsive.sp(
@@ -334,13 +334,13 @@ class RidesListSection extends GetView<JourneyController> {
                           ),
                         ],
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                 ),
                 SizedBox(height: Responsive.vp(context, 2.0).clamp(12.0, 20.0)),
                 Obx(() {
-                  final list = controller.filteredRidesList;
-                  if (list.isEmpty) {
+                  final state = controller.ridesSectionState;
+                  if (state.isEmpty) {
                     return Padding(
                       padding: EdgeInsets.all(
                         Responsive.sp(context, 32.0).clamp(24.0, 40.0),
@@ -349,14 +349,13 @@ class RidesListSection extends GetView<JourneyController> {
                         child: Column(
                           children: [
                             Text(
-                              controller.ridesError.value ??
-                                  'Nenhuma corrida encontrada',
+                              state.errorMessage ?? 'Nenhuma corrida encontrada',
                               style: TextStyle(
                                 color: colorScheme.onSurface.withValues(alpha: 0.54),
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            if (controller.ridesError.value != null) ...[
+                            if (state.errorMessage != null) ...[
                               const SizedBox(height: 12),
                               OutlinedButton(
                                 onPressed: controller.retryJourneyData,
@@ -371,7 +370,7 @@ class RidesListSection extends GetView<JourneyController> {
 
                   return Column(
                     children: [
-                      for (final ride in list)
+                      for (final ride in state.visibleRides)
                         _RideHistoryCard(
                           ride: ride,
                           onTap: () => controller.openRideDetails(ride),
@@ -450,7 +449,8 @@ class _RidePaginationFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final visibleCount = controller.filteredRidesCount;
+      final state = controller.ridesSectionState;
+      final visibleCount = state.visibleCount;
 
       if (visibleCount == 0) {
         return const SizedBox.shrink();
@@ -475,7 +475,7 @@ class _RidePaginationFooter extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (controller.isLoadingMoreRides.value) ...[
+            if (state.isLoadingMore) ...[
               const SizedBox(height: 10),
               const AppLoadingIndicator(
                 size: AppLoadingSize.compact,

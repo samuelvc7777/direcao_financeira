@@ -29,7 +29,7 @@ class TransactionsView extends GetView<TransactionsController> {
         preferredSize: const Size.fromHeight(kToolbarHeight + 40),
         child: Obx(
           () => CustomAppBar(
-            title: 'Transacoes',
+            title: 'Transações',
             subtitle: controller.selectedMonthSubtitle,
             leadingIcon: Icons.receipt_long_rounded,
             showBackButton: false,
@@ -45,7 +45,7 @@ class TransactionsView extends GetView<TransactionsController> {
       body: Obx(() {
         if (controller.isLoading.value) {
           return const AppLoadingScreen(
-            label: 'Carregando transacoes',
+            label: 'Carregando transações',
             accentColor: AppColors.violet,
           );
         }
@@ -183,13 +183,13 @@ class TransactionsView extends GetView<TransactionsController> {
         backgroundColor: surfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          'Excluir Transacao',
+          'Excluir Transação',
           style: TextStyle(color: titleColor, fontWeight: FontWeight.bold),
         ),
         content: Text(
           isInstallment
-              ? 'Esta transacao faz parte de uma compra parcelada. O que deseja fazer?'
-              : 'Deseja realmente excluir esta transacao?',
+              ? 'Esta transação faz parte de uma compra parcelada. O que deseja fazer?'
+              : 'Deseja realmente excluir esta transação?',
           style: TextStyle(color: bodyColor),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

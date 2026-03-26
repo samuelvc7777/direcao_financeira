@@ -196,6 +196,54 @@ class JourneyController extends GetxController {
         ridesError.value;
   }
 
+  JourneyHistorySectionState get historySectionState =>
+      JourneyHistorySectionState(
+        shifts: List<ShiftEntity>.unmodifiable(shiftsList),
+        totalCount: shiftsTotalCount.value,
+        isLoadingMore: isLoadingMoreShifts.value,
+        hasMore: hasMoreShifts.value,
+        errorMessage: historyError.value,
+      );
+
+  JourneyRidesSectionState get ridesSectionState => JourneyRidesSectionState(
+    selectedStatusFilter: selectedRideStatusFilter.value,
+    visibleRides: List<RideEntity>.unmodifiable(filteredRidesList),
+    totalVisibleCount: ridesHistoryTotalCount.value,
+    periodLabel: dateLabel,
+    isLoadingMore: isLoadingMoreRides.value,
+    errorMessage: ridesError.value,
+  );
+
+  JourneyPaymentMethodsSectionState get paymentMethodsSectionState =>
+      JourneyPaymentMethodsSectionState(
+        items: List<PaymentMethodSummaryItem>.unmodifiable(paymentMethodSummary),
+        totalFinishedRides: paymentMethodFinishedRidesCount.value,
+        mappedCount: mappedPaymentMethodCount,
+        isExpanded: isPaymentMethodSectionExpanded.value,
+      );
+
+  JourneyOperationalSummaryData get operationalSummaryData =>
+      JourneyOperationalSummaryData(
+        netEarningsCents: operationalNetEarningsCents,
+        grossEarningsCents: operationalGrossEarningsCents,
+        totalCostsCents: operationalTotalCostsCents,
+        totalRides: totalRides.value,
+        margin: operationalMargin,
+        isCostBreakdownExpanded: isOperationalCostBreakdownExpanded.value,
+      );
+
+  JourneyOperationalCostBreakdownData get operationalCostBreakdownData =>
+      JourneyOperationalCostBreakdownData(
+        variableCostsCents: operationalVariableCostsCents,
+        fixedCostsCents: operationalFixedCostsCents,
+        variableItems: List<OperationalCostBreakdownItem>.unmodifiable(
+          operationalVariableCostItems,
+        ),
+        fixedItems: List<OperationalCostBreakdownItem>.unmodifiable(
+          operationalFixedCostItems,
+        ),
+      );
+
   @override
   void onInit() {
     super.onInit();
@@ -398,6 +446,16 @@ class JourneyController extends GetxController {
     return (litersUsed * settings.fuelPricePerLiterCents).round();
   }
 
+  int get rideAnalysisFuelCostsCents {
+    final settings = costsGainsSettings.value;
+    if (settings == null || settings.kmPerLiter <= 0) {
+      return 0;
+    }
+
+    final litersUsed = rideAnalysisTotalKm / settings.kmPerLiter;
+    return (litersUsed * settings.fuelPricePerLiterCents).round();
+  }
+
   int get operationalVariablePlatformFeeCents {
     final settings = costsGainsSettings.value;
     if (settings == null ||
@@ -579,13 +637,11 @@ class JourneyController extends GetxController {
     final started = await shiftLifecycleCoordinator.startShift(
       onTrackingStatusResolved: (status) => trackingStatus.value = status,
       askToOpenTrackingSettings: _showStartShiftLocationDialog,
-      openTrackingSettings: (
-        status, {
-        bool showFollowUpWarning = true,
-      }) => _openTrackingSettings(
-        status: status,
-        showFollowUpWarning: showFollowUpWarning,
-      ),
+      openTrackingSettings: (status, {bool showFollowUpWarning = true}) =>
+          _openTrackingSettings(
+            status: status,
+            showFollowUpWarning: showFollowUpWarning,
+          ),
       showSuccess: _showSuccess,
       showError: _showError,
       normalizeErrorMessage: _normalizeErrorMessage,
@@ -1435,7 +1491,9 @@ class JourneyController extends GetxController {
     if (isTrafficLightActive.value) {
       isTrafficLightActive.value = false;
       isWaitingAccessibilityActivation.value = false;
-      await runtimeCoordinator.accessibilityService.setTrafficLightActive(false);
+      await runtimeCoordinator.accessibilityService.setTrafficLightActive(
+        false,
+      );
       return;
     }
 
@@ -1498,24 +1556,21 @@ class JourneyController extends GetxController {
       isAssistantActive: isAssistantActive.value,
       onAssistantStateChanged: (isActive) => isAssistantActive.value = isActive,
       onBusyStateChanged: (isBusy) => isAssistantBusy.value = isBusy,
-      showSuccess: (title, message) =>
-          _showSnackbar(
-            title: title,
-            message: message,
-            backgroundColor: const Color(0xFF03A696),
-          ),
-      showWarning: (title, message) =>
-          _showSnackbar(
-            title: title,
-            message: message,
-            backgroundColor: Colors.orangeAccent,
-          ),
-      showError: (title, message) =>
-          _showSnackbar(
-            title: title,
-            message: message,
-            backgroundColor: Colors.redAccent,
-          ),
+      showSuccess: (title, message) => _showSnackbar(
+        title: title,
+        message: message,
+        backgroundColor: const Color(0xFF03A696),
+      ),
+      showWarning: (title, message) => _showSnackbar(
+        title: title,
+        message: message,
+        backgroundColor: Colors.orangeAccent,
+      ),
+      showError: (title, message) => _showSnackbar(
+        title: title,
+        message: message,
+        backgroundColor: Colors.redAccent,
+      ),
     );
   }
 }
@@ -1528,6 +1583,97 @@ class OperationalCostBreakdownItem {
 
   final String label;
   final int amountCents;
+}
+
+class JourneyHistorySectionState {
+  const JourneyHistorySectionState({
+    required this.shifts,
+    required this.totalCount,
+    required this.isLoadingMore,
+    required this.hasMore,
+    required this.errorMessage,
+  });
+
+  final List<ShiftEntity> shifts;
+  final int totalCount;
+  final bool isLoadingMore;
+  final bool hasMore;
+  final String? errorMessage;
+
+  int get loadedCount => shifts.length;
+  bool get isEmpty => shifts.isEmpty;
+}
+
+class JourneyRidesSectionState {
+  const JourneyRidesSectionState({
+    required this.selectedStatusFilter,
+    required this.visibleRides,
+    required this.totalVisibleCount,
+    required this.periodLabel,
+    required this.isLoadingMore,
+    required this.errorMessage,
+  });
+
+  final String selectedStatusFilter;
+  final List<RideEntity> visibleRides;
+  final int totalVisibleCount;
+  final String periodLabel;
+  final bool isLoadingMore;
+  final String? errorMessage;
+
+  int get visibleCount => visibleRides.length;
+  bool get isEmpty => visibleRides.isEmpty;
+}
+
+class JourneyPaymentMethodsSectionState {
+  const JourneyPaymentMethodsSectionState({
+    required this.items,
+    required this.totalFinishedRides,
+    required this.mappedCount,
+    required this.isExpanded,
+  });
+
+  final List<PaymentMethodSummaryItem> items;
+  final int totalFinishedRides;
+  final int mappedCount;
+  final bool isExpanded;
+
+  int get unmappedCount => totalFinishedRides - mappedCount;
+  bool get hasUnmappedRides => unmappedCount > 0;
+}
+
+class JourneyOperationalSummaryData {
+  const JourneyOperationalSummaryData({
+    required this.netEarningsCents,
+    required this.grossEarningsCents,
+    required this.totalCostsCents,
+    required this.totalRides,
+    required this.margin,
+    required this.isCostBreakdownExpanded,
+  });
+
+  final int netEarningsCents;
+  final int grossEarningsCents;
+  final int totalCostsCents;
+  final int totalRides;
+  final double margin;
+  final bool isCostBreakdownExpanded;
+
+  bool get isPositive => netEarningsCents >= 0;
+}
+
+class JourneyOperationalCostBreakdownData {
+  const JourneyOperationalCostBreakdownData({
+    required this.variableCostsCents,
+    required this.fixedCostsCents,
+    required this.variableItems,
+    required this.fixedItems,
+  });
+
+  final int variableCostsCents;
+  final int fixedCostsCents;
+  final List<OperationalCostBreakdownItem> variableItems;
+  final List<OperationalCostBreakdownItem> fixedItems;
 }
 
 class PaymentMethodSummaryItem {

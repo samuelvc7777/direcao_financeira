@@ -77,7 +77,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
 
   int get _rideAnalysisGrossCents => controller.grossEarningsCents.value;
 
-  int get _rideAnalysisFuelCostCents => controller.operationalFuelCostsCents;
+  int get _rideAnalysisFuelCostCents => controller.rideAnalysisFuelCostsCents;
 
   int get _rideAnalysisProfitCents =>
       _rideAnalysisGrossCents - _rideAnalysisFuelCostCents;
@@ -101,7 +101,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
           const SizedBox(width: 4),
           Expanded(
             child: Text(
-              'MÃ©dias por ${partes.join(' e ')} â€” amostra pequena, valores estimados',
+              'Médias por ${partes.join(' e ')} — amostra pequena, valores estimados',
               style: TextStyle(
                 color: context.theme.colorScheme.onSurface.withValues(
                   alpha: 0.5,
@@ -222,7 +222,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Nenhum turno registrado neste perÃ­odo',
+                  'Nenhum turno registrado neste período',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: context.theme.colorScheme.onSurface.withValues(
@@ -232,7 +232,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'As mÃ©dias por viagem, hora e km dependem do tempo de turno registrado pelo timer.',
+                  'As médias por viagem, hora e km dependem do tempo de turno registrado pelo timer.',
                   style: TextStyle(
                     color: context.theme.colorScheme.onSurface.withValues(
                       alpha: 0.45,
@@ -346,7 +346,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AnÃ¡lise por corrida',
+                    'Análise por corrida',
                     style: TextStyle(
                       color: context.theme.colorScheme.onSurface,
                       fontSize: 15,
@@ -355,7 +355,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'MÃ©dias por corrida com base no bruto e no combustÃ­vel por km rodado',
+                    'Médias por corrida com base no bruto e no combustível por km rodado',
                     style: TextStyle(
                       color: context.theme.colorScheme.onSurface.withValues(
                         alpha: 0.5,
@@ -429,7 +429,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 icon: Icons.trending_up_rounded,
                 title: 'Ganhos',
                 subtitle:
-                    'Valor bruto recebido pelas corridas â€” mÃ©dias por viagem, hora e km',
+                    'Valor bruto recebido pelas corridas — médias por viagem, hora e km',
                 color: AppColors.royalBlue,
               ),
               const SizedBox(height: 10),
@@ -507,7 +507,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 icon: Icons.local_gas_station_rounded,
                 title: 'Custos das corridas',
                 subtitle:
-                    'Custo baseado no combustÃ­vel consumido pelo km rodado nas corridas',
+                    'Custo baseado no combustível consumido pelo km rodado nas corridas',
                 color: AppColors.rose,
               ),
               const SizedBox(height: 10),
@@ -578,7 +578,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 icon: Icons.savings_rounded,
                 title: 'Lucro das corridas',
                 subtitle:
-                    'Ganho bruto menos o custo do combustÃ­vel calculado por km rodado',
+                    'Ganho bruto menos o custo do combustível calculado por km rodado',
                 color: AppColors.emerald,
               ),
               const SizedBox(height: 10),

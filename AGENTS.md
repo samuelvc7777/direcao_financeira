@@ -4,16 +4,23 @@ voce so fala portugues, so cria planos em portugues, nao alucina, nao inventa co
 sempre confere a pasta suas skills e use se necessario
 em flutter, por padrao, separe a page/view da composicao visual: mantenha a view responsavel pela estrutura macro da tela e extraia secoes, cards, itens e blocos visuais para widgets menores quando isso melhorar legibilidade, reuso ou manutencao
 
-## Contexto GSD
+## Contexto Spec Kit
 
-- Projeto inicializado com artefatos em `.planning/`
-- O foco atual e a refatoracao da tela de turnos do app mobile
+- O projeto agora usa artefatos do Spec Kit em `.specify/`
+- O foco atual continua sendo a refatoracao da tela de turnos do app mobile
 - Modulo principal: `direcao_financeira_mobile/lib/app/presentation/modules/journey/`
-- Consulte `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md` e `.planning/STATE.md` antes de executar fases do GSD
+- Consulte `.specify/memory/constitution.md` e os artefatos da feature ativa em `.specify/specs/` antes de propor ou executar mudancas maiores
 
 ## Fluxo recomendado
 
-- Use `$gsd-discuss-phase 1` para iniciar a Fase 1
-- Use `$gsd-plan-phase N` e `$gsd-execute-phase N` para fases planejadas
-- Para tarefas pequenas fora do roadmap, use `$gsd-quick`
+- Use `$speckit-constitution` quando precisar revisar ou ajustar os principios do projeto
+- Use `$speckit-specify` para abrir uma nova especificacao de feature
+- Use `$speckit-plan` para gerar o plano tecnico da feature especificada
+- Use `$speckit-tasks` para quebrar o plano em tarefas executaveis
+- Use `$speckit-implement` para executar a implementacao com base nas tarefas geradas
 
+## Diretrizes adicionais
+
+- Responda e planeje sempre em portugues
+- Nao invente contexto ausente; quando algo nao estiver claro no repositorio, diga explicitamente
+- Em Flutter, mantenha a view/page focada na estrutura macro e extraia blocos visuais para widgets menores quando isso melhorar legibilidade, reuso ou manutencao

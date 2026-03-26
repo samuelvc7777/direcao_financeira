@@ -111,7 +111,6 @@ class _FilterTab extends StatelessWidget {
           vertical: verticalPadding,
         ),
         decoration: BoxDecoration(
-          gradient: null,
           color: isSelected
               ? accentColor.withValues(alpha: isDark ? 0.18 : 0.12)
               : (isDark

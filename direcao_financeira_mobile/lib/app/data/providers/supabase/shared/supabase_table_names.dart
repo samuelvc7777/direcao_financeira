@@ -6,6 +6,8 @@ class SupabaseTableNames {
   static const creditCards = 'CreditCard';
   static const categories = 'Category';
   static const transactions = 'Transaction';
+  static const creditCardInvoices = 'CreditCardInvoice';
+  static const invoicePayments = 'InvoicePayment';
   static const subscriptions = 'Subscription';
   static const plans = 'Plan';
   static const shifts = 'Shift';

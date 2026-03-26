@@ -40,7 +40,7 @@ class TransactionTypeSelectorSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Nova transaÃ§Ã£o',
+                      'Nova transação',
                       style: TextStyle(
                         color: colorScheme.onSurface,
                         fontSize: 20,
@@ -84,7 +84,7 @@ class TransactionTypeSelectorSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: _SelectorItem(
-                    title: 'Nova SaÃ­da',
+                    title: 'Nova Saída',
                     subtitle: 'Despesas e gastos',
                     icon: Icons.arrow_downward_rounded,
                     color: AppColors.rose,
@@ -118,8 +118,8 @@ class TransactionTypeSelectorSheet extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _SelectorItemRow(
-            title: 'Compra no CartÃ£o',
-            subtitle: 'CrÃ©dito â€¢ Parcelas â€¢ Fatura',
+            title: 'Compra no Cartão',
+            subtitle: 'Crédito • Parcelas • Fatura',
             icon: Icons.credit_card_rounded,
             color: AppColors.violet,
             onTap: () {

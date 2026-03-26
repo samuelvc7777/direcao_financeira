@@ -36,6 +36,9 @@ enum TransactionStatus {
   pending;
 }
 
+const String kInternalInvoicePaymentDescriptionPrefix =
+    '[sistema] pagamento_fatura:';
+
 class TransactionEntity {
   final int id;
   final TransactionType type;
@@ -47,6 +50,7 @@ class TransactionEntity {
   final DateTime transactionDate;
   final int? bankAccountId;
   final int? creditCardId;
+  final int? invoiceId;
   final String? installmentGroupId;
   final int? installmentNumber;
   final int? installmentCount;
@@ -68,6 +72,7 @@ class TransactionEntity {
     required this.transactionDate,
     this.bankAccountId,
     this.creditCardId,
+    this.invoiceId,
     this.installmentGroupId,
     this.installmentNumber,
     this.installmentCount,
@@ -78,4 +83,24 @@ class TransactionEntity {
   });
 
   double get amount => amountCents / 100.0;
+
+  bool get isInternalInvoicePayment =>
+      description.startsWith(kInternalInvoicePaymentDescriptionPrefix);
+
+  int get displayedAmountCents {
+    final count = installmentCount;
+    final number = installmentNumber;
+    if (count != null && count > 1) {
+      final base = amountCents ~/ count;
+      final remainder = amountCents % count;
+      if (number != null && number > 0 && number <= remainder) {
+        return base + 1;
+      }
+      return base;
+    }
+
+    return amountCents;
+  }
+
+  double get displayedAmount => displayedAmountCents / 100.0;
 }

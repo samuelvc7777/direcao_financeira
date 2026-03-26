@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/dashboard/dashboard_refresh_notifier.dart';
 import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
@@ -12,6 +13,7 @@ class CreditCardsController extends GetxController {
     required this.updateCreditCardUseCase,
     required this.deactivateCreditCardUseCase,
     required this.reactivateCreditCardUseCase,
+    required this.dashboardRefreshNotifier,
   });
 
   final LoadCreditCardsUseCase loadCreditCardsUseCase;
@@ -19,6 +21,7 @@ class CreditCardsController extends GetxController {
   final UpdateCreditCardUseCase updateCreditCardUseCase;
   final DeactivateCreditCardUseCase deactivateCreditCardUseCase;
   final ReactivateCreditCardUseCase reactivateCreditCardUseCase;
+  final DashboardRefreshNotifier dashboardRefreshNotifier;
 
   final isLoading = true.obs;
   final isSubmitting = false.obs;
@@ -157,10 +160,11 @@ class CreditCardsController extends GetxController {
         ? await deactivateCreditCardUseCase(card.id)
         : await reactivateCreditCardUseCase(card.id);
 
-    result.fold(
-      (failure) => _showFeedback('Erro', failure.message, isError: true),
+    await result.fold(
+      (failure) async => _showFeedback('Erro', failure.message, isError: true),
       (_) async {
         await loadCreditCards();
+        dashboardRefreshNotifier.requestRefresh();
         if (Get.isBottomSheetOpen ?? false) {
           Get.back();
         }
@@ -178,10 +182,11 @@ class CreditCardsController extends GetxController {
     isSubmitting.value = true;
     final result = await action();
 
-    result.fold(
-      (failure) => _showFeedback('Erro', failure.message, isError: true),
+    await result.fold(
+      (failure) async => _showFeedback('Erro', failure.message, isError: true),
       (_) async {
         await loadCreditCards();
+        dashboardRefreshNotifier.requestRefresh();
         if (Get.isBottomSheetOpen ?? false) {
           Get.back();
         }
@@ -193,16 +198,27 @@ class CreditCardsController extends GetxController {
   }
 
   void _showFeedback(String title, String message, {bool isError = false}) {
-    AppSnackbar.show(
-      title,
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(16),
-      backgroundColor: isError
-          ? const Color(0xFFBF4124).withValues(alpha: 0.12)
-          : const Color(0xFF03A696).withValues(alpha: 0.12),
-      colorText: Get.theme.colorScheme.onSurface,
-    );
+    try {
+      if (Get.testMode || Get.overlayContext == null) {
+        debugPrint(
+          '[CreditCardsController] Feedback suprimido: $title - $message',
+        );
+        return;
+      }
+
+      AppSnackbar.show(
+        title,
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        backgroundColor: isError
+            ? const Color(0xFFBF4124).withValues(alpha: 0.12)
+            : const Color(0xFF03A696).withValues(alpha: 0.12),
+        colorText: Get.theme.colorScheme.onSurface,
+      );
+    } catch (_) {
+      debugPrint('[CreditCardsController] Feedback suprimido: $title - $message');
+    }
   }
 
   Color colorFromHex(String colorHex) {

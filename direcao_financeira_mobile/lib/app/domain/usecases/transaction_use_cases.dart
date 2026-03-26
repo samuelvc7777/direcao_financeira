@@ -76,6 +76,31 @@ class CreateTransactionUseCase {
   }
 }
 
+class CreateInvoicePaymentUseCase {
+  final ITransactionRepository repository;
+  CreateInvoicePaymentUseCase(this.repository);
+
+  Future<Either<Failure, void>> call({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async {
+    return await repository.createInvoicePayment(
+      bankAccountId: bankAccountId,
+      creditCardId: creditCardId,
+      amountCents: amountCents,
+      expenseCategoryId: expenseCategoryId,
+      incomeCategoryId: incomeCategoryId,
+      description: description,
+      transactionDate: transactionDate,
+    );
+  }
+}
+
 class UpdateTransactionUseCase {
   final ITransactionRepository repository;
 

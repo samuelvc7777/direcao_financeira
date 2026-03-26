@@ -92,6 +92,36 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
   }
 
   @override
+  Future<void> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async {
+    await createTransaction(
+      type: TransactionType.expense,
+      assetType: AssetType.bankAccount,
+      amountCents: amountCents,
+      categoryId: expenseCategoryId,
+      description: description,
+      transactionDate: transactionDate,
+      bankAccountId: bankAccountId,
+    );
+    await createTransaction(
+      type: TransactionType.income,
+      assetType: AssetType.creditCard,
+      amountCents: amountCents,
+      categoryId: incomeCategoryId,
+      description: description,
+      transactionDate: transactionDate,
+      creditCardId: creditCardId,
+    );
+  }
+
+  @override
   Future<TransactionModel> updateTransaction(
     int id, {
     int? categoryId,

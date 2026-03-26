@@ -19,6 +19,16 @@ abstract class ITransactionRepository {
     int? installmentCount,
   });
 
+  Future<Either<Failure, void>> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  });
+
   Future<Either<Failure, TransactionEntity>> updateTransaction(
     int id, {
     int? categoryId,

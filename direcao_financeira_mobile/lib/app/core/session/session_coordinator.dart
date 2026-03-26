@@ -43,11 +43,19 @@ class DefaultSessionCoordinator implements SessionCoordinator {
       return;
     }
 
-    if (restoreRemoteSession != null) {
-      await restoreRemoteSession!(token);
-    }
+    try {
+      if (restoreRemoteSession != null) {
+        await restoreRemoteSession!(token);
+      }
 
-    realtimeClient.connect(token: token);
+      realtimeClient.connect(token: token);
+    } catch (_) {
+      await _clearLocalSession();
+
+      if (Get.currentRoute != AppRoutes.login) {
+        Get.offAllNamed(AppRoutes.login);
+      }
+    }
   }
 
   @override
@@ -55,6 +63,10 @@ class DefaultSessionCoordinator implements SessionCoordinator {
     if (remoteLogout != null) {
       await remoteLogout!();
     }
+    await _clearLocalSession();
+  }
+
+  Future<void> _clearLocalSession() async {
     realtimeClient.disconnect();
     await sessionStore.clearToken();
     await userCache.clearUser();

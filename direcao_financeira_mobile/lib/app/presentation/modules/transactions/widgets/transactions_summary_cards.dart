@@ -33,7 +33,7 @@ class TransactionsSummaryCards extends StatelessWidget {
         SizedBox(width: spacing),
         Expanded(
           child: _SummaryCard(
-            label: 'SaÃ­das',
+            label: 'Saídas',
             value: expenseAmount,
             color: AppColors.rose,
             icon: Icons.arrow_downward_rounded,
@@ -70,19 +70,12 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = context.theme.colorScheme;
     final isDark = context.theme.brightness == Brightness.dark;
-    final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = Responsive.hp(context, 3.2).clamp(8.0, 10.0);
     final verticalPadding = Responsive.vp(context, 1.5).clamp(10.0, 12.0);
     final borderRadius = Responsive.hp(context, 5.0).clamp(16.0, 20.0);
     final iconSize = Responsive.sp(context, 16).clamp(14.0, 16.0);
-    final labelSize = Responsive.sp(
-      context,
-      width < 380 ? 11 : 12,
-    ).clamp(10.0, 12.0);
-    final valueSize = Responsive.sp(
-      context,
-      width < 380 ? 12 : 14,
-    ).clamp(12.0, 14.0);
+    final labelSize = Responsive.sp(context, 12).clamp(10.0, 12.0);
+    final valueSize = Responsive.sp(context, 14).clamp(12.0, 14.0);
     final contentSpacing = Responsive.vp(context, 1.0).clamp(6.0, 8.0);
 
     return Container(

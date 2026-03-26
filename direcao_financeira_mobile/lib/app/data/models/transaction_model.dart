@@ -13,6 +13,7 @@ class TransactionModel extends TransactionEntity {
     required super.transactionDate,
     super.bankAccountId,
     super.creditCardId,
+    super.invoiceId,
     super.installmentGroupId,
     super.installmentNumber,
     super.installmentCount,
@@ -47,6 +48,7 @@ class TransactionModel extends TransactionEntity {
       transactionDate: DateTime.parse(json['transactionDate'] as String),
       bankAccountId: json['bankAccountId'] as int?,
       creditCardId: json['creditCardId'] as int?,
+      invoiceId: json['invoiceId'] as int?,
       installmentGroupId: json['installmentGroupId'] as String?,
       installmentNumber: json['installmentNumber'] as int?,
       installmentCount: json['installmentCount'] as int?,
@@ -70,6 +72,7 @@ class TransactionModel extends TransactionEntity {
       'transactionDate': transactionDate.toIso8601String(),
       if (bankAccountId != null) 'bankAccountId': bankAccountId,
       if (creditCardId != null) 'creditCardId': creditCardId,
+      if (invoiceId != null) 'invoiceId': invoiceId,
     };
   }
 }

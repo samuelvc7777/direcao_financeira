@@ -90,8 +90,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
                           ).clamp(14.0, 18.0),
                         ),
                       ),
-                      Obx(
-                        () => Container(
+                      Obx(() {
+                        final state = controller.historySectionState;
+                        return Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: Responsive.hp(
                               context,
@@ -126,7 +127,7 @@ class ShiftHistorySection extends GetView<JourneyController> {
                                 ).clamp(6.0, 10.0),
                               ),
                               Text(
-                                '${controller.shiftsTotalCount.value} turnos',
+                                '${state.totalCount} turnos',
                                 style: TextStyle(
                                   color: AppColors.royalBlue,
                                   fontSize: Responsive.sp(
@@ -138,15 +139,15 @@ class ShiftHistorySection extends GetView<JourneyController> {
                               ),
                             ],
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ],
                   ),
                 ),
                 SizedBox(height: Responsive.vp(context, 2.0).clamp(12.0, 20.0)),
                 Obx(() {
-                  final list = controller.shiftsList;
-                  if (list.isEmpty) {
+                  final state = controller.historySectionState;
+                  if (state.isEmpty) {
                     return Padding(
                       padding: EdgeInsets.all(
                         Responsive.sp(context, 32.0).clamp(24.0, 40.0),
@@ -155,14 +156,13 @@ class ShiftHistorySection extends GetView<JourneyController> {
                         child: Column(
                           children: [
                             Text(
-                              controller.historyError.value ??
-                                  'Nenhum turno encontrado',
+                              state.errorMessage ?? 'Nenhum turno encontrado',
                               style: TextStyle(
                                 color: colorScheme.onSurface.withValues(alpha: 0.54),
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            if (controller.historyError.value != null) ...[
+                            if (state.errorMessage != null) ...[
                               const SizedBox(height: 12),
                               OutlinedButton(
                                 onPressed: controller.retryJourneyData,
@@ -177,7 +177,7 @@ class ShiftHistorySection extends GetView<JourneyController> {
 
                   return Column(
                     children: [
-                      for (final shift in list)
+                      for (final shift in state.shifts)
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: Responsive.hp(
@@ -233,8 +233,9 @@ class _ShiftPaginationFooter extends StatelessWidget {
     final colorScheme = context.theme.colorScheme;
 
     return Obx(() {
-      final totalCount = controller.shiftsTotalCount.value;
-      final loadedCount = controller.shiftsList.length;
+      final state = controller.historySectionState;
+      final totalCount = state.totalCount;
+      final loadedCount = state.loadedCount;
 
       if (loadedCount == 0) {
         return const SizedBox.shrink();
@@ -257,14 +258,14 @@ class _ShiftPaginationFooter extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (controller.isLoadingMoreShifts.value) ...[
+            if (state.isLoadingMore) ...[
               const SizedBox(height: 10),
               const AppLoadingIndicator(
                 size: AppLoadingSize.compact,
                 accentColor: AppColors.royalBlue,
                 onDark: true,
               ),
-            ] else if (controller.hasMoreShifts.value) ...[
+            ] else if (state.hasMore) ...[
               const SizedBox(height: 10),
               Text(
                 'Role para carregar mais turnos',

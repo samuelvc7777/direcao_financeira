@@ -129,6 +129,53 @@ class TransactionRepository implements ITransactionRepository {
   }
 
   @override
+  Future<Either<Failure, void>> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async {
+    try {
+      await dataSource.createInvoicePayment(
+        bankAccountId: bankAccountId,
+        creditCardId: creditCardId,
+        amountCents: amountCents,
+        expenseCategoryId: expenseCategoryId,
+        incomeCategoryId: incomeCategoryId,
+        description: description,
+        transactionDate: transactionDate,
+      );
+
+      return const Right(null);
+    } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.createInvoicePayment',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao pagar fatura do cartao.',
+        ),
+      );
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.createInvoicePayment',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao pagar fatura do cartao.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, TransactionEntity>> updateTransaction(
     int id, {
     int? categoryId,

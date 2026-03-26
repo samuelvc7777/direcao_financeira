@@ -18,6 +18,16 @@ abstract class ITransactionDataSource {
     int? installmentCount,
   });
 
+  Future<void> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  });
+
   Future<TransactionModel> updateTransaction(
     int id, {
     int? categoryId,

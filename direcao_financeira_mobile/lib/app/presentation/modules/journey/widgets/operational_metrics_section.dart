@@ -66,7 +66,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'MÃ©tricas Operacionais',
+                        'Métricas Operacionais',
                         style: context.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
@@ -130,7 +130,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Lucro LÃ­quido',
+                            'Lucro Líquido',
                             style: context.textTheme.bodyLarge?.copyWith(
                               color: Colors.white70,
                               fontSize: 13,
@@ -344,7 +344,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                       child: Column(
                         children: [
                           _CostDetailGroupCard(
-                            title: 'Custos VariÃ¡veis',
+                            title: 'Custos Variáveis',
                             totalCents:
                                 controller.operationalVariableCostsCents,
                             items: controller.operationalVariableCostItems,
@@ -374,14 +374,14 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
           const _RideAnalysisSection(),
 
           if (DateTime.now().microsecondsSinceEpoch == -1) ...[
-            // AnÃ¡lise por corrida
+            // Análise por corrida
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AnÃ¡lise por corrida',
+                    'Análise por corrida',
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -389,7 +389,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'MÃ©dias de desempenho, ganho e custo variÃ¡vel',
+                    'Médias de desempenho, ganho e custo variável',
                     style: context.textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondaryDark,
                     ),
@@ -817,7 +817,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
                                   controller
                                       .isPaymentMethodSectionExpanded
                                       .value
-                                  ? -0.5 // Roda o Ã­cone apontando p/ cima dependendo do Ã­cone original (-0.5 = 180 graus invertido)
+                                  ? -0.5 // Roda o ícone apontando p/ cima dependendo do ícone original (-0.5 = 180 graus invertido)
                                   : 0,
                               duration: const Duration(milliseconds: 250),
                               curve: Curves.easeOutCubic,
@@ -857,7 +857,7 @@ class _OperationalMetricsSectionState extends State<OperationalMetricsSection> {
     Color textColor = Colors.white,
   }) {
     return Container(
-      // Garantir altura mÃ­nima para todos os cards ficarem iguais
+      // Garantir altura mínima para todos os cards ficarem iguais
       constraints: BoxConstraints(
         minHeight: Responsive.vp(context, 15.0).clamp(110.0, 140.0),
       ),

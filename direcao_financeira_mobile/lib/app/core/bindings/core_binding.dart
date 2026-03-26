@@ -97,7 +97,12 @@ class CoreBinding extends Bindings {
         restoreRemoteSession:
             environment.backendProvider == BackendProviderKind.supabase
             ? (token) async {
-                await Get.find<SupabaseClient>().auth.setSession(token);
+                final auth = Get.find<SupabaseClient>().auth;
+                if (auth.currentSession != null) {
+                  return;
+                }
+
+                await auth.setSession(token);
               }
             : null,
         remoteLogout:

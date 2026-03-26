@@ -117,18 +117,31 @@ class _CardsHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = NumberFormat.simpleCurrency(locale: 'pt_BR');
     final totalLimit = cards.fold<double>(0, (sum, item) => sum + item.limit);
-    final totalUsed = cards.fold<double>(
+    final totalCommitted = cards.fold<double>(
       0,
       (sum, item) => sum + item.usedLimit,
     );
-    final totalAvailable = totalLimit - totalUsed;
+    final totalOpenInvoices = cards.fold<double>(
+      0,
+      (sum, item) => sum + item.openInvoice,
+    );
+    final totalClosedInvoices = cards.fold<double>(
+      0,
+      (sum, item) => sum + item.closedInvoice,
+    );
+    final totalAvailable = totalLimit - totalCommitted;
     final averageUsage = cards.isEmpty
         ? 0.0
         : cards.fold<double>(0, (sum, item) => sum + item.usedPercentage) /
               cards.length;
     final headlineCard = cards.isEmpty
         ? null
-        : cards.reduce((a, b) => a.usedPercentage >= b.usedPercentage ? a : b);
+        : cards.reduce(
+            (a, b) => a.payableInvoiceCents >= b.payableInvoiceCents ? a : b,
+          );
+    final openCount = cards.where((card) => card.hasOpenInvoice).length;
+    final closedCount = cards.where((card) => card.hasClosedInvoice).length;
+    final dueCount = cards.where((card) => card.canPayInvoice).length;
     final isWide = MediaQuery.of(context).size.width >= 760;
     final colorScheme = context.theme.colorScheme;
     final isDark = context.theme.brightness == Brightness.dark;
@@ -170,11 +183,18 @@ class _CardsHero extends StatelessWidget {
                     flex: 6,
                     child: _HeroMainPanel(
                       available: currency.format(totalAvailable),
-                      committed: currency.format(totalUsed),
+                      committed: currency.format(totalCommitted),
+                      openInvoices: currency.format(totalOpenInvoices),
+                      closedInvoices: currency.format(totalClosedInvoices),
                       averageUsage: '${(averageUsage * 100).round()}%',
                       spotlight: headlineCard == null
                           ? 'Sem cartao em destaque'
+                          : headlineCard.canPayInvoice
+                          ? '${headlineCard.name} pede pagamento'
                           : '${headlineCard.name} lidera o uso',
+                      openCount: openCount,
+                      closedCount: closedCount,
+                      dueCount: dueCount,
                     ),
                   ),
                   const SizedBox(width: 18),
@@ -192,11 +212,18 @@ class _CardsHero extends StatelessWidget {
                 children: [
                   _HeroMainPanel(
                     available: currency.format(totalAvailable),
-                    committed: currency.format(totalUsed),
+                    committed: currency.format(totalCommitted),
+                    openInvoices: currency.format(totalOpenInvoices),
+                    closedInvoices: currency.format(totalClosedInvoices),
                     averageUsage: '${(averageUsage * 100).round()}%',
                     spotlight: headlineCard == null
                         ? 'Sem cartao em destaque'
+                        : headlineCard.canPayInvoice
+                        ? '${headlineCard.name} pede pagamento'
                         : '${headlineCard.name} lidera o uso',
+                    openCount: openCount,
+                    closedCount: closedCount,
+                    dueCount: dueCount,
                   ),
                   const SizedBox(height: 18),
                   _HeroCardPreview(
@@ -215,14 +242,24 @@ class _HeroMainPanel extends StatelessWidget {
   const _HeroMainPanel({
     required this.available,
     required this.committed,
+    required this.openInvoices,
+    required this.closedInvoices,
     required this.averageUsage,
     required this.spotlight,
+    required this.openCount,
+    required this.closedCount,
+    required this.dueCount,
   });
 
   final String available;
   final String committed;
+  final String openInvoices;
+  final String closedInvoices;
   final String averageUsage;
   final String spotlight;
+  final int openCount;
+  final int closedCount;
+  final int dueCount;
 
   @override
   Widget build(BuildContext context) {
@@ -281,18 +318,45 @@ class _HeroMainPanel extends StatelessWidget {
           children: [
             Expanded(
               child: _HeroStat(
-                label: 'Comprometido',
-                value: committed,
-                color: AppColors.rose,
+                label: 'Faturas abertas',
+                value: openInvoices,
+                color: AppColors.amber,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _HeroStat(
-                label: 'Uso medio',
-                value: averageUsage,
-                color: AppColors.amber,
+                label: 'Faturas fechadas',
+                value: closedInvoices,
+                color: AppColors.rose,
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _HeroChip(
+              icon: Icons.account_balance_wallet_rounded,
+              label: '$openCount abertas',
+            ),
+            _HeroChip(
+              icon: Icons.receipt_long_rounded,
+              label: '$closedCount fechadas',
+            ),
+            _HeroChip(
+              icon: Icons.payments_rounded,
+              label: '$dueCount para pagar',
+            ),
+            _HeroChip(
+              icon: Icons.pie_chart_rounded,
+              label: 'Uso medio $averageUsage',
+            ),
+            _HeroChip(
+              icon: Icons.credit_score_rounded,
+              label: 'Comprometido $committed',
             ),
           ],
         ),
@@ -446,9 +510,36 @@ class _UsageOverview extends StatelessWidget {
         : cards
               .map((item) => item.availableLimit)
               .reduce((a, b) => a > b ? a : b);
-    final nextDueCard = cards.isEmpty
-        ? null
-        : cards.reduce((a, b) => a.dueDay <= b.dueDay ? a : b);
+    final nextDueCard = cards
+        .where((card) => card.nextDueDate != null)
+        .fold<CreditCardEntity?>(
+          null,
+          (current, card) =>
+              current == null ||
+                  card.nextDueDate!.isBefore(current.nextDueDate!)
+              ? card
+              : current,
+        );
+    final openInvoicesCount = cards.where((card) => card.hasOpenInvoice).length;
+    final closedInvoicesCount = cards
+        .where((card) => card.hasClosedInvoice)
+        .length;
+    final dueTodayOrOverdueCount = cards
+        .where((card) => card.canPayInvoice)
+        .length;
+
+    final nextOpenClosingCard = cards
+        .where((card) => card.openInvoiceClosingDate != null)
+        .fold<CreditCardEntity?>(
+          null,
+          (current, card) =>
+              current == null ||
+                  card.openInvoiceClosingDate!.isBefore(
+                    current.openInvoiceClosingDate!,
+                  )
+              ? card
+              : current,
+        );
 
     final items = [
       _OverviewCardData(
@@ -467,18 +558,30 @@ class _UsageOverview extends StatelessWidget {
       ),
       _OverviewCardData(
         title: 'Proximo vencimento',
-        value: nextDueCard == null ? '-' : 'Dia ${nextDueCard.dueDay}',
+        value: nextDueCard == null
+            ? '-'
+            : DateFormat('dd/MM').format(nextDueCard.nextDueDate!),
         subtitle: nextDueCard?.name ?? 'Sem cartoes ativos',
         icon: Icons.event_available_rounded,
         color: AppColors.amber,
       ),
       _OverviewCardData(
         title: 'Faturas abertas',
-        value:
-            '${cards.where((card) => DateTime.now().day < card.closingDay).length}',
-        subtitle: 'Cartoes ainda antes do fechamento',
+        value: '$openInvoicesCount',
+        subtitle: nextOpenClosingCard == null
+            ? 'Nenhum ciclo aberto'
+            : 'Proximo fechamento: ${nextOpenClosingCard.name}',
         icon: Icons.timelapse_rounded,
         color: AppColors.violet,
+      ),
+      _OverviewCardData(
+        title: 'Faturas fechadas',
+        value: '$closedInvoicesCount',
+        subtitle: dueTodayOrOverdueCount == 0
+            ? 'Nenhuma pronta para pagar'
+            : '$dueTodayOrOverdueCount prontas para pagamento',
+        icon: Icons.receipt_long_rounded,
+        color: AppColors.rose,
       ),
     ];
 
@@ -500,7 +603,7 @@ class _UsageOverview extends StatelessWidget {
               .map(
                 (item) => SizedBox(
                   width: itemWidth,
-                  child: _OverviewCard(data: item),
+                    child: _OverviewCard(data: item),
                 ),
               )
               .toList(),
@@ -705,6 +808,14 @@ class _CreditCardSpotlight extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = NumberFormat.simpleCurrency(locale: 'pt_BR');
     final accent = _parseColor(card.color, AppColors.violet);
+    final primaryInvoiceLabel = card.closedInvoiceCents > 0
+        ? 'Fatura fechada'
+        : card.openInvoiceCents > 0
+        ? 'Fatura aberta'
+        : 'Sem fatura pendente';
+    final primaryInvoiceValue = card.closedInvoiceCents > 0
+        ? card.closedInvoice
+        : card.openInvoice;
 
     return InkWell(
       onTap: onTap,
@@ -807,15 +918,46 @@ class _CreditCardSpotlight extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _MiniBlock(
-                      label: 'Limite',
-                      value: currency.format(card.limit),
+                      label: primaryInvoiceLabel,
+                      value: currency.format(primaryInvoiceValue),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _StatusBadge(
+                    label: _buildClosingLabel(card),
+                    color: accent,
+                  ),
+                  _StatusBadge(
+                    label: _buildDueLabel(card),
+                    color: card.isInvoiceOverdue
+                        ? AppColors.rose
+                        : card.isInvoiceDueToday
+                        ? AppColors.amber
+                        : accent,
+                  ),
+                  if (card.openInvoiceCents > 0)
+                    _StatusBadge(
+                      label:
+                          'Aberta ${currency.format(card.openInvoice)}',
+                      color: AppColors.amber,
+                    ),
+                  if (card.closedInvoiceCents > 0)
+                    _StatusBadge(
+                      label:
+                          'Fechada ${currency.format(card.closedInvoice)}',
+                      color: AppColors.rose,
+                    ),
+                ],
+              ),
               const SizedBox(height: 16),
               Text(
-                'Uso atual',
+                'Comprometimento do limite',
                 style: TextStyle(
                   color: context.theme.colorScheme.onSurface.withValues(
                     alpha: 0.48,
@@ -862,6 +1004,58 @@ class _CreditCardSpotlight extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  String _buildClosingLabel(CreditCardEntity card) {
+    if (card.openInvoiceClosingDate != null) {
+      return 'Fecha ${DateFormat('dd/MM').format(card.openInvoiceClosingDate!)}';
+    }
+
+    return 'Fecha dia ${card.closingDay}';
+  }
+
+  String _buildDueLabel(CreditCardEntity card) {
+    if (card.isInvoiceOverdue) {
+      if (card.nextDueDate == null) {
+        return 'Fatura em atraso';
+      }
+      return 'Atrasou ${DateFormat('dd/MM').format(card.nextDueDate!)}';
+    }
+    if (card.isInvoiceDueToday) {
+      return 'Vence hoje';
+    }
+    if (card.nextDueDate != null) {
+      return 'Vence ${DateFormat('dd/MM').format(card.nextDueDate!)}';
+    }
+
+    return 'Vence dia ${card.dueDay}';
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

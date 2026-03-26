@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../home_controller.dart';
+
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
-import '../../../../domain/entities/credit_card_entity.dart';
+
 import '../../../../core/utils/responsive.dart';
+import '../../../../domain/entities/bank_account_entity.dart';
+import '../../../../domain/entities/credit_card_entity.dart';
+import '../home_controller.dart';
 
 class CreditCardsSection extends StatefulWidget {
   const CreditCardsSection({super.key, required this.controller});
@@ -18,28 +21,21 @@ class CreditCardsSection extends StatefulWidget {
 class _CreditCardsSectionState extends State<CreditCardsSection> {
   bool _showOpenInvoices = true;
 
-  bool _isInvoiceClosed(CreditCardEntity card) {
-    final today = DateTime.now().day;
-    return today >= card.closingDay;
-  }
-
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.simpleCurrency(locale: 'pt_BR');
     final controller = widget.controller;
 
     return Obx(() {
-      final cartoes = controller.cartoes;
+      final cards = controller.cartoes;
       final isVisible = controller.isBalanceVisible.value;
-
-      final cartoesFiltrados = cartoes.where((card) {
-        final isClosed = _isInvoiceClosed(card);
-        return _showOpenInvoices ? !isClosed : isClosed;
+      final filteredCards = cards.where((card) {
+        return _showOpenInvoices ? card.hasOpenInvoice : card.hasClosedInvoice;
       }).toList();
-
-      final totalPagar = cartoesFiltrados.fold(
-        0.0,
-        (total, c) => total + c.usedLimit,
+      final totalAmount = filteredCards.fold<double>(
+        0,
+        (total, card) =>
+            total + (_showOpenInvoices ? card.openInvoice : card.closedInvoice),
       );
 
       return LayoutBuilder(
@@ -104,7 +100,9 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                           child: Icon(
                             Icons.credit_card_rounded,
                             size: Responsive.sp(context, 16).clamp(15.0, 17.0),
-                            color: isDark ? const Color(0xFFD4A5FF) : AppColors.violet,
+                            color: isDark
+                                ? const Color(0xFFD4A5FF)
+                                : AppColors.violet,
                           ),
                         ),
                         SizedBox(width: titleGap),
@@ -161,7 +159,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                   ),
                 ),
                 SizedBox(height: contentGap),
-                if (cartoesFiltrados.isEmpty)
+                if (filteredCards.isEmpty)
                   Padding(
                     padding: EdgeInsets.symmetric(
                       vertical: Responsive.vp(context, 3).clamp(18.0, 24.0),
@@ -180,22 +178,22 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                   )
                 else
                   SizedBox(
-                    height: 180,
+                    height: 220,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemCount: cartoesFiltrados.length,
-                      separatorBuilder: (_, itemIndex) =>
-                          SizedBox(width: listGap),
+                      itemCount: filteredCards.length,
+                      separatorBuilder: (_, index) => SizedBox(width: listGap),
                       itemBuilder: (context, index) {
-                        final cartao = cartoesFiltrados[index];
+                        final card = filteredCards[index];
                         return SizedBox(
                           width: cardWidth.clamp(200.0, 280.0),
                           child: _buildCreditCard(
-                            context,
-                            cartao,
-                            isVisible,
-                            currencyFormat,
-                            _showOpenInvoices,
+                            context: context,
+                            card: card,
+                            isVisible: isVisible,
+                            currencyFormat: currencyFormat,
+                            isOpenInvoice: _showOpenInvoices,
+                            controller: controller,
                           ),
                         );
                       },
@@ -227,7 +225,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           isVisible
-                              ? currencyFormat.format(totalPagar)
+                              ? currencyFormat.format(totalAmount)
                               : 'R\$ ....',
                           style: TextStyle(
                             color: AppColors.rose,
@@ -282,18 +280,20 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     );
   }
 
-  Widget _buildCreditCard(
-    BuildContext context,
-    CreditCardEntity cartao,
-    bool isVisible,
-    NumberFormat currencyFormat,
-    bool isOpenInvoice,
-  ) {
-    final fatura = cartao
-        .usedLimit; // Simulando a fatura com o limite usado. Ficará real no módulo de Transacoes.
-    final disponivel = cartao.availableLimit;
-    final percentual = cartao.usedPercentage;
-    final cardColor = _parseColor(cartao.color);
+  Widget _buildCreditCard({
+    required BuildContext context,
+    required CreditCardEntity card,
+    required bool isVisible,
+    required NumberFormat currencyFormat,
+    required bool isOpenInvoice,
+    required HomeController controller,
+  }) {
+    final invoiceAmount = isOpenInvoice ? card.openInvoice : card.closedInvoice;
+    final availableLimit = card.availableLimit;
+    final usedPercentage = card.usedPercentage;
+    final cardColor = _parseColor(card.color);
+    final payableAmount = card.payableInvoice;
+    final isPaying = controller.isProcessingInvoicePayment(card.id);
 
     final cardPadding = Responsive.hp(context, 3.2).clamp(10.0, 12.0);
     final cardRadius = Responsive.hp(context, 4.3).clamp(14.0, 16.0);
@@ -303,125 +303,276 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     final nameSize = Responsive.sp(context, 14).clamp(13.0, 14.0);
     final valueSize = Responsive.sp(context, 15).clamp(14.0, 15.0);
 
-    return Container(
-      padding: EdgeInsets.all(cardPadding),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            cardColor.withValues(alpha: 0.16),
-            cardColor.withValues(alpha: 0.08),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(cardRadius),
-        border: Border.all(color: cardColor.withValues(alpha: 0.42)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: iconBoxSize,
-                height: iconBoxSize,
-                decoration: BoxDecoration(
-                  color: cardColor.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!isOpenInvoice && card.canPayInvoice)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: FilledButton.icon(
+              onPressed: isPaying
+                  ? null
+                  : () => _showPayInvoiceSheet(
+                        context: context,
+                        controller: controller,
+                        card: card,
+                        currencyFormat: currencyFormat,
+                      ),
+              style: FilledButton.styleFrom(
+                backgroundColor: card.isInvoiceOverdue
+                    ? AppColors.rose
+                    : cardColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
                 ),
-                child: Icon(
-                  Icons.credit_card_rounded,
-                  size: Responsive.sp(context, 15).clamp(14.0, 15.0),
-                  color: cardColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: badgeHorizontal,
-                  vertical: badgeVertical,
+              icon: isPaying
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.white,
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.payments_rounded, size: 18),
+              label: Text(
+                isPaying
+                    ? 'Pagando...'
+                    : 'Pagar fatura ${isVisible ? currencyFormat.format(payableAmount) : ''}'
+                        .trim(),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.all(cardPadding),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  cardColor.withValues(alpha: 0.16),
+                  cardColor.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(cardRadius),
+              border: Border.all(color: cardColor.withValues(alpha: 0.42)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: iconBoxSize,
+                      height: iconBoxSize,
+                      decoration: BoxDecoration(
+                        color: cardColor.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.credit_card_rounded,
+                        size: Responsive.sp(context, 15).clamp(14.0, 15.0),
+                        color: cardColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: badgeHorizontal,
+                        vertical: badgeVertical,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cardColor.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        card.brand.toUpperCase(),
+                        style: TextStyle(
+                          color: cardColor,
+                          fontSize: Responsive.sp(context, 8).clamp(7.0, 8.0),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                decoration: BoxDecoration(
-                  color: cardColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  cartao.brand.toUpperCase(),
+                const Spacer(),
+                Text(
+                  card.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: cardColor,
-                    fontSize: Responsive.sp(context, 8).clamp(7.0, 8.0),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.86,
+                    ),
+                    fontSize: nameSize,
+                    fontWeight: FontWeight.w500,
+                    height: 1.15,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            cartao.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(
-                alpha: 0.86,
-              ),
-              fontSize: nameSize,
-              fontWeight: FontWeight.w500,
-              height: 1.15,
+                Text(
+                  isOpenInvoice
+                      ? _buildOpenInvoiceLabel(card.openInvoiceClosingDate)
+                      : _buildClosedInvoiceLabel(card),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.38,
+                    ),
+                    fontSize: Responsive.sp(context, 10).clamp(9.0, 10.0),
+                  ),
+                ),
+                SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    isVisible ? currencyFormat.format(invoiceAmount) : 'R\$ ....',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: valueSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: usedPercentage,
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      usedPercentage > 0.9 ? AppColors.rose : cardColor,
+                    ),
+                    minHeight: 4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isVisible
+                      ? 'Limite disponível: ${currencyFormat.format(availableLimit)}'
+                      : 'Limite disponível: R\$ ....',
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.38,
+                    ),
+                    fontSize: Responsive.sp(context, 9).clamp(8.0, 9.0),
+                  ),
+                ),
+              ],
             ),
           ),
-          Text(
-            isOpenInvoice
-                ? 'Fecha dia ${cartao.closingDay}'
-                : 'Vence dia ${cartao.dueDay}',
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(
-                alpha: 0.38,
-              ),
-              fontSize: Responsive.sp(context, 10).clamp(9.0, 10.0),
-            ),
-          ),
-          SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              isVisible ? currencyFormat.format(fatura) : 'R\$ ....',
-              style: TextStyle(
-                color: context.theme.colorScheme.onSurface,
-                fontSize: valueSize,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: percentual,
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                percentual > 0.9 ? AppColors.rose : cardColor,
-              ),
-              minHeight: 4,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            isVisible
-                ? 'Lim: ${currencyFormat.format(disponivel)}'
-                : 'Lim: R\$ ....',
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(
-                alpha: 0.38,
-              ),
-              fontSize: Responsive.sp(context, 9).clamp(8.0, 9.0),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _showPayInvoiceSheet({
+    required BuildContext context,
+    required HomeController controller,
+    required CreditCardEntity card,
+    required NumberFormat currencyFormat,
+  }) async {
+    final activeAccounts = controller.contas
+        .where((account) => account.isActive)
+        .toList();
+    if (activeAccounts.isEmpty) {
+      Get.snackbar('Atencao', 'Cadastre uma conta antes de pagar a fatura.');
+      return;
+    }
+
+    final selectedAccount = await showModalBottomSheet<BankAccountEntity>(
+      context: context,
+      backgroundColor: context.theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pagar fatura do ${card.name}',
+                  style: TextStyle(
+                    color: sheetContext.theme.colorScheme.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Escolha a conta para quitar ${currencyFormat.format(card.payableInvoice)}.',
+                  style: TextStyle(
+                    color: sheetContext.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.62,
+                    ),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...activeAccounts.map(
+                  (account) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.account_balance_wallet_rounded),
+                    title: Text(account.name),
+                    subtitle: Text(account.bankName),
+                    trailing: Text(
+                      currencyFormat.format(account.currentBalance),
+                    ),
+                    onTap: () => Navigator.of(sheetContext).pop(account),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedAccount == null) {
+      return;
+    }
+
+    await controller.payInvoice(card: card, bankAccount: selectedAccount);
+  }
+
+  String _buildOpenInvoiceLabel(DateTime? closingDate) {
+    if (closingDate == null) {
+      return 'Fatura em aberto';
+    }
+
+    return 'Fecha em ${DateFormat('dd/MM').format(closingDate)}';
+  }
+
+  String _buildClosedInvoiceLabel(CreditCardEntity card) {
+    if (card.isInvoiceOverdue) {
+      if (card.nextDueDate == null) {
+        return 'Fatura em atraso';
+      }
+      return 'Em atraso desde ${DateFormat('dd/MM').format(card.nextDueDate!)}';
+    }
+    if (card.isInvoiceDueToday) {
+      return 'Vence hoje';
+    }
+    if (card.nextDueDate != null) {
+      return 'Vence em ${DateFormat('dd/MM').format(card.nextDueDate!)}';
+    }
+
+    return 'Fatura fechada';
   }
 
   Color _parseColor(String colorHex) {
