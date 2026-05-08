@@ -7,6 +7,7 @@ class RideModel extends RideEntity {
     required super.status,
     required super.appName,
     required super.paymentMethod,
+    required super.createdAt,
     required super.grossValueCents,
     required super.date,
     required super.time,
@@ -21,16 +22,17 @@ class RideModel extends RideEntity {
   });
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
+    DateTime? createdAt;
     String formattedDate = '--/--';
     String formattedTime = '--:--';
 
     if (json['createdAt'] != null) {
       try {
-        final dt = DateTime.parse(json['createdAt']).toLocal();
+        createdAt = DateTime.parse(json['createdAt']).toLocal();
         formattedDate =
-            '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+            '${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}';
         formattedTime =
-            '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+            '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
 
@@ -44,6 +46,7 @@ class RideModel extends RideEntity {
           ? platformName
           : 'App',
       paymentMethod: json['paymentMethod'] as String?,
+      createdAt: createdAt,
       grossValueCents: json['grossValueCents'] as int? ?? 0,
       date: formattedDate,
       time: formattedTime,
@@ -73,6 +76,7 @@ class RideModel extends RideEntity {
           ? draft.platformName!.trim()
           : 'App',
       paymentMethod: draft.paymentMethod,
+      createdAt: localDate,
       grossValueCents: draft.grossValueCents,
       date:
           '${localDate.day.toString().padLeft(2, '0')}/${localDate.month.toString().padLeft(2, '0')}',
@@ -112,6 +116,7 @@ class RideModel extends RideEntity {
   DetectedRideDraftEntity toDetectedRideDraft({String? paymentMethodOverride}) {
     return DetectedRideDraftEntity(
       platformName: appName,
+      detectedAt: createdAt,
       paymentMethod: paymentMethodOverride ?? paymentMethod ?? 'APP',
       grossValueCents: grossValueCents,
       netProfitCents: 0,

@@ -38,4 +38,14 @@ class NestAuthRemoteDataSource implements IAuthRemoteDataSource {
       Map<String, dynamic>.from(response.data as Map),
     );
   }
+
+  @override
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    await dio.post('/auth/forgot-password', data: {'email': email});
+  }
+
+  @override
+  Future<void> updatePassword({required String password}) async {
+    await dio.post('/auth/reset-password', data: {'password': password});
+  }
 }

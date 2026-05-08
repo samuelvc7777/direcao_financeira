@@ -140,7 +140,7 @@ class MetricPeriodSelector extends GetView<JourneyController> {
                 icon,
                 size: Responsive.sp(context, 18).clamp(16.0, 22.0),
                 color: isSelected
-                    ? colorScheme.onPrimary
+                    ? Colors.white
                     : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 2),
@@ -148,7 +148,7 @@ class MetricPeriodSelector extends GetView<JourneyController> {
                 title,
                 style: TextStyle(
                   color: isSelected
-                      ? colorScheme.onPrimary
+                      ? Colors.white
                       : colorScheme.onSurfaceVariant,
                   fontSize: Responsive.sp(context, 11).clamp(10.0, 13.0),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

@@ -212,11 +212,12 @@ ShiftEntity buildShift() {
 }
 
 RideEntity buildRide() {
-  return const RideEntity(
+  return RideEntity(
     id: 1,
     status: 'FINISHED',
     appName: 'Uber',
     paymentMethod: null,
+    createdAt: DateTime(2026, 1, 10, 8, 30),
     grossValueCents: 3200,
     date: '10/01/2026',
     time: '08:30',

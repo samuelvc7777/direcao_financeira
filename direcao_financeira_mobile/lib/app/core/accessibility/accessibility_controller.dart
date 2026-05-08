@@ -270,6 +270,7 @@ class AccessibilityController extends GetxController
 
     return DetectedRideDraftEntity(
       platformName: platformName,
+      detectedAt: DateTime.now(),
       paymentMethod: _mapPaymentMethod(data['forma_pagamento']),
       grossValueCents: grossValueCents,
       netProfitCents: 0,

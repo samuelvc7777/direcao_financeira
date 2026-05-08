@@ -21,6 +21,9 @@ class _FakeAuthRemoteDataSource implements IAuthRemoteDataSource {
   AuthSessionDto? registerResponse;
   Object? loginError;
   Object? registerError;
+  Object? passwordResetError;
+  String? passwordResetEmail;
+  String? updatedPassword;
 
   @override
   Future<AuthSessionDto> login({
@@ -43,6 +46,19 @@ class _FakeAuthRemoteDataSource implements IAuthRemoteDataSource {
       throw registerError!;
     }
     return registerResponse!;
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    if (passwordResetError != null) {
+      throw passwordResetError!;
+    }
+    passwordResetEmail = email;
+  }
+
+  @override
+  Future<void> updatePassword({required String password}) async {
+    updatedPassword = password;
   }
 }
 
@@ -197,5 +213,14 @@ void main() {
       result.swap().getOrElse(() => ServerFailure('x')).message,
       'Erro inesperado ao realizar cadastro.',
     );
+  });
+
+  test('sendPasswordResetEmail delega envio para datasource', () async {
+    final result = await repository.sendPasswordResetEmail(
+      'samuel@example.com',
+    );
+
+    expect(result.isRight(), isTrue);
+    expect(remoteDataSource.passwordResetEmail, 'samuel@example.com');
   });
 }

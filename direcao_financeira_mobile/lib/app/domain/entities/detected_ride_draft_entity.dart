@@ -1,6 +1,7 @@
 class DetectedRideDraftEntity {
   const DetectedRideDraftEntity({
     this.platformName,
+    this.detectedAt,
     required this.paymentMethod,
     required this.grossValueCents,
     required this.netProfitCents,
@@ -14,6 +15,7 @@ class DetectedRideDraftEntity {
   });
 
   final String? platformName;
+  final DateTime? detectedAt;
   final String paymentMethod;
   final int grossValueCents;
   final int netProfitCents;

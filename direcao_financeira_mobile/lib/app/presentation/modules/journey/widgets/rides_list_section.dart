@@ -417,7 +417,7 @@ class RidesListSection extends GetView<JourneyController> {
                 icon,
                 size: Responsive.sp(context, 20).clamp(18.0, 22.0),
                 color: isSelected
-                    ? selectedColor
+                    ? Colors.white
                     : context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
               ),
               SizedBox(height: Responsive.vp(context, 0.5).clamp(2.0, 6.0)),
@@ -425,7 +425,7 @@ class RidesListSection extends GetView<JourneyController> {
                 title,
                 style: TextStyle(
                   color: isSelected
-                      ? selectedColor
+                      ? Colors.white
                       : context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
                   fontSize: Responsive.sp(context, 10).clamp(8.0, 12.0),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

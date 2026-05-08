@@ -104,7 +104,7 @@ class _JourneyViewState extends State<JourneyView> {
                             ),
                           ],
                         ),
-                        labelColor: colorScheme.onPrimary,
+                        labelColor: Colors.white,
                         labelStyle: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: Responsive.sp(

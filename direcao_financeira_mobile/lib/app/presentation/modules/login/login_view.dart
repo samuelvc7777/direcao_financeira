@@ -61,7 +61,7 @@ class LoginView extends GetView<LoginController> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {},
+                            onPressed: controller.openPasswordRecovery,
                             child: Text(
                               'Esqueceu a senha?',
                               style: TextStyle(color: colorScheme.primary),

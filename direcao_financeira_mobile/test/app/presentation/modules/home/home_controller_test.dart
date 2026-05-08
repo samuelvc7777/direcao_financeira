@@ -25,23 +25,24 @@ import 'package:get/get.dart';
 
 class _FakeAuthRepository implements IAuthRepository {
   @override
-  Either<Failure, UserEntity?> getStoredUser() =>
-      Right(
-        UserEntity(
-          id: 1,
-          name: 'Samuel',
-          email: 'samuel@test.com',
-          role: 'user',
-          isActive: true,
-        ),
-      );
+  Either<Failure, UserEntity?> getStoredUser() => Right(
+    UserEntity(
+      id: 1,
+      name: 'Samuel',
+      email: 'samuel@test.com',
+      role: 'user',
+      isActive: true,
+    ),
+  );
 
   @override
   Future<Either<Failure, String?>> getToken() async => const Right(null);
 
   @override
-  Future<Either<Failure, UserEntity>> login(String email, String password) async =>
-      throw UnimplementedError();
+  Future<Either<Failure, UserEntity>> login(
+    String email,
+    String password,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, void>> logout() async => const Right(null);
@@ -54,10 +55,20 @@ class _FakeAuthRepository implements IAuthRepository {
   ) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, void>> saveToken(String token) async => const Right(null);
+  Future<Either<Failure, void>> sendPasswordResetEmail(String email) async =>
+      throw UnimplementedError();
 
   @override
-  Future<Either<Failure, void>> saveUser(UserEntity user) async => const Right(null);
+  Future<Either<Failure, void>> updatePassword(String password) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, void>> saveToken(String token) async =>
+      const Right(null);
+
+  @override
+  Future<Either<Failure, void>> saveUser(UserEntity user) async =>
+      const Right(null);
 }
 
 class _FakeBankAccountRepository implements IBankAccountRepository {
@@ -239,23 +250,22 @@ class _FakeTransactionRepository implements ITransactionRepository {
   Future<Either<Failure, List<TransactionEntity>>> createImportedTransactions({
     required List<TransactionDraftEntity> transactions,
   }) async {
-    final created =
-        transactions.asMap().entries.map((entry) {
-          final index = entry.key;
-          final draft = entry.value;
-          return TransactionEntity(
-            id: 1000 + index,
-            type: draft.type,
-            status: TransactionStatus.cleared,
-            assetType: draft.assetType,
-            amountCents: draft.amountCents,
-            categoryId: draft.categoryId,
-            description: draft.description,
-            transactionDate: draft.transactionDate,
-            bankAccountId: draft.bankAccountId,
-            creditCardId: draft.creditCardId,
-          );
-        }).toList();
+    final created = transactions.asMap().entries.map((entry) {
+      final index = entry.key;
+      final draft = entry.value;
+      return TransactionEntity(
+        id: 1000 + index,
+        type: draft.type,
+        status: TransactionStatus.cleared,
+        assetType: draft.assetType,
+        amountCents: draft.amountCents,
+        categoryId: draft.categoryId,
+        description: draft.description,
+        transactionDate: draft.transactionDate,
+        bankAccountId: draft.bankAccountId,
+        creditCardId: draft.creditCardId,
+      );
+    }).toList();
 
     return Right(created);
   }
@@ -371,7 +381,9 @@ void main() {
       controller = HomeController(
         getStoredUserUseCase: GetStoredUserUseCase(_FakeAuthRepository()),
         logoutUseCase: LogoutUseCase(_FakeAuthRepository()),
-        loadBankAccountsUseCase: LoadBankAccountsUseCase(_FakeBankAccountRepository()),
+        loadBankAccountsUseCase: LoadBankAccountsUseCase(
+          _FakeBankAccountRepository(),
+        ),
         loadCreditCardsUseCase: LoadCreditCardsUseCase(creditCardRepository),
         loadCategoriesUseCase: LoadCategoriesUseCase(categoryRepository),
         createCategoryUseCase: CreateCategoryUseCase(categoryRepository),
@@ -394,17 +406,20 @@ void main() {
       expect(transactionRepository.requestedMonths, [selectedMonth]);
     });
 
-    test('previousMonth e nextMonth mudam o mes e fazem nova carga remota', () async {
-      controller.selectedMonth.value = DateTime(2026, 3, 1);
+    test(
+      'previousMonth e nextMonth mudam o mes e fazem nova carga remota',
+      () async {
+        controller.selectedMonth.value = DateTime(2026, 3, 1);
 
-      await controller.previousMonth();
-      await controller.nextMonth();
+        await controller.previousMonth();
+        await controller.nextMonth();
 
-      expect(transactionRepository.requestedMonths, [
-        DateTime(2026, 2, 1),
-        DateTime(2026, 3, 1),
-      ]);
-    });
+        expect(transactionRepository.requestedMonths, [
+          DateTime(2026, 2, 1),
+          DateTime(2026, 3, 1),
+        ]);
+      },
+    );
 
     test('loadDashboardData usa o mes informado como referencia', () async {
       controller.selectedMonth.value = DateTime(2026, 5, 1);
@@ -420,13 +435,19 @@ void main() {
       expect(transactionRepository.requestedMonths, [DateTime(2026, 4, 1)]);
     });
 
-    test('gera o grafico a partir das despesas do retorno mensal sem placeholder', () async {
-      await controller.loadDashboardData();
+    test(
+      'gera o grafico a partir das despesas do retorno mensal sem placeholder',
+      () async {
+        await controller.loadDashboardData();
 
-      expect(controller.gastosPorCategoria, isNotEmpty);
-      expect(controller.gastosPorCategoria.single.categoryLabel, 'Combustivel');
-      expect(controller.gastosPorCategoria.single.amountCents, 5000);
-    });
+        expect(controller.gastosPorCategoria, isNotEmpty);
+        expect(
+          controller.gastosPorCategoria.single.categoryLabel,
+          'Combustivel',
+        );
+        expect(controller.gastosPorCategoria.single.amountCents, 5000);
+      },
+    );
 
     test('ignora pagamento interno de fatura nos resumos da home', () async {
       transactionRepository.response = [

@@ -100,6 +100,63 @@ class AuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<Either<Failure, void>> sendPasswordResetEmail(String email) async {
+    try {
+      await remoteDataSource.sendPasswordResetEmail(email: email);
+      return const Right(null);
+    } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'AuthRepository.sendPasswordResetEmail',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao enviar recuperacao de senha.',
+        ),
+      );
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'AuthRepository.sendPasswordResetEmail',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao enviar recuperacao de senha.',
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updatePassword(String password) async {
+    try {
+      await remoteDataSource.updatePassword(password: password);
+      return const Right(null);
+    } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'AuthRepository.updatePassword',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao atualizar senha.'),
+      );
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'AuthRepository.updatePassword',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao atualizar senha.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> saveToken(String token) async {
     try {
       await sessionStore.saveToken(token);

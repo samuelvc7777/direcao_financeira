@@ -25,7 +25,7 @@ class CustomBottomNavBar extends StatelessWidget {
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.22)
         : Colors.black.withValues(alpha: 0.06);
-    final activeNavColor = colorScheme.onPrimary;
+    final activeNavColor = Colors.white;
     final inactiveNavColor = isDark
         ? colorScheme.onSurface.withValues(alpha: 0.74)
         : AppColors.textPrimary;

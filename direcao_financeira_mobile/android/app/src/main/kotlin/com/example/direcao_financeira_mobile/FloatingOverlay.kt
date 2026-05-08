@@ -183,6 +183,7 @@ class FloatingOverlay(
         cardView = card
 
         applyVisualStyle(signalColor = resolveSignalColor(OverlaySignalStatus.GOOD))
+        card.setOnClickListener { hide() }
         attachDragBehavior(card)
 
         container.measure(

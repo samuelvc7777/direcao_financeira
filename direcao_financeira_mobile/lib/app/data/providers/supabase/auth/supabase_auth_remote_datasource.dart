@@ -90,4 +90,17 @@ class SupabaseAuthRemoteDataSource implements IAuthRemoteDataSource {
       user: user,
     );
   }
+
+  @override
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    await client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'direcaofinanceira://reset-password',
+    );
+  }
+
+  @override
+  Future<void> updatePassword({required String password}) async {
+    await client.auth.updateUser(UserAttributes(password: password));
+  }
 }

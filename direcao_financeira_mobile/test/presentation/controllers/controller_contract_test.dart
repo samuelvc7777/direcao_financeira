@@ -15,6 +15,7 @@ import 'package:direcao_financeira_mobile/app/domain/entities/active_shift_entit
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/costs_gains_settings_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/detected_ride_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/plan_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_import_entity.dart';
@@ -85,6 +86,14 @@ class _FakeAuthRepository implements IAuthRepository {
     String email,
     String password,
   ) async => Right(buildUser());
+
+  @override
+  Future<Either<Failure, void>> sendPasswordResetEmail(String email) async =>
+      const Right(null);
+
+  @override
+  Future<Either<Failure, void>> updatePassword(String password) async =>
+      const Right(null);
 
   @override
   Future<Either<Failure, void>> saveToken(String token) async =>
@@ -385,7 +394,8 @@ class _FakeJourneyRepository implements IJourneyRepository {
 
   @override
   Future<Either<Failure, LocationTrackingStatusEntity>>
-  getLocationTrackingStatus() async => trackingStatusResult ?? Right(trackingStatus);
+  getLocationTrackingStatus() async =>
+      trackingStatusResult ?? Right(trackingStatus);
 
   @override
   Future<Either<Failure, ShiftRouteEntity>> getShiftRoute({
@@ -468,30 +478,29 @@ class _FakeRideRepository implements IRideRepository {
     int offset = 0,
     int limit = 100,
   }) async {
-    final items =
-        ridesResult
-            .getOrElse(
-              () => PagedResultEntity<RideEntity>(
-                items: [],
-                totalCount: 0,
-                offset: 0,
-                limit: 0,
-              ),
-            )
-            .items
-            .map(
-              (ride) => RideImportEntity(
-                rideId: ride.id,
-                status: ride.status,
-                appName: ride.appName,
-                paymentMethod: ride.paymentMethod,
-                grossValueCents: ride.grossValueCents,
-                date: ride.date,
-                time: ride.time,
-                isAlreadyImported: false,
-              ),
-            )
-            .toList();
+    final items = ridesResult
+        .getOrElse(
+          () => PagedResultEntity<RideEntity>(
+            items: [],
+            totalCount: 0,
+            offset: 0,
+            limit: 0,
+          ),
+        )
+        .items
+        .map(
+          (ride) => RideImportEntity(
+            rideId: ride.id,
+            status: ride.status,
+            appName: ride.appName,
+            paymentMethod: ride.paymentMethod,
+            grossValueCents: ride.grossValueCents,
+            date: ride.date,
+            time: ride.time,
+            isAlreadyImported: false,
+          ),
+        )
+        .toList();
 
     return Right(
       PagedResultEntity(
@@ -1278,10 +1287,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(controller.canOpenTrackingSettings, isTrue);
-      expect(
-        controller.bannerMessage,
-        'Permita localizacao em segundo plano.',
-      );
+      expect(controller.bannerMessage, 'Permita localizacao em segundo plano.');
 
       journeyRepository.shiftHistoryResult = Left(
         ServerFailure('socketexception'),
@@ -1293,10 +1299,7 @@ void main() {
         controller.historyError.value,
         'Nao foi possivel carregar o historico de turnos. Verifique sua conexao e tente novamente.',
       );
-      expect(
-        controller.bannerMessage,
-        'Permita localizacao em segundo plano.',
-      );
+      expect(controller.bannerMessage, 'Permita localizacao em segundo plano.');
 
       controller.onClose();
       await journeyRepository.dispose();
@@ -1377,6 +1380,129 @@ void main() {
 
       controller.onClose();
       await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController calcula analise por corrida com turnos ativo e finalizados',
+    () async {
+      final activeShift = buildActiveShift().copyWith(
+        startTime: DateTime.now().subtract(const Duration(minutes: 30)),
+        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+        currentDrivenKm: 2,
+        idleTimeSeconds: 0,
+      );
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = activeShift
+        ..activeShiftResult = Right(activeShift)
+        ..statisticsResult = const Right(
+          JourneyStatisticsEntity(
+            totalShifts: 1,
+            totalTime: '01:00:00',
+            averageTime: '01:00:00',
+            idleTime: '00:00:00',
+            drivenKm: '10.0 km',
+            totalDrivenKmValue: 10,
+            averageKmh: '10.0 km/h',
+            rideStats: RideStatisticsEntity(
+              totalRides: 1,
+              grossEarningsCents: 1373,
+              netEarningsCents: 1373,
+              totalCostsCents: 0,
+              ridesTotalKm: 4,
+              ridesTotalTime: 9 * 60,
+            ),
+          ),
+        );
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      controller.elapsedSeconds.value = 30 * 60;
+      controller.currentKm.value = 2;
+      controller.costsGainsSettings.value = const CostsGainsSettingsEntity(
+        userId: 1,
+        desiredMonthlyProfitCents: 0,
+        workDaysPerWeek: 6,
+        workHoursPerDay: 8,
+        kmPerDay: 0,
+        financeOrRentMonthlyCents: 0,
+        insuranceMonthlyCents: 0,
+        maintenanceMonthlyCents: 0,
+        annualTaxesCents: 0,
+        fuelPricePerLiterCents: 580,
+        kmPerLiter: 10,
+        platformFeeType: PlatformFeeType.fixed,
+        platformFeeValue: 500,
+      );
+
+      final analysis = controller.rideAnalysisData;
+
+      expect(controller.isRideAnalysisAvailable, isTrue);
+      expect(analysis.totalRides, 1);
+      expect(analysis.totalTimeSeconds, 90 * 60);
+      expect(analysis.totalKm, 12);
+      expect(controller.rideAnalysisFuelCostsCents, 696);
+      expect(controller.rideAnalysisPlatformFeeCents, 1925);
+      expect(analysis.costsPerRide, closeTo(26.21, 0.01));
+      expect(analysis.grossPerHour, closeTo(9.15, 0.01));
+      expect(analysis.costsPerHour, closeTo(17.47, 0.01));
+      expect(
+        analysis.profitPerHour,
+        closeTo(analysis.grossPerHour! - analysis.costsPerHour!, 0.01),
+      );
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController mostra analise por corrida com turno finalizado sem ativo',
+    () async {
+      final controller = _buildJourneyController(
+        journeyRepository: _FakeJourneyRepository(),
+        rideRepository: _FakeRideRepository(),
+        accessibilityService: _FakeAccessibilityService(),
+        journeyRealtimeBridge: _FakeJourneyRealtimeBridge(),
+        appBubbleService: _FakeAppBubbleService(),
+      );
+
+      controller.activeShift.value = null;
+      controller.totalShifts.value = '1';
+      controller.totalShiftDrivenKm.value = 10;
+      controller.totalRides.value = 1;
+      controller.grossEarningsCents.value = 5000;
+      controller.costsGainsSettings.value = const CostsGainsSettingsEntity(
+        userId: 1,
+        desiredMonthlyProfitCents: 0,
+        workDaysPerWeek: 6,
+        workHoursPerDay: 8,
+        kmPerDay: 0,
+        financeOrRentMonthlyCents: 0,
+        insuranceMonthlyCents: 0,
+        maintenanceMonthlyCents: 0,
+        annualTaxesCents: 0,
+        fuelPricePerLiterCents: 580,
+        kmPerLiter: 10,
+        platformFeeType: PlatformFeeType.percentage,
+        platformFeeValue: 10,
+      );
+
+      expect(controller.isRideAnalysisAvailable, isTrue);
+      expect(controller.rideAnalysisTotalKm, 10);
+      expect(controller.rideAnalysisFuelCostsCents, 580);
     },
   );
 }

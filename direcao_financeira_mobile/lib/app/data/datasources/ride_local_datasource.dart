@@ -22,7 +22,7 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
   Future<RideModel> savePendingRide(DetectedRideDraftEntity ride) async {
     try {
       final pendingRides = await _readPendingRideEntries();
-      final createdAt = DateTime.now();
+      final createdAt = ride.detectedAt?.toLocal() ?? DateTime.now();
       final model = RideModel.fromDetectedRideDraft(
         localId: -createdAt.microsecondsSinceEpoch,
         createdAt: createdAt,

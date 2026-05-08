@@ -62,6 +62,9 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
     String? cancelReason,
   }) async {
     final userId = await userScope.getCurrentUserId();
+    final createdAt = (ride.detectedAt ?? DateTime.now())
+        .toUtc()
+        .toIso8601String();
     final now = DateTime.now().toUtc().toIso8601String();
 
     await client.from(SupabaseTableNames.rides).insert({
@@ -79,7 +82,7 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
       'originAddress': ride.originAddress,
       'destinationAddress': ride.destinationAddress,
       'cancelReason': cancelReason,
-      'createdAt': now,
+      'createdAt': createdAt,
       'updatedAt': now,
     });
   }

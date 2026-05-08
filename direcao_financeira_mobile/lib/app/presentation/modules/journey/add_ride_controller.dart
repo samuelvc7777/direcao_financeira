@@ -53,6 +53,7 @@ class AddRideController extends GetxController {
 
     final ride = DetectedRideDraftEntity(
       platformName: selectedPlatform.value,
+      detectedAt: DateTime.now(),
       paymentMethod: selectedPaymentMethod.value,
       grossValueCents: grossValueCents,
       netProfitCents: 0,

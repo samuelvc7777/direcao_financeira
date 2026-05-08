@@ -15,6 +15,7 @@ RideEntity buildJourneyRideVariant({
     status: status,
     appName: 'Uber',
     paymentMethod: paymentMethod,
+    createdAt: DateTime(2026, 1, 10, 8, 30),
     grossValueCents: grossValueCents,
     date: '10/01/2026',
     time: '08:30',

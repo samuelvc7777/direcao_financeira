@@ -3,6 +3,7 @@ class RideEntity {
   final String status;
   final String appName;
   final String? paymentMethod;
+  final DateTime? createdAt;
   final int grossValueCents;
   final String date;
   final String time;
@@ -20,6 +21,7 @@ class RideEntity {
     required this.status,
     required this.appName,
     required this.paymentMethod,
+    required this.createdAt,
     required this.grossValueCents,
     required this.date,
     required this.time,

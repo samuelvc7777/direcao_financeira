@@ -34,6 +34,17 @@ void main() async {
       url: environment.supabaseUrl,
       anonKey: environment.supabaseAnonKey,
     );
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event != AuthChangeEvent.passwordRecovery) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (Get.currentRoute != AppRoutes.resetPassword) {
+          Get.offAllNamed(AppRoutes.resetPassword);
+        }
+      });
+    });
   }
 
   final storage = GetStorage();

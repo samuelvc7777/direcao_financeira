@@ -216,7 +216,9 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
   JourneyPaymentMethodsSectionState get paymentMethodsSectionState =>
       JourneyPaymentMethodsSectionState(
-        items: List<PaymentMethodSummaryItem>.unmodifiable(paymentMethodSummary),
+        items: List<PaymentMethodSummaryItem>.unmodifiable(
+          paymentMethodSummary,
+        ),
         totalFinishedRides: paymentMethodFinishedRidesCount.value,
         mappedCount: mappedPaymentMethodCount,
         isExpanded: isPaymentMethodSectionExpanded.value,
@@ -243,6 +245,15 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
           operationalFixedCostItems,
         ),
       );
+
+  JourneyRideAnalysisData get rideAnalysisData => JourneyRideAnalysisData(
+    totalRides: totalRides.value,
+    totalTimeSeconds: rideAnalysisTotalTimeSeconds,
+    totalKm: rideAnalysisTotalKm,
+    grossEarningsCents: rideAnalysisGrossEarningsCents,
+    variableCostsCents: rideAnalysisVariableCostsCents,
+    profitCents: rideAnalysisProfitCents,
+  );
 
   @override
   void onInit() {
@@ -485,6 +496,32 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     return (litersUsed * settings.fuelPricePerLiterCents).round();
   }
 
+  int get rideAnalysisPlatformFeeCents {
+    final settings = costsGainsSettings.value;
+    if (settings == null || settings.platformFeeValue <= 0) {
+      return 0;
+    }
+
+    switch (settings.platformFeeType) {
+      case PlatformFeeType.percentage:
+        return (grossEarningsCents.value * (settings.platformFeeValue / 100))
+            .round();
+      case PlatformFeeType.fixed:
+        return _diluteMonthlyCostForSelectedPeriod(
+          monthlyCostCents: (settings.platformFeeValue * 100).round(),
+          settings: settings,
+        );
+    }
+  }
+
+  int get rideAnalysisVariableCostsCents =>
+      rideAnalysisFuelCostsCents + rideAnalysisPlatformFeeCents;
+
+  int get rideAnalysisGrossEarningsCents => grossEarningsCents.value;
+
+  int get rideAnalysisProfitCents =>
+      rideAnalysisGrossEarningsCents - rideAnalysisVariableCostsCents;
+
   int get operationalVariablePlatformFeeCents {
     final settings = costsGainsSettings.value;
     if (settings == null ||
@@ -508,22 +545,15 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     return km;
   }
 
-  int get rideAnalysisTotalTimeSeconds {
-    var seconds = ridesTotalTime.value;
-    if (_selectedRangeIncludesNow && hasActiveShift) {
-      // Atualiza em blocos de 5s para evitar oscilação visual excessiva.
-      seconds += (elapsedSeconds.value ~/ 5) * 5;
-    }
-    return seconds;
-  }
+  bool get isRideAnalysisAvailable =>
+      hasActiveShift ||
+      _statisticsTotalTimeBaseSeconds > 0 ||
+      totalShiftDrivenKm.value > 0 ||
+      (int.tryParse(totalShifts.value) ?? 0) > 0;
 
-  double get rideAnalysisTotalKm {
-    var km = ridesTotalKm.value;
-    if (_shouldUseLiveJourneyKm) {
-      km += currentKm.value.floorToDouble();
-    }
-    return km;
-  }
+  int get rideAnalysisTotalTimeSeconds => onlineAnalysisTotalTimeSeconds;
+
+  double get rideAnalysisTotalKm => operationalDrivenKm;
 
   int get onlineAnalysisTotalTimeSeconds {
     var seconds = _statisticsTotalTimeBaseSeconds;
@@ -1323,7 +1353,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   bool get _shouldUseLiveJourneyTime =>
       hasActiveShift && _selectedRangeIncludesNow;
 
-  int get _statisticsLiveElapsedSeconds => (elapsedSeconds.value ~/ 30) * 30;
+  int get _statisticsLiveElapsedSeconds => (elapsedSeconds.value ~/ 60) * 60;
 
   ({DateTime start, DateTime endExclusive}) get _selectedRange {
     DateTime startOfDay(DateTime value) =>
@@ -1703,6 +1733,56 @@ class JourneyOperationalCostBreakdownData {
   final int fixedCostsCents;
   final List<OperationalCostBreakdownItem> variableItems;
   final List<OperationalCostBreakdownItem> fixedItems;
+}
+
+class JourneyRideAnalysisData {
+  const JourneyRideAnalysisData({
+    required this.totalRides,
+    required this.totalTimeSeconds,
+    required this.totalKm,
+    required this.grossEarningsCents,
+    required this.variableCostsCents,
+    required this.profitCents,
+  });
+
+  final int totalRides;
+  final int totalTimeSeconds;
+  final double totalKm;
+  final int grossEarningsCents;
+  final int variableCostsCents;
+  final int profitCents;
+
+  bool get hasRides => totalRides > 0;
+  bool get hasHours => totalTimeSeconds >= 60;
+  bool get hasKm => totalKm >= 1;
+
+  double get totalHours => totalTimeSeconds / 3600;
+
+  double? get grossPerRide =>
+      hasRides ? grossEarningsCents / 100 / totalRides : null;
+
+  double? get grossPerHour =>
+      hasRides && hasHours ? grossEarningsCents / 100 / totalHours : null;
+
+  double? get grossPerKm =>
+      hasRides && hasKm ? grossEarningsCents / 100 / totalKm : null;
+
+  double? get costsPerRide =>
+      hasRides ? variableCostsCents / 100 / totalRides : null;
+
+  double? get costsPerHour =>
+      hasRides && hasHours ? variableCostsCents / 100 / totalHours : null;
+
+  double? get costsPerKm =>
+      hasRides && hasKm ? variableCostsCents / 100 / totalKm : null;
+
+  double? get profitPerRide => hasRides ? profitCents / 100 / totalRides : null;
+
+  double? get profitPerHour =>
+      hasRides && hasHours ? profitCents / 100 / totalHours : null;
+
+  double? get profitPerKm =>
+      hasRides && hasKm ? profitCents / 100 / totalKm : null;
 }
 
 class PaymentMethodSummaryItem {

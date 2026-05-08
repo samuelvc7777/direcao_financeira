@@ -258,7 +258,7 @@ class RideRepositoryImpl implements IRideRepository {
     final rides = await localDataSource.getPendingRides();
 
     return rides.where((ride) {
-      final createdAt = _createdAtFromLocalRideId(ride.id);
+      final createdAt = ride.createdAt ?? _createdAtFromLocalRideId(ride.id);
       if (createdAt == null) {
         return false;
       }

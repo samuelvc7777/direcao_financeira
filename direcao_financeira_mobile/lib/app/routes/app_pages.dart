@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../presentation/modules/login/login_view.dart';
 import '../presentation/modules/login/login_binding.dart';
+import '../presentation/modules/reset_password/reset_password_binding.dart';
+import '../presentation/modules/reset_password/reset_password_view.dart';
 import '../presentation/modules/home/home_view.dart';
 import '../presentation/modules/home/home_binding.dart';
 import '../presentation/modules/register/register_view.dart';
@@ -40,6 +42,7 @@ import '../domain/entities/transaction_entity.dart';
 
 class AppRoutes {
   static const String login = '/login';
+  static const String resetPassword = '/reset-password';
   static const String register = '/register';
   static const String dashboard = '/dashboard';
   static const String initial = '/initial';
@@ -68,6 +71,13 @@ class AppPages {
       name: AppRoutes.login,
       page: () => const LoginView(),
       binding: LoginBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.resetPassword,
+      page: () => const ResetPasswordView(),
+      binding: ResetPasswordBinding(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
     ),

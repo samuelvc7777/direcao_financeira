@@ -68,6 +68,8 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
     return formatter.format(v);
   }
 
+  String _fmtOptional(double? value) => value == null ? '--' : _fmt(value);
+
   String _fmtHours(double hours) {
     final totalMin = (hours * 60).round().clamp(0, 999999);
     final h = totalMin ~/ 60;
@@ -75,20 +77,13 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
     return '$h:${m.toString().padLeft(2, '0')}';
   }
 
-  int get _rideAnalysisGrossCents => controller.grossEarningsCents.value;
-
-  int get _rideAnalysisFuelCostCents => controller.rideAnalysisFuelCostsCents;
-
-  int get _rideAnalysisProfitCents =>
-      _rideAnalysisGrossCents - _rideAnalysisFuelCostCents;
-
   Widget _buildInsuficienteAviso({
     required bool semHoras,
     required bool semKm,
   }) {
     final partes = <String>[];
-    if (semKm) partes.add('km < 1 km (GPS insuficiente)');
-    if (semHoras) partes.add('turno < 1 min');
+    if (semKm) partes.add('km < 1 km');
+    if (semHoras) partes.add('corridas < 1 min');
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
@@ -124,6 +119,15 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
     required Color color,
   }) {
     final isExpanded = _sectionExpanded[sectionKey] ?? true;
+    final effectiveSubtitle = switch (sectionKey) {
+      'desempenho' =>
+        'Mostra corridas do periodo, horas online e km dos turnos',
+      'ganhos' =>
+        'Divide o bruto das corridas por viagem, hora online e km rodado',
+      'custos' => 'Soma combustivel pelos km rodados e taxa da plataforma',
+      'lucro' => 'Bruto das corridas menos combustivel e taxa da plataforma',
+      _ => subtitle,
+    };
     return GestureDetector(
       onTap: () => _toggleSection(sectionKey),
       behavior: HitTestBehavior.opaque,
@@ -167,7 +171,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
             secondChild: Padding(
               padding: const EdgeInsets.only(left: 46, top: 2),
               child: Text(
-                subtitle,
+                effectiveSubtitle,
                 style: TextStyle(
                   color: context.theme.colorScheme.onSurface.withValues(
                     alpha: 0.55,
@@ -186,7 +190,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
     );
   }
 
-  Widget _buildSemTurnoAviso() {
+  Widget _buildSemCorridasAviso() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -222,7 +226,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Nenhum turno registrado neste período',
+                  'Nenhuma corrida com dados suficientes neste período',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: context.theme.colorScheme.onSurface.withValues(
@@ -232,10 +236,67 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'As médias por viagem, hora e km dependem do tempo de turno registrado pelo timer.',
+                  'As médias desta seção precisam de corridas no período e usam as horas/km dos turnos para calcular desempenho.',
                   style: TextStyle(
                     color: context.theme.colorScheme.onSurface.withValues(
                       alpha: 0.45,
+                    ),
+                    height: 1.4,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTurnoInativoAviso() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.royalBlue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.royalBlue.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.play_circle_outline_rounded,
+              size: 20,
+              color: AppColors.royalBlue,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nenhum turno neste periodo',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.72,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Esta secao usa as corridas do periodo junto com as horas e km dos turnos finalizados ou do turno ativo. Inicie um turno para acompanhar a analise em tempo real.',
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.50,
                     ),
                     height: 1.4,
                     fontSize: 12,
@@ -329,11 +390,11 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final semDados = controller.totalRides.value == 0;
-      final totalTempoAnalise = controller.onlineAnalysisTotalTimeSeconds;
-      final totalKmAnalise = controller.rideAnalysisTotalKm;
-      final semHoras = totalTempoAnalise < 60;
-      final semKm = totalKmAnalise < 1;
+      final analysis = controller.rideAnalysisData;
+      final turnoInativo = !controller.isRideAnalysisAvailable;
+      final semDados = !analysis.hasRides;
+      final semHoras = !analysis.hasHours;
+      final semKm = !analysis.hasKm;
 
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -355,7 +416,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Médias por corrida com base no bruto e no combustível por km rodado',
+                    'Médias das corridas usando horas e km dos turnos',
                     style: TextStyle(
                       color: context.theme.colorScheme.onSurface.withValues(
                         alpha: 0.5,
@@ -366,15 +427,19 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 ],
               ),
             ),
-            if (totalTempoAnalise == 0) ...[
-              _buildSemTurnoAviso(),
+            if (turnoInativo) ...[
+              _buildTurnoInativoAviso(),
+              const SizedBox(height: 24),
+            ] else if (semDados) ...[
+              _buildSemCorridasAviso(),
               const SizedBox(height: 24),
             ] else ...[
               _buildSectionHeader(
                 sectionKey: 'desempenho',
                 icon: Icons.speed_rounded,
                 title: 'Desempenho',
-                subtitle: 'Viagens realizadas, horas no turno e km pelo GPS',
+                subtitle:
+                    'Viagens realizadas, duração total e km somados das corridas',
                 color: AppColors.royalBlue,
               ),
               const SizedBox(height: 10),
@@ -386,9 +451,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                       child: _buildMetricCard(
                         icon: Icons.directions_car,
                         label: 'Viagens',
-                        value: semDados
-                            ? '--'
-                            : controller.totalRides.value.toString(),
+                        value: semDados ? '--' : analysis.totalRides.toString(),
                         color: AppColors.royalBlue,
                       ),
                     ),
@@ -400,9 +463,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                       child: _buildMetricCard(
                         icon: Icons.schedule,
                         label: 'Horas',
-                        value: semDados
-                            ? '--'
-                            : _fmtHours(totalTempoAnalise / 3600),
+                        value: semDados ? '--' : _fmtHours(analysis.totalHours),
                         color: AppColors.electricCyan,
                       ),
                     ),
@@ -416,7 +477,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'KM',
                         value: semDados
                             ? '--'
-                            : totalKmAnalise.toStringAsFixed(0),
+                            : analysis.totalKm.toStringAsFixed(0),
                         color: AppColors.royalBlue,
                       ),
                     ),
@@ -446,13 +507,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                             label: 'por viagem',
                             value: semDados
                                 ? '--'
-                                : _fmt(
-                                    controller.totalRides.value > 0
-                                        ? _rideAnalysisGrossCents /
-                                              100 /
-                                              controller.totalRides.value
-                                        : 0,
-                                  ),
+                                : _fmtOptional(analysis.grossPerRide),
                             color: AppColors.royalBlue,
                           ),
                         ),
@@ -466,12 +521,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                             label: 'por hora',
                             value: (semDados || semHoras)
                                 ? '--'
-                                : _fmt(
-                                    totalTempoAnalise > 0
-                                        ? (_rideAnalysisGrossCents / 100) /
-                                              (totalTempoAnalise / 3600)
-                                        : 0,
-                                  ),
+                                : _fmtOptional(analysis.grossPerHour),
                             color: AppColors.royalBlue,
                           ),
                         ),
@@ -485,12 +535,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                             label: 'por km',
                             value: (semDados || semKm)
                                 ? '--'
-                                : _fmt(
-                                    totalKmAnalise > 0
-                                        ? (_rideAnalysisGrossCents / 100) /
-                                              totalKmAnalise
-                                        : 0,
-                                  ),
+                                : _fmtOptional(analysis.grossPerKm),
                             color: AppColors.royalBlue,
                           ),
                         ),
@@ -507,7 +552,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 icon: Icons.local_gas_station_rounded,
                 title: 'Custos das corridas',
                 subtitle:
-                    'Custo baseado no combustível consumido pelo km rodado nas corridas',
+                    'Custos variáveis das corridas com combustível e taxa da plataforma',
                 color: AppColors.rose,
               ),
               const SizedBox(height: 10),
@@ -521,13 +566,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'por viagem',
                         value: semDados
                             ? '--'
-                            : _fmt(
-                                controller.totalRides.value > 0
-                                    ? _rideAnalysisFuelCostCents /
-                                          100 /
-                                          controller.totalRides.value
-                                    : 0,
-                              ),
+                            : _fmtOptional(analysis.costsPerRide),
                         color: AppColors.rose,
                       ),
                     ),
@@ -541,12 +580,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'por hora',
                         value: (semDados || semHoras)
                             ? '--'
-                            : _fmt(
-                                totalTempoAnalise > 0
-                                    ? (_rideAnalysisFuelCostCents / 100) /
-                                          (totalTempoAnalise / 3600)
-                                    : 0,
-                              ),
+                            : _fmtOptional(analysis.costsPerHour),
                         color: AppColors.rose,
                       ),
                     ),
@@ -560,12 +594,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'por km',
                         value: (semDados || semKm)
                             ? '--'
-                            : _fmt(
-                                totalKmAnalise > 0
-                                    ? (_rideAnalysisFuelCostCents / 100) /
-                                          totalKmAnalise
-                                    : 0,
-                              ),
+                            : _fmtOptional(analysis.costsPerKm),
                         color: AppColors.rose,
                       ),
                     ),
@@ -578,7 +607,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                 icon: Icons.savings_rounded,
                 title: 'Lucro das corridas',
                 subtitle:
-                    'Ganho bruto menos o custo do combustível calculado por km rodado',
+                    'Ganho bruto menos os custos variáveis de combustível e taxa da plataforma',
                 color: AppColors.emerald,
               ),
               const SizedBox(height: 10),
@@ -592,13 +621,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'por viagem',
                         value: semDados
                             ? '--'
-                            : _fmt(
-                                controller.totalRides.value > 0
-                                    ? _rideAnalysisProfitCents /
-                                          100 /
-                                          controller.totalRides.value
-                                    : 0,
-                              ),
+                            : _fmtOptional(analysis.profitPerRide),
                         color: AppColors.emerald,
                       ),
                     ),
@@ -612,12 +635,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'por hora',
                         value: (semDados || semHoras)
                             ? '--'
-                            : _fmt(
-                                totalTempoAnalise > 0
-                                    ? (_rideAnalysisProfitCents / 100) /
-                                          (totalTempoAnalise / 3600)
-                                    : 0,
-                              ),
+                            : _fmtOptional(analysis.profitPerHour),
                         color: AppColors.emerald,
                       ),
                     ),
@@ -631,12 +649,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
                         label: 'por km',
                         value: (semDados || semKm)
                             ? '--'
-                            : _fmt(
-                                totalKmAnalise > 0
-                                    ? (_rideAnalysisProfitCents / 100) /
-                                          totalKmAnalise
-                                    : 0,
-                              ),
+                            : _fmtOptional(analysis.profitPerKm),
                         color: AppColors.emerald,
                       ),
                     ),
