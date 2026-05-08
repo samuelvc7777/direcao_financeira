@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../domain/entities/transaction_entity.dart';
+import '../../../../domain/entities/transaction_draft_entity.dart';
 import '../../../datasources/transaction_datasource.dart';
 import '../../../mappers/transaction_codecs.dart';
 import '../../../models/transaction_model.dart';
@@ -146,6 +147,29 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
 
     final enriched = await _enrichTransactions(_toRowList(inserted));
     return enriched.first;
+  }
+
+  @override
+  Future<List<TransactionModel>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
+  }) async {
+    final created = <TransactionModel>[];
+    for (final draft in transactions) {
+      created.add(
+        await createTransaction(
+          type: draft.type,
+          assetType: draft.assetType,
+          amountCents: draft.amountCents,
+          categoryId: draft.categoryId,
+          description: draft.description,
+          transactionDate: draft.transactionDate,
+          bankAccountId: draft.bankAccountId,
+          creditCardId: draft.creditCardId,
+          installmentCount: draft.installmentCount,
+        ),
+      );
+    }
+    return created;
   }
 
   @override

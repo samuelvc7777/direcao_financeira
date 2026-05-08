@@ -72,6 +72,18 @@ class NestRideRemoteDataSource implements IRideDataSource {
   }
 
   @override
+  Future<void> createRideWithStatus({
+    required DetectedRideDraftEntity ride,
+    required String status,
+    String? paymentMethod,
+    String? cancelReason,
+  }) {
+    throw UnsupportedError(
+      'Persistencia remota de corrida detectada esta disponivel apenas no provider Supabase.',
+    );
+  }
+
+  @override
   Future<void> finishRide({
     required int rideId,
     required String paymentMethod,

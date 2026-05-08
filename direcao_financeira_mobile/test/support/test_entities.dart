@@ -89,6 +89,7 @@ TransactionModel buildTransaction({
   int id = 1,
   TransactionType type = TransactionType.expense,
   DateTime? date,
+  String description = 'Posto Shell',
 }) {
   return TransactionModel(
     id: id,
@@ -97,7 +98,7 @@ TransactionModel buildTransaction({
     assetType: AssetType.bankAccount,
     amountCents: 2500,
     categoryId: 1,
-    description: 'Posto Shell',
+    description: description,
     transactionDate: date ?? DateTime(2026, 1, 10),
     bankAccountId: 1,
     categoryName: 'Combustivel',
@@ -222,6 +223,8 @@ RideEntity buildRide() {
     origin: 'Centro',
     destination: 'Aeroporto',
     passenger: 'Joao',
+    totalKm: 5,
+    totalTimeSeconds: 1200,
     durationMinutes: 20,
     gainPerKmCents: 640,
     gainPerHourCents: 9600,

@@ -3,6 +3,7 @@ import '../../core/errors/failures.dart';
 import '../entities/bank_account_entity.dart';
 import '../entities/category_entity.dart';
 import '../entities/credit_card_entity.dart';
+import '../entities/transaction_draft_entity.dart';
 import '../entities/transaction_entity.dart';
 import '../repositories/i_bank_account_repository.dart';
 import '../repositories/i_category_repository.dart';
@@ -72,6 +73,20 @@ class CreateTransactionUseCase {
       bankAccountId: bankAccountId,
       creditCardId: creditCardId,
       installmentCount: installmentCount,
+    );
+  }
+}
+
+class CreateImportedTransactionsUseCase {
+  final ITransactionRepository repository;
+
+  CreateImportedTransactionsUseCase(this.repository);
+
+  Future<Either<Failure, List<TransactionEntity>>> call({
+    required List<TransactionDraftEntity> transactions,
+  }) async {
+    return await repository.createImportedTransactions(
+      transactions: transactions,
     );
   }
 }

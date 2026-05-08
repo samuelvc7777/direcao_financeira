@@ -21,6 +21,8 @@ RideEntity buildJourneyRideVariant({
     origin: 'Centro',
     destination: 'Aeroporto',
     passenger: 'Joao',
+    totalKm: 5,
+    totalTimeSeconds: durationMinutes * 60,
     durationMinutes: durationMinutes,
     gainPerKmCents: 640,
     gainPerHourCents: 9600,

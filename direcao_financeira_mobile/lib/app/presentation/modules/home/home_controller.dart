@@ -145,7 +145,9 @@ class HomeController extends GetxController {
             .where((transaction) => !transaction.isInternalInvoicePayment)
             .toList();
         ultimasTransacoes.assignAll(visibleTransactions);
-        gastosPorCategoria.assignAll(_buildExpenseChartItems(visibleTransactions));
+        gastosPorCategoria.assignAll(
+          _buildExpenseChartItems(visibleTransactions),
+        );
       },
     );
 
@@ -180,10 +182,8 @@ class HomeController extends GetxController {
       .where((t) => t.type == TransactionType.expense)
       .fold(0.0, (total, t) => total + t.amount);
 
-  double get totalSaidas => gastosPorCategoria.fold(
-    0.0,
-    (total, item) => total + item.amount,
-  );
+  double get totalSaidas =>
+      gastosPorCategoria.fold(0.0, (total, item) => total + item.amount);
 
   void toggleBalanceVisibility() => isBalanceVisible.toggle();
 
@@ -236,6 +236,7 @@ class HomeController extends GetxController {
       );
 
       await loadDashboardData(silent: true);
+      dashboardRefreshNotifier.requestRefresh();
       _showFeedback(
         'Sucesso',
         'Fatura do cartao "${card.name}" paga com ${bankAccount.name}.',
@@ -300,7 +301,8 @@ class HomeController extends GetxController {
       );
       labelsByCategory.putIfAbsent(
         transaction.categoryId,
-        () => transaction.categoryName ?? 'Categoria #${transaction.categoryId}',
+        () =>
+            transaction.categoryName ?? 'Categoria #${transaction.categoryId}',
       );
       colorsByCategory.putIfAbsent(
         transaction.categoryId,
@@ -313,20 +315,21 @@ class HomeController extends GetxController {
       (total, amount) => total + amount,
     );
 
-    final items = totalsByCategory.entries
-        .map(
-          (entry) => HomeExpenseChartItem(
-            categoryId: entry.key,
-            categoryLabel: labelsByCategory[entry.key]!,
-            amountCents: entry.value,
-            percentage: totalExpenseCents == 0
-                ? 0
-                : (entry.value / totalExpenseCents) * 100,
-            color: colorsByCategory[entry.key]!,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.amountCents.compareTo(a.amountCents));
+    final items =
+        totalsByCategory.entries
+            .map(
+              (entry) => HomeExpenseChartItem(
+                categoryId: entry.key,
+                categoryLabel: labelsByCategory[entry.key]!,
+                amountCents: entry.value,
+                percentage: totalExpenseCents == 0
+                    ? 0
+                    : (entry.value / totalExpenseCents) * 100,
+                color: colorsByCategory[entry.key]!,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.amountCents.compareTo(a.amountCents));
 
     return items;
   }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../../domain/entities/transaction_entity.dart';
+import '../../../../domain/entities/transaction_draft_entity.dart';
 import '../../../datasources/transaction_datasource.dart';
 import '../../../mappers/transaction_codecs.dart';
 import '../../../models/transaction_model.dart';
@@ -89,6 +90,29 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
 
     final response = await dio.post('/finance/transactions', data: payload);
     return _parseTransaction(response.data);
+  }
+
+  @override
+  Future<List<TransactionModel>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
+  }) async {
+    final created = <TransactionModel>[];
+    for (final draft in transactions) {
+      created.add(
+        await createTransaction(
+          type: draft.type,
+          assetType: draft.assetType,
+          amountCents: draft.amountCents,
+          categoryId: draft.categoryId,
+          description: draft.description,
+          transactionDate: draft.transactionDate,
+          bankAccountId: draft.bankAccountId,
+          creditCardId: draft.creditCardId,
+          installmentCount: draft.installmentCount,
+        ),
+      );
+    }
+    return created;
   }
 
   @override

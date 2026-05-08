@@ -9,7 +9,10 @@ class MoveSjParser {
     private val ratingRegex =
         Regex("\\d+(?:[.,]\\d+)?\\s*[\\u2605\\u2B50]", RegexOption.IGNORE_CASE)
     private val routeStepRegex =
-        Regex("\\d+(?:[.,]\\d+)?\\s*km\\s*\\(\\d+\\s*min\\)", RegexOption.IGNORE_CASE)
+        Regex(
+            "\\d+(?:[.,]\\d+)?\\s*(?:km|m)\\s*\\((?:(?:\\d+)\\s*hora(?:s)?\\s*)?(?:\\d+)\\s*min\\)",
+            RegexOption.IGNORE_CASE,
+        )
     private val offerDistanceRegex =
         Regex(
             "(\\d+(?:[.,]\\d+)?)\\s*km\\s*\\(\\s*R\\$\\s*\\d+(?:[.,]\\d+)?\\s*/\\s*km\\s*\\)",
@@ -17,7 +20,7 @@ class MoveSjParser {
         )
     private val offerMinutesRegex =
         Regex(
-            "(\\d+)\\s*min\\s*\\(\\s*R\\$\\s*\\d+(?:[.,]\\d+)?\\s*/\\s*min\\s*\\)",
+            "((?:(?:\\d+)\\s*hora(?:s)?\\s*)?(?:\\d+)\\s*min)\\s*\\(\\s*R\\$\\s*\\d+(?:[.,]\\d+)?\\s*/\\s*min\\s*\\)",
             RegexOption.IGNORE_CASE,
         )
     private val actionMarkers =
@@ -27,6 +30,8 @@ class MoveSjParser {
             "recusar",
             "aceitar",
         )
+    private val routeKeywordRegex =
+        Regex("\\b(?:km|min|hora|horas)\\b", RegexOption.IGNORE_CASE)
 
     fun isOfferScreen(rootNode: AccessibilityNodeInfo): Boolean {
         return isOfferScreenFromLines(collectVisibleTexts(rootNode))
@@ -56,6 +61,22 @@ class MoveSjParser {
             lines = lines,
             priceText = priceNode?.text?.toString() ?: "R$ 0,00",
             ratingText = ratingNode?.text?.toString(),
+        )
+    }
+
+    fun buildDebugSnapshot(rootNode: AccessibilityNodeInfo): Map<String, Any> {
+        val rawLines = collectNonEmptyTexts(rootNode)
+        val normalizedLines = normalizeVisibleTexts(rawLines)
+        val parsedOffer = extractOfferDetails(normalizedLines)
+
+        return linkedMapOf(
+            "raw_lines" to rawLines,
+            "normalized_lines" to normalizedLines,
+            "passenger_name" to parsedOffer.passengerName.orEmpty(),
+            "origin_address" to parsedOffer.originAddress.orEmpty(),
+            "destination_address" to parsedOffer.destinationAddress.orEmpty(),
+            "km_total" to parsedOffer.metrics.totalKm,
+            "minutos_total" to parsedOffer.metrics.totalMinutes,
         )
     }
 
@@ -130,7 +151,7 @@ class MoveSjParser {
                     offerMinutesRegex.find(line)
                         ?.groupValues
                         ?.getOrNull(1)
-                        ?.toIntOrNull()
+                        ?.let(::parseDurationMinutes)
                 if (minuteValue != null && minuteValue > 0) {
                     totalMinutes = minuteValue
                 }
@@ -138,38 +159,45 @@ class MoveSjParser {
         }
 
         if (totalKm <= 0 || totalMinutes <= 0) {
+            var fallbackKm = 0.0
+            var fallbackMinutes = 0
+
             lines.forEach { line ->
                 val routeMatch = routeStepRegex.find(line) ?: return@forEach
                 val routeText = routeMatch.value
 
                 if (totalKm <= 0) {
-                    val routeKm =
-                        Regex("(\\d+(?:[.,]\\d+)?)\\s*km", RegexOption.IGNORE_CASE)
-                            .find(routeText)
-                            ?.groupValues
-                            ?.getOrNull(1)
-                            ?.replace(",", ".")
-                            ?.toDoubleOrNull()
+                    val routeKm = parseRouteDistanceKm(routeText)
                     if (routeKm != null) {
-                        totalKm += routeKm
+                        fallbackKm += routeKm
                     }
                 }
 
                 if (totalMinutes <= 0) {
                     val routeMinutes =
-                        Regex("\\((\\d+)\\s*min\\)", RegexOption.IGNORE_CASE)
+                        Regex("\\(((?:(?:\\d+)\\s*hora(?:s)?\\s*)?(?:\\d+)\\s*min)\\)", RegexOption.IGNORE_CASE)
                             .find(routeText)
                             ?.groupValues
                             ?.getOrNull(1)
-                            ?.toIntOrNull()
+                            ?.let(::parseDurationMinutes)
                     if (routeMinutes != null) {
-                        totalMinutes += routeMinutes
+                        fallbackMinutes += routeMinutes
                     }
                 }
             }
+
+            if (totalKm <= 0 && fallbackKm > 0) {
+                totalKm = fallbackKm
+            }
+            if (totalMinutes <= 0 && fallbackMinutes > 0) {
+                totalMinutes = fallbackMinutes
+            }
         }
 
-        return MoveSjOfferMetrics(totalKm = totalKm, totalMinutes = totalMinutes)
+        return MoveSjOfferMetrics(
+            totalKm = roundKm(totalKm),
+            totalMinutes = totalMinutes,
+        )
     }
 
     private fun collectVisibleTexts(rootNode: AccessibilityNodeInfo): List<String> {
@@ -214,9 +242,10 @@ class MoveSjParser {
         val normalized = normalizedText(line)
         return line.length in 3..30 &&
             line.any { it.isLetter() } &&
+            !line.contains(",") &&
+            !line.any { it.isDigit() } &&
             !normalized.contains("deslize") &&
-            !normalized.contains("km") &&
-            !normalized.contains("min") &&
+            !routeKeywordRegex.containsMatchIn(normalized) &&
             !normalized.contains("r$") &&
             !normalized.contains("aceitar") &&
             !normalized.contains("recusar") &&
@@ -267,6 +296,8 @@ class MoveSjParser {
         passengerName: String?,
     ): String? {
         val collected = mutableListOf<String>()
+        val routeLine = lines.getOrNull(startIndex - 1)
+        extractInlineAddressFromRouteLine(routeLine, passengerName)?.let(collected::add)
 
         for (index in startIndex until lines.size) {
             val candidate = lines[index]
@@ -290,6 +321,23 @@ class MoveSjParser {
         }
 
         return joinAddressLines(collected)
+    }
+
+    private fun extractInlineAddressFromRouteLine(
+        routeLine: String?,
+        passengerName: String?,
+    ): String? {
+        if (routeLine.isNullOrBlank()) {
+            return null
+        }
+
+        val routeMatch = routeStepRegex.find(routeLine) ?: return null
+        val inlineAddress = routeLine.substring(routeMatch.range.last + 1).trim()
+        if (!isAddressCandidate(inlineAddress, passengerName)) {
+            return null
+        }
+
+        return inlineAddress
     }
 
     private fun buildFallbackAddressBlocks(
@@ -357,7 +405,11 @@ class MoveSjParser {
         passengerName: String?,
     ): Boolean {
         val normalized = normalizedText(line)
-        return line.length >= 10 &&
+        val hasStreetLikeStructure =
+            line.length >= 6 &&
+                (line.contains(",") || line.any { it.isDigit() })
+
+        return (line.length >= 10 || hasStreetLikeStructure) &&
             line.any { it.isLetter() } &&
             (passengerName == null || normalized != normalizedText(passengerName)) &&
             !normalized.contains("move") &&
@@ -365,8 +417,7 @@ class MoveSjParser {
             !normalized.contains("deslize") &&
             !normalized.contains("aceitar") &&
             !normalized.contains("recusar") &&
-            !normalized.contains("km") &&
-            !normalized.contains("min") &&
+            !routeKeywordRegex.containsMatchIn(normalized) &&
             !normalized.contains("r$") &&
             !normalized.contains("pix") &&
             !normalized.contains("cartao") &&
@@ -440,8 +491,45 @@ class MoveSjParser {
         return normalized.lowercase()
     }
 
+    private fun parseRouteDistanceKm(routeText: String): Double? {
+        val match =
+            Regex("(\\d+(?:[.,]\\d+)?)\\s*(km|m)", RegexOption.IGNORE_CASE)
+                .find(routeText)
+                ?: return null
+
+        val rawValue =
+            match.groupValues
+                .getOrNull(1)
+                ?.replace(",", ".")
+                ?.toDoubleOrNull()
+                ?: return null
+        val unit = match.groupValues.getOrNull(2)?.lowercase()
+
+        return when (unit) {
+            "km" -> rawValue
+            "m" -> rawValue / 1000.0
+            else -> null
+        }
+    }
+
+    private fun parseDurationMinutes(durationText: String): Int? {
+        val normalized = normalizedText(durationText)
+        val hourMatch = Regex("(\\d+)\\s*hora").find(normalized)
+        val minuteMatch = Regex("(\\d+)\\s*min").find(normalized)
+
+        val hours = hourMatch?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 0
+        val minutes = minuteMatch?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 0
+        val total = (hours * 60) + minutes
+
+        return total.takeIf { it > 0 }
+    }
+
     private fun normalizeFingerprintValue(value: String?): String {
         return normalizedText(value).replace(" ", "")
+    }
+
+    private fun roundKm(value: Double): Double {
+        return (value * 1000).toInt() / 1000.0
     }
 
     private fun sanitizeRating(ratingText: String?): String {

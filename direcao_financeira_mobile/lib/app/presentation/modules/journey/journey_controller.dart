@@ -19,7 +19,7 @@ import 'journey_runtime_coordinator.dart';
 import 'journey_statistics_display_data.dart';
 import 'shift_lifecycle_coordinator.dart';
 
-class JourneyController extends GetxController {
+class JourneyController extends GetxController with WidgetsBindingObserver {
   static const int _historyPageSize = 20;
 
   final GetActiveShiftUseCase getActiveShift;
@@ -247,6 +247,7 @@ class JourneyController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     isTrafficLightActive.value =
         runtimeCoordinator.accessibilityService.persistedTrafficLightActive;
     _journeyMetricsWorker = everAll([
@@ -277,10 +278,20 @@ class JourneyController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     runtimeCoordinator.unbind();
     _timer?.cancel();
     _journeyMetricsWorker?.dispose();
     super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+
+    _syncSelectedDateWithTodayIfNeeded();
   }
 
   String get dateLabel {
@@ -378,6 +389,24 @@ class JourneyController extends GetxController {
       selectedFilter.value = filter;
       refreshJourneyData(showErrors: false);
     }
+  }
+
+  void _syncSelectedDateWithTodayIfNeeded() {
+    if (selectedFilter.value != 'day') {
+      return;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selected = selectedDate.value;
+    final selectedDay = DateTime(selected.year, selected.month, selected.day);
+
+    if (selectedDay == today) {
+      return;
+    }
+
+    selectedDate.value = today;
+    refreshJourneyData(silent: true, showErrors: false);
   }
 
   void setCustomRange(DateTime start, DateTime end) {

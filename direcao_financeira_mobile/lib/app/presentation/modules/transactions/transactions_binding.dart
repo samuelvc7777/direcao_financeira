@@ -53,7 +53,6 @@ class TransactionsBinding extends Bindings {
         fenix: true,
       );
     }
-
     if (!Get.isRegistered<TransactionsController>()) {
       Get.lazyPut<TransactionsController>(
         () => TransactionsController(

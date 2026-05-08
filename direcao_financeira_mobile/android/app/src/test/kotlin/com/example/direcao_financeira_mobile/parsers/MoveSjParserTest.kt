@@ -64,6 +64,60 @@ class MoveSjParserTest {
     }
 
     @Test
+    fun `mantem origem e destino quando a origem vem com distancia em metros`() {
+        val offerData =
+            parser.parseOfferFromLines(
+                lines =
+                    listOf(
+                        "R$ 12,66",
+                        "1,5 km (R$ 8,61 / km)",
+                        "4 min (R$ 2,98 / min)",
+                        "0 m (1 min)",
+                        "R. Joaquim Portugal, 15 - Matozinhos, Sao Joao del Rei - MG, 36305-174, Brasil",
+                        "1,5 km (4 min)",
+                        "Av. Leite de Castro, 617 - Fabricas, Sao Joao del Rei - MG, 36301-182, Brasil",
+                        "ACEITAR (12)",
+                    ),
+                priceText = "R$ 12,66",
+            )
+
+        assertEquals(
+            "R. Joaquim Portugal, 15 - Matozinhos, Sao Joao del Rei - MG, 36305-174, Brasil",
+            offerData["origin_address"],
+        )
+        assertEquals(
+            "Av. Leite de Castro, 617 - Fabricas, Sao Joao del Rei - MG, 36301-182, Brasil",
+            offerData["destination_address"],
+        )
+    }
+
+    @Test
+    fun `extrai origem e destino quando endereco vem no mesmo no do trecho da rota`() {
+        val offerData =
+            parser.parseOfferFromLines(
+                lines =
+                    listOf(
+                        "R$ 12,66",
+                        "1,5 km (R$ 8,61 / km)",
+                        "4 min (R$ 2,98 / min)",
+                        "0 m (1 min) R. Joaquim Portugal, 15 - Matozinhos, Sao Joao del Rei - MG, 36305-174, Brasil",
+                        "1,5 km (4 min) Av. Leite de Castro, 617 - Fabricas, Sao Joao del Rei - MG, 36301-182, Brasil",
+                        "ACEITAR (12)",
+                    ),
+                priceText = "R$ 12,66",
+            )
+
+        assertEquals(
+            "R. Joaquim Portugal, 15 - Matozinhos, Sao Joao del Rei - MG, 36305-174, Brasil",
+            offerData["origin_address"],
+        )
+        assertEquals(
+            "Av. Leite de Castro, 617 - Fabricas, Sao Joao del Rei - MG, 36301-182, Brasil",
+            offerData["destination_address"],
+        )
+    }
+
+    @Test
     fun `usa os trechos da rota como fallback para km e minutos`() {
         val offerData =
             parser.parseOfferFromLines(
@@ -79,6 +133,61 @@ class MoveSjParserTest {
 
         assertEquals(2.4, offerData["km_total"])
         assertEquals(6, offerData["minutos_total"])
+    }
+
+    @Test
+    fun `soma trechos em metros no fallback de km e minutos`() {
+        val offerData =
+            parser.parseOfferFromLines(
+                lines =
+                    listOf(
+                        "300 m (2 min)",
+                        "Rua Antonio Floriano da Silva, 5 - Sao Joao del Rei - MG",
+                        "900 m (4 min)",
+                        "Praca Frei Orlando - Centro, Sao Joao del Rei - MG",
+                    ),
+                priceText = "R$ 10,00",
+            )
+
+        assertEquals(1.2, offerData["km_total"])
+        assertEquals(6, offerData["minutos_total"])
+    }
+
+    @Test
+    fun `extrai origem destino e duracao quando a movesj informa horas e minutos`() {
+        val offerData =
+            parser.parseOfferFromLines(
+                lines =
+                    listOf(
+                        "Move",
+                        "1,1x",
+                        "Deslize para recusar",
+                        "Samuel",
+                        "5,00",
+                        "R$ 254,25",
+                        "(Motorista)",
+                        "R$ 254,25",
+                        "59,6 km (R$ 4,27/km)",
+                        "1 hora 6 min (R$ 3,81/min)",
+                        "0 m (1 min)",
+                        "R. Getulio Vargas, 989 - A Definir, Santa Cruz de Minas - MG, 36302-142, Brasil",
+                        "59,6 km (1 hora 6 min)",
+                        "R. Anita Garibalde, 210 - Sao Sebastiao, Barbacena - MG, 36202-314, Brasil",
+                        "Deslize para aceitar (5)",
+                    ),
+                priceText = "R$ 254,25",
+            )
+
+        assertEquals(
+            "R. Getulio Vargas, 989 - A Definir, Santa Cruz de Minas - MG, 36302-142, Brasil",
+            offerData["origin_address"],
+        )
+        assertEquals(
+            "R. Anita Garibalde, 210 - Sao Sebastiao, Barbacena - MG, 36202-314, Brasil",
+            offerData["destination_address"],
+        )
+        assertEquals(59.6, offerData["km_total"])
+        assertEquals(66, offerData["minutos_total"])
     }
 
     @Test

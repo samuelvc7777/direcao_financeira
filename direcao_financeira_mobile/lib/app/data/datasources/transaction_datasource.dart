@@ -1,4 +1,5 @@
 import '../../domain/entities/transaction_entity.dart';
+import '../../domain/entities/transaction_draft_entity.dart';
 import '../models/transaction_model.dart';
 
 abstract class ITransactionDataSource {
@@ -16,6 +17,10 @@ abstract class ITransactionDataSource {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+  });
+
+  Future<List<TransactionModel>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
   });
 
   Future<void> createInvoicePayment({

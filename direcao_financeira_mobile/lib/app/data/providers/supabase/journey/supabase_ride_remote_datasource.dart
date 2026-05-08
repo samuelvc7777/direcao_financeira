@@ -51,14 +51,24 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
 
   @override
   Future<void> createDetectedRide(DetectedRideDraftEntity ride) async {
+    await createRideWithStatus(ride: ride, status: 'PENDING');
+  }
+
+  @override
+  Future<void> createRideWithStatus({
+    required DetectedRideDraftEntity ride,
+    required String status,
+    String? paymentMethod,
+    String? cancelReason,
+  }) async {
     final userId = await userScope.getCurrentUserId();
     final now = DateTime.now().toUtc().toIso8601String();
 
     await client.from(SupabaseTableNames.rides).insert({
       'userId': userId,
-      'status': 'PENDING',
+      'status': status,
       'platformName': ride.platformName,
-      'paymentMethod': ride.paymentMethod,
+      'paymentMethod': paymentMethod ?? ride.paymentMethod,
       'grossValueCents': ride.grossValueCents,
       'netProfitCents': ride.netProfitCents,
       'totalKm': ride.totalKm,
@@ -68,6 +78,7 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
       'passengerName': ride.passengerName,
       'originAddress': ride.originAddress,
       'destinationAddress': ride.destinationAddress,
+      'cancelReason': cancelReason,
       'createdAt': now,
       'updatedAt': now,
     });

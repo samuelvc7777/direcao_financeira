@@ -17,12 +17,14 @@ import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.da
 import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/detected_ride_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/plan_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/ride_import_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_route_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/store_product_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/store_purchase_event_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/subscription_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/transaction_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/transaction_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
@@ -222,6 +224,24 @@ class _FakeTransactionRepository implements ITransactionRepository {
   }) async {
     final created = buildTransaction(id: 99, type: type, date: transactionDate);
     transactions = [created, ...transactions];
+    return Right(created);
+  }
+
+  @override
+  Future<Either<Failure, List<TransactionEntity>>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
+  }) async {
+    final created = <TransactionEntity>[];
+    for (var i = 0; i < transactions.length; i++) {
+      created.add(
+        buildTransaction(
+          id: 200 + i,
+          type: transactions[i].type,
+          date: transactions[i].transactionDate,
+          description: transactions[i].description,
+        ),
+      );
+    }
     return Right(created);
   }
 
@@ -437,6 +457,51 @@ class _FakeRideRepository implements IRideRepository {
     int offset = 0,
     int limit = 20,
   }) async => ridesResult;
+
+  @override
+  Future<Either<Failure, PagedResultEntity<RideImportEntity>>>
+  getImportableRides({
+    String period = 'month',
+    String? date,
+    String? endDate,
+    String? status = 'FINISHED',
+    int offset = 0,
+    int limit = 100,
+  }) async {
+    final items =
+        ridesResult
+            .getOrElse(
+              () => PagedResultEntity<RideEntity>(
+                items: [],
+                totalCount: 0,
+                offset: 0,
+                limit: 0,
+              ),
+            )
+            .items
+            .map(
+              (ride) => RideImportEntity(
+                rideId: ride.id,
+                status: ride.status,
+                appName: ride.appName,
+                paymentMethod: ride.paymentMethod,
+                grossValueCents: ride.grossValueCents,
+                date: ride.date,
+                time: ride.time,
+                isAlreadyImported: false,
+              ),
+            )
+            .toList();
+
+    return Right(
+      PagedResultEntity(
+        items: items,
+        totalCount: items.length,
+        offset: offset,
+        limit: limit,
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, Unit>> finishRide({

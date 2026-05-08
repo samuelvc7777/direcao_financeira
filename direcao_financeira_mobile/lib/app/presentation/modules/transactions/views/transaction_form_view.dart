@@ -424,10 +424,12 @@ class TransactionFormView extends GetView<TransactionsController> {
       AppSnackbar.show('Atencao', 'Selecione a categoria.');
       return;
     }
-    final amountCents =
-        int.tryParse(amountController.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
-        0;
     if (editingTransaction != null) {
+      final amountCents =
+          int.tryParse(
+            amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+          ) ??
+          0;
       await controller.updateTransaction(
         editingTransaction!.id,
         categoryId: selectedCategory.value!.id,
@@ -439,6 +441,11 @@ class TransactionFormView extends GetView<TransactionsController> {
         scope: TransactionMutationScope.current,
       );
     } else {
+      final amountCents =
+          int.tryParse(
+            amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+          ) ??
+          0;
       await controller.createTransaction(
         type: selectedType.value,
         assetType: AssetType.bankAccount,

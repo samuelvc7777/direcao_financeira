@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -22,6 +23,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.text.Normalizer
 
 class ScreenReaderService : AccessibilityService() {
+    private val logTag = "DF-MoveSjDebug"
     private val ninetyNinePackageKeywords = listOf("99")
     private val moveSjDriverPackage = "br.com.devbase.movesj.prestador"
     private val samsungGalleryPackage = "com.sec.android.gallery3d"
@@ -100,15 +102,23 @@ class ScreenReaderService : AccessibilityService() {
 
         if (targetNode != null) {
             val screenFingerprint = moveSjParser.buildScreenFingerprint(targetNode)
+            Log.d(
+                logTag,
+                "MoveSj screenFingerprint=$screenFingerprint package=$packageName source=${sourceNode != null} root=${rootNode != null}",
+            )
             if (shouldIgnoreMatchingScreen(appKey = "MoveSj", screenFingerprint = screenFingerprint)) {
+                Log.d(logTag, "MoveSj tela ignorada por fingerprint repetido.")
                 return
             }
         }
 
         if (targetNode != null && moveSjParser.isOfferScreen(targetNode)) {
+            val parserDebugSnapshot = moveSjParser.buildDebugSnapshot(targetNode)
+            Log.d(logTag, "MoveSj parserSnapshot=$parserDebugSnapshot")
             val offerData = moveSjParser.parseOffer(targetNode).toMutableMap()
             offerData.putIfAbsent("app", "MoveSj")
             offerData.putIfAbsent("platform_name", "MoveSj")
+            Log.d(logTag, "MoveSj offerData=$offerData")
             processOffer(offerData)
         }
     }
@@ -219,7 +229,9 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         val signature = buildOfferSignature(offerData)
+        Log.d(logTag, "MoveSj processOffer signature=$signature payload=$offerData")
         if (isDuplicateOffer(signature)) {
+            Log.d(logTag, "MoveSj oferta ignorada por assinatura duplicada.")
             return
         }
 
@@ -493,8 +505,9 @@ class ScreenReaderService : AccessibilityService() {
 
     private fun notifyFlutter(data: Map<String, Any>) {
         Handler(Looper.getMainLooper()).post {
-            channel?.invokeMethod("onRaceDetected", data)
-        }
+        channel?.invokeMethod("onRaceDetected", data)
+        Log.d(logTag, "MoveSj invokeMethod onRaceDetected payload=$data")
+    }
     }
 
     override fun onInterrupt() {

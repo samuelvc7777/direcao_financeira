@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../../core/errors/failures.dart';
 import '../../core/network/api_error_mapper.dart';
 import '../../core/network/api_request_logger.dart';
+import '../../domain/entities/transaction_draft_entity.dart';
 import '../../domain/entities/transaction_entity.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
 import '../datasources/transaction_datasource.dart';
@@ -123,6 +124,40 @@ class TransactionRepository implements ITransactionRepository {
         apiErrorMapper.mapToFailure(
           e,
           fallback: 'Erro inesperado ao criar transacao.',
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<TransactionEntity>>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
+  }) async {
+    try {
+      final created = await dataSource.createImportedTransactions(
+        transactions: transactions,
+      );
+      return Right(created);
+    } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.createImportedTransactions',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao registrar importacao de corridas.',
+        ),
+      );
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'TransactionRepository.createImportedTransactions',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao registrar importacao de corridas.',
         ),
       );
     }

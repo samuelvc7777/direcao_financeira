@@ -7,6 +7,7 @@ import 'package:get_storage/get_storage.dart';
 
 import '../../domain/entities/detected_ride_draft_entity.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
+import '../../presentation/modules/journey/journey_controller.dart';
 import 'accessibility_service.dart';
 
 class AccessibilityController extends GetxController
@@ -204,10 +205,27 @@ class AccessibilityController extends GetxController
       return;
     }
 
+    developer.log('Payload bruto recebido para persistencia da corrida: $data');
     final ride = _mapDetectedRide(data);
     if (ride == null) {
+      developer.log(
+        'Corrida detectada descartada no mapeamento. '
+        'valor=${data['valor_bruto']} km=${data['km_total']} '
+        'min=${data['minutos_total']} origem=${data['origin_address']} '
+        'destino=${data['destination_address']}',
+      );
       return;
     }
+
+    developer.log(
+      'Draft mapeado para persistencia: '
+      'platform=${ride.platformName} '
+      'passenger=${ride.passengerName} '
+      'origin=${ride.originAddress} '
+      'destination=${ride.destinationAddress} '
+      'km=${ride.totalKm} '
+      'seconds=${ride.totalTimeSeconds}',
+    );
 
     if (_isDuplicateRide(ride)) {
       developer.log('Corrida detectada ignorada por dedupe local.');
@@ -217,13 +235,27 @@ class AccessibilityController extends GetxController
     final result = await Get.find<CreateDetectedRideUseCase>()(ride);
     result.fold(
       (failure) => developer.log(
-        'Erro ao salvar corrida detectada no Supabase: ${failure.message}',
+        'Erro ao salvar corrida detectada localmente: ${failure.message}',
       ),
       (_) {
         _rememberPersistedRide(ride);
-        developer.log('Corrida detectada salva como PENDING.');
+        developer.log('Corrida detectada salva localmente como PENDING.');
+        _refreshJourneyRides();
       },
     );
+  }
+
+  void _refreshJourneyRides() {
+    if (!Get.isRegistered<JourneyController>()) {
+      developer.log(
+        'JourneyController nao registrado no momento da persistencia da corrida.',
+      );
+      return;
+    }
+
+    final controller = Get.find<JourneyController>();
+    controller.refreshJourneyData(silent: true, showErrors: false);
+    developer.log('Refresh local da jornada disparado apos salvar corrida.');
   }
 
   DetectedRideDraftEntity? _mapDetectedRide(Map<String, dynamic> data) {

@@ -30,21 +30,55 @@ enum TransactionsFilter {
   }
 }
 
+enum DisplayedTransactionKind { income, expense, transfer }
+
+class DisplayedTransactionEntry {
+  DisplayedTransactionEntry.regular(this.transaction)
+    : pairedTransaction = null,
+      kind = transaction.type == TransactionType.expense
+          ? DisplayedTransactionKind.expense
+          : DisplayedTransactionKind.income;
+
+  DisplayedTransactionEntry.invoicePayment({
+    required this.transaction,
+    required this.pairedTransaction,
+  }) : kind = DisplayedTransactionKind.transfer;
+
+  final TransactionEntity transaction;
+  final TransactionEntity? pairedTransaction;
+  final DisplayedTransactionKind kind;
+
+  bool get isInvoicePaymentTransfer =>
+      kind == DisplayedTransactionKind.transfer;
+
+  bool get canEditOrDelete => !isInvoicePaymentTransfer;
+
+  DateTime get transactionDate => transaction.transactionDate;
+
+  int get totalCents {
+    if (isInvoicePaymentTransfer) {
+      return -transaction.displayedAmountCents;
+    }
+
+    final signal = kind == DisplayedTransactionKind.expense
+        ? -1
+        : kind == DisplayedTransactionKind.income
+        ? 1
+        : 0;
+    return transaction.displayedAmountCents * signal;
+  }
+}
+
 class TransactionsDayGroup {
   TransactionsDayGroup({required this.date, required this.transactions});
 
   final DateTime date;
-  final List<TransactionEntity> transactions;
+  final List<DisplayedTransactionEntry> transactions;
 
   int get totalCents => transactions.fold<int>(
     0,
-    (total, transaction) =>
-        total + transaction.displayedAmountCents * _signalFor(transaction.type),
+    (total, transaction) => total + transaction.totalCents,
   );
-
-  static int _signalFor(TransactionType type) {
-    return type == TransactionType.expense ? -1 : 1;
-  }
 }
 
 class TransactionsController extends GetxController {
@@ -78,11 +112,23 @@ class TransactionsController extends GetxController {
   final activeCards = <CreditCardEntity>[].obs;
   final selectedFilter = TransactionsFilter.all.obs;
   final selectedMonth = DateTime(DateTime.now().year, DateTime.now().month).obs;
+  Worker? _dashboardRefreshWorker;
 
   @override
   void onInit() {
     super.onInit();
     loadData();
+    _dashboardRefreshWorker = ever<int>(dashboardRefreshNotifier.refreshTick, (
+      _,
+    ) {
+      loadData(silent: true);
+    });
+  }
+
+  @override
+  void onClose() {
+    _dashboardRefreshWorker?.dispose();
+    super.onClose();
   }
 
   Future<void> loadData({bool silent = false}) async {
@@ -156,28 +202,54 @@ class TransactionsController extends GetxController {
         .toList();
   }
 
-  List<TransactionEntity> get visibleTransactions {
+  List<DisplayedTransactionEntry> get visibleTransactions {
+    final displayed = displayedMonthTransactions;
+
     switch (selectedFilter.value) {
       case TransactionsFilter.all:
-        return monthTransactions;
+        return displayed;
       case TransactionsFilter.income:
-        return monthTransactions
-            .where((transaction) => transaction.type == TransactionType.income)
+        return displayed
+            .where(
+              (transaction) =>
+                  transaction.kind == DisplayedTransactionKind.income,
+            )
             .toList();
       case TransactionsFilter.expense:
-        return monthTransactions
-            .where((transaction) => transaction.type == TransactionType.expense)
+        return displayed
+            .where(
+              (transaction) =>
+                  transaction.kind == DisplayedTransactionKind.expense ||
+                  transaction.kind == DisplayedTransactionKind.transfer,
+            )
             .toList();
     }
   }
 
-  int get totalIncomeCents => monthTransactions
-      .where((transaction) => transaction.type == TransactionType.income)
-      .fold<int>(0, (total, transaction) => total + transaction.displayedAmountCents);
+  List<DisplayedTransactionEntry> get displayedMonthTransactions =>
+      _buildDisplayedTransactions(monthTransactions);
 
-  int get totalExpenseCents => monthTransactions
-      .where((transaction) => transaction.type == TransactionType.expense)
-      .fold<int>(0, (total, transaction) => total + transaction.displayedAmountCents);
+  int get totalIncomeCents => displayedMonthTransactions
+      .where(
+        (transaction) => transaction.kind == DisplayedTransactionKind.income,
+      )
+      .fold<int>(
+        0,
+        (total, transaction) =>
+            total + transaction.transaction.displayedAmountCents,
+      );
+
+  int get totalExpenseCents => displayedMonthTransactions
+      .where(
+        (transaction) =>
+            transaction.kind == DisplayedTransactionKind.expense ||
+            transaction.kind == DisplayedTransactionKind.transfer,
+      )
+      .fold<int>(
+        0,
+        (total, transaction) =>
+            total + transaction.transaction.displayedAmountCents,
+      );
 
   int get balanceCents => totalIncomeCents - totalExpenseCents;
 
@@ -195,7 +267,7 @@ class TransactionsController extends GetxController {
   ).format(selectedMonth.value).toUpperCase();
 
   List<TransactionsDayGroup> get groupedVisibleTransactions {
-    final buckets = <DateTime, List<TransactionEntity>>{};
+    final buckets = <DateTime, List<DisplayedTransactionEntry>>{};
 
     for (final transaction in visibleTransactions) {
       final day = DateTime(
@@ -204,7 +276,9 @@ class TransactionsController extends GetxController {
         transaction.transactionDate.day,
       );
 
-      buckets.putIfAbsent(day, () => <TransactionEntity>[]).add(transaction);
+      buckets
+          .putIfAbsent(day, () => <DisplayedTransactionEntry>[])
+          .add(transaction);
     }
 
     final groups =
@@ -412,5 +486,49 @@ class TransactionsController extends GetxController {
     }
 
     return value[0].toUpperCase() + value.substring(1);
+  }
+
+  List<DisplayedTransactionEntry> _buildDisplayedTransactions(
+    List<TransactionEntity> source,
+  ) {
+    final groupedInvoicePayments = <String, List<TransactionEntity>>{};
+    final displayed = <DisplayedTransactionEntry>[];
+
+    for (final transaction in source) {
+      if (!transaction.isInternalInvoicePayment) {
+        displayed.add(DisplayedTransactionEntry.regular(transaction));
+        continue;
+      }
+
+      groupedInvoicePayments
+          .putIfAbsent(transaction.description, () => <TransactionEntity>[])
+          .add(transaction);
+    }
+
+    for (final group in groupedInvoicePayments.values) {
+      final expense = group.firstWhereOrNull(
+        (item) => item.type == TransactionType.expense,
+      );
+      final income = group.firstWhereOrNull(
+        (item) => item.type == TransactionType.income,
+      );
+
+      if (expense != null && income != null) {
+        displayed.add(
+          DisplayedTransactionEntry.invoicePayment(
+            transaction: expense,
+            pairedTransaction: income,
+          ),
+        );
+        continue;
+      }
+
+      for (final item in group) {
+        displayed.add(DisplayedTransactionEntry.regular(item));
+      }
+    }
+
+    displayed.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+    return displayed;
   }
 }

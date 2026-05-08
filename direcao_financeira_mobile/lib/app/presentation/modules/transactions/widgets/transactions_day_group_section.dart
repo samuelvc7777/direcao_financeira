@@ -87,10 +87,10 @@ class TransactionsDayGroupSection extends StatelessWidget {
           children: [
             for (var index = 0; index < group.transactions.length; index++) ...[
               _TransactionFinanceCard(
-                transaction: group.transactions[index],
+                entry: group.transactions[index],
                 amountFormat: amountFormat,
-                onEdit: () => onEdit(group.transactions[index]),
-                onDelete: () => onDelete(group.transactions[index]),
+                onEdit: () => onEdit(group.transactions[index].transaction),
+                onDelete: () => onDelete(group.transactions[index].transaction),
               ),
               if (index != group.transactions.length - 1)
                 const SizedBox(height: 10),
@@ -104,22 +104,28 @@ class TransactionsDayGroupSection extends StatelessWidget {
 
 class _TransactionFinanceCard extends StatelessWidget {
   const _TransactionFinanceCard({
-    required this.transaction,
+    required this.entry,
     required this.amountFormat,
     required this.onEdit,
     required this.onDelete,
   });
 
-  final TransactionEntity transaction;
+  final DisplayedTransactionEntry entry;
   final NumberFormat amountFormat;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  TransactionEntity get transaction => entry.transaction;
+
   @override
   Widget build(BuildContext context) {
+    final transaction = entry.transaction;
     final colorScheme = context.theme.colorScheme;
     final isDark = context.theme.brightness == Brightness.dark;
-    final isExpense = transaction.type == TransactionType.expense;
+    final isTransfer = entry.kind == DisplayedTransactionKind.transfer;
+    final isExpense =
+        entry.kind == DisplayedTransactionKind.expense ||
+        entry.kind == DisplayedTransactionKind.transfer;
     final accentColor = _resolveAccentColor();
     final title = _resolveTitle();
     final subtitle = _resolveSubtitle(title);
@@ -201,7 +207,8 @@ class _TransactionFinanceCard extends StatelessWidget {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface,
+                                        color:
+                                            context.theme.colorScheme.onSurface,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: -0.3,
@@ -211,12 +218,16 @@ class _TransactionFinanceCard extends StatelessWidget {
                                   const SizedBox(width: 10),
                                   Flexible(
                                     child: Text(
-                                      '${isExpense ? '-' : '+'} $amountLabel',
+                                      isTransfer
+                                          ? '- $amountLabel'
+                                          : '${isExpense ? '-' : '+'} $amountLabel',
                                       textAlign: TextAlign.end,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: isExpense
+                                        color: isTransfer
+                                            ? AppColors.rose
+                                            : isExpense
                                             ? AppColors.rose
                                             : AppColors.emerald,
                                         fontSize: 18,
@@ -285,17 +296,33 @@ class _TransactionFinanceCard extends StatelessWidget {
                       runSpacing: 5,
                       children: [
                         _InfoChip(
-                          label: isExpense ? 'Pendente' : 'Recebido',
+                          label: isTransfer
+                              ? 'Saida'
+                              : isExpense
+                              ? 'Pendente'
+                              : 'Recebido',
                           icon: isExpense
-                              ? Icons.more_horiz_rounded
+                              ? isTransfer
+                                    ? Icons.outbox_rounded
+                                    : Icons.more_horiz_rounded
                               : Icons.check_circle_rounded,
                           backgroundColor:
-                              (isExpense ? AppColors.rose : AppColors.emerald)
+                              (isTransfer
+                                      ? AppColors.rose
+                                      : isExpense
+                                      ? AppColors.rose
+                                      : AppColors.emerald)
                                   .withValues(alpha: 0.14),
                           borderColor:
-                              (isExpense ? AppColors.rose : AppColors.emerald)
+                              (isTransfer
+                                      ? AppColors.rose
+                                      : isExpense
+                                      ? AppColors.rose
+                                      : AppColors.emerald)
                                   .withValues(alpha: 0.35),
-                          textColor: isExpense
+                          textColor: isTransfer
+                              ? AppColors.rose
+                              : isExpense
                               ? AppColors.rose
                               : AppColors.emerald,
                         ),
@@ -318,24 +345,36 @@ class _TransactionFinanceCard extends StatelessWidget {
                       children: [
                         _TimeLabel(timeLabel: timeLabel),
                         const Spacer(),
-                        _ActionButton(
-                          label: 'Editar',
-                          icon: Icons.edit_rounded,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          textColor: context.theme.colorScheme.onSurface
-                              .withValues(alpha: 0.7),
-                          onTap: onEdit,
-                        ),
-                        const SizedBox(width: 8),
-                        _ActionButton(
-                          label: 'Excluir',
-                          icon: Icons.delete_rounded,
-                          backgroundColor: AppColors.rose.withValues(
-                            alpha: 0.14,
+                        if (entry.canEditOrDelete) ...[
+                          _ActionButton(
+                            label: 'Editar',
+                            icon: Icons.edit_rounded,
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
+                            textColor: context.theme.colorScheme.onSurface
+                                .withValues(alpha: 0.7),
+                            onTap: onEdit,
                           ),
-                          textColor: AppColors.rose,
-                          onTap: onDelete,
-                        ),
+                          const SizedBox(width: 8),
+                          _ActionButton(
+                            label: 'Excluir',
+                            icon: Icons.delete_rounded,
+                            backgroundColor: AppColors.rose.withValues(
+                              alpha: 0.14,
+                            ),
+                            textColor: AppColors.rose,
+                            onTap: onDelete,
+                          ),
+                        ] else
+                          Text(
+                            'Lancamento interno',
+                            style: TextStyle(
+                              color: context.theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.42),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -349,6 +388,10 @@ class _TransactionFinanceCard extends StatelessWidget {
   }
 
   String _resolveTitle() {
+    if (entry.isInvoicePaymentTransfer) {
+      return 'Pagamento de fatura';
+    }
+
     final categoryName = transaction.categoryName?.trim();
     if (categoryName != null && categoryName.isNotEmpty) {
       return categoryName;
@@ -358,6 +401,21 @@ class _TransactionFinanceCard extends StatelessWidget {
   }
 
   String? _resolveSubtitle(String title) {
+    if (entry.isInvoicePaymentTransfer) {
+      final sourceName = transaction.assetName?.trim();
+      final targetName = entry.pairedTransaction?.assetName?.trim();
+      if (sourceName != null &&
+          sourceName.isNotEmpty &&
+          targetName != null &&
+          targetName.isNotEmpty) {
+        return '$sourceName -> $targetName';
+      }
+      if (sourceName != null && sourceName.isNotEmpty) {
+        return sourceName;
+      }
+      return 'Pagamento da fatura com saldo da conta';
+    }
+
     final description = transaction.description.trim();
     if (description.isEmpty) {
       return null;
@@ -371,6 +429,14 @@ class _TransactionFinanceCard extends StatelessWidget {
   }
 
   String _resolveSecondaryChipLabel() {
+    if (entry.isInvoicePaymentTransfer) {
+      final targetName = entry.pairedTransaction?.assetName?.trim();
+      if (targetName != null && targetName.isNotEmpty) {
+        return targetName;
+      }
+      return 'Cartao';
+    }
+
     if (transaction.assetType == AssetType.creditCard) {
       if (transaction.installmentNumber != null &&
           transaction.installmentCount != null) {
@@ -388,6 +454,10 @@ class _TransactionFinanceCard extends StatelessWidget {
   }
 
   IconData _resolveIcon() {
+    if (entry.isInvoicePaymentTransfer) {
+      return Icons.outbox_rounded;
+    }
+
     const iconMap = <String, IconData>{
       'briefcase': Icons.work_rounded,
       'fuel': Icons.local_gas_station_rounded,
@@ -411,6 +481,10 @@ class _TransactionFinanceCard extends StatelessWidget {
   }
 
   Color _resolveAccentColor() {
+    if (entry.isInvoicePaymentTransfer) {
+      return AppColors.rose;
+    }
+
     final colorHex = transaction.categoryColor;
     if (colorHex == null || colorHex.isEmpty) {
       return transaction.type == TransactionType.expense

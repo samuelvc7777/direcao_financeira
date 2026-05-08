@@ -112,7 +112,10 @@ class _JourneyViewState extends State<JourneyView> {
                             14,
                           ).clamp(12.0, 15.0),
                         ),
-                        unselectedLabelColor: colorScheme.onSurfaceVariant,
+                        unselectedLabelColor:
+                            context.theme.brightness == Brightness.dark
+                            ? colorScheme.onSurfaceVariant
+                            : AppColors.textPrimary,
                         unselectedLabelStyle: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: Responsive.sp(

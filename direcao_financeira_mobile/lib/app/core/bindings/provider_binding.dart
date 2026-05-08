@@ -12,6 +12,7 @@ import '../../data/datasources/i_ride_datasource.dart';
 import '../../data/datasources/journey_local_datasource.dart';
 import '../../data/datasources/journey_route_local_datasource.dart';
 import '../../data/datasources/location_tracking_datasource.dart';
+import '../../data/datasources/ride_local_datasource.dart';
 import '../../data/datasources/subscription_datasource.dart';
 import '../../data/datasources/subscription_store_datasource.dart';
 import '../../data/datasources/traffic_light_local_datasource.dart';
@@ -181,6 +182,10 @@ class ProviderBinding extends Bindings {
       JourneyLocalDataSourceImpl(storage: Get.find()),
       permanent: true,
     );
+    Get.put<IRideLocalDataSource>(
+      RideLocalDataSourceImpl(storage: Get.find()),
+      permanent: true,
+    );
     Get.put<IJourneyRouteLocalDataSource>(
       JourneyRouteLocalDataSourceImpl(),
       permanent: true,
@@ -265,6 +270,7 @@ class ProviderBinding extends Bindings {
     Get.put<IRideRepository>(
       RideRepositoryImpl(
         Get.find(),
+        localDataSource: Get.find(),
         apiErrorMapper: Get.find<ApiErrorMapper>(),
         apiRequestLogger: Get.find<ApiRequestLogger>(),
       ),
@@ -346,6 +352,10 @@ class ProviderBinding extends Bindings {
     );
     Get.put<IJourneyLocalDataSource>(
       JourneyLocalDataSourceImpl(storage: Get.find()),
+      permanent: true,
+    );
+    Get.put<IRideLocalDataSource>(
+      RideLocalDataSourceImpl(storage: Get.find()),
       permanent: true,
     );
     Get.put<IJourneyRouteLocalDataSource>(
@@ -436,6 +446,7 @@ class ProviderBinding extends Bindings {
     Get.put<IRideRepository>(
       RideRepositoryImpl(
         Get.find(),
+        localDataSource: Get.find(),
         apiErrorMapper: Get.find<ApiErrorMapper>(),
         apiRequestLogger: Get.find<ApiRequestLogger>(),
       ),

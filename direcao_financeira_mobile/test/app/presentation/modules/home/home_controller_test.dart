@@ -5,6 +5,7 @@ import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart'
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/transaction_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/transaction_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
@@ -232,6 +233,31 @@ class _FakeTransactionRepository implements ITransactionRepository {
         creditCardId: creditCardId,
       ),
     );
+  }
+
+  @override
+  Future<Either<Failure, List<TransactionEntity>>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
+  }) async {
+    final created =
+        transactions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final draft = entry.value;
+          return TransactionEntity(
+            id: 1000 + index,
+            type: draft.type,
+            status: TransactionStatus.cleared,
+            assetType: draft.assetType,
+            amountCents: draft.amountCents,
+            categoryId: draft.categoryId,
+            description: draft.description,
+            transactionDate: draft.transactionDate,
+            bankAccountId: draft.bankAccountId,
+            creditCardId: draft.creditCardId,
+          );
+        }).toList();
+
+    return Right(created);
   }
 
   @override

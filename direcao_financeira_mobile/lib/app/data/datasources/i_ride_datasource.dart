@@ -14,6 +14,13 @@ abstract class IRideDataSource {
 
   Future<void> createDetectedRide(DetectedRideDraftEntity ride);
 
+  Future<void> createRideWithStatus({
+    required DetectedRideDraftEntity ride,
+    required String status,
+    String? paymentMethod,
+    String? cancelReason,
+  });
+
   Future<void> finishRide({required int rideId, required String paymentMethod});
 
   Future<void> cancelRide({required int rideId, required String cancelReason});

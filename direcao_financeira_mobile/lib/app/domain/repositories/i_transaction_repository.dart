@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
+import '../entities/transaction_draft_entity.dart';
 import '../entities/transaction_entity.dart';
 
 abstract class ITransactionRepository {
@@ -17,6 +18,10 @@ abstract class ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+  });
+
+  Future<Either<Failure, List<TransactionEntity>>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
   });
 
   Future<Either<Failure, void>> createInvoicePayment({

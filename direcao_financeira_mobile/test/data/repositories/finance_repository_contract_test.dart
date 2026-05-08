@@ -16,6 +16,7 @@ import 'package:direcao_financeira_mobile/app/data/repositories/transaction_repo
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/transaction_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/transaction_draft_entity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/dio_test_helpers.dart';
@@ -161,6 +162,21 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
   }) async => buildTransaction(id: 10, type: type, date: transactionDate);
 
   @override
+  Future<List<TransactionModel>> createImportedTransactions({
+    required List<TransactionDraftEntity> transactions,
+  }) async =>
+      transactions
+          .map(
+            (draft) => buildTransaction(
+              id: draft.amountCents,
+              type: draft.type,
+              date: draft.transactionDate,
+              description: draft.description,
+            ),
+          )
+          .toList();
+
+  @override
   Future<void> deleteTransaction(
     int id, {
     TransactionMutationScope? scope,
@@ -183,6 +199,17 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
     }
     return transactions;
   }
+
+  @override
+  Future<void> createInvoicePayment({
+    required int bankAccountId,
+    required int creditCardId,
+    required int amountCents,
+    required int expenseCategoryId,
+    required int incomeCategoryId,
+    required String description,
+    required DateTime transactionDate,
+  }) async {}
 
   @override
   Future<TransactionModel> updateTransaction(
