@@ -47,7 +47,7 @@ object SettingsManager {
         "Uber" to true,
         "99" to true,
         "inDrive" to true,
-        "MoveSj" to false,
+        "MoveSj" to true,
     )
     var gainPerKmBad: Double = 1.57
     var gainPerKmGood: Double = 2.60

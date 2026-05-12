@@ -379,23 +379,19 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
           if (isSidePosition)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: activeIndicators
-                  .map(
-                    (name) => Padding(
-                      padding: EdgeInsets.only(
-                        bottom: Responsive.vp(context, 0.8),
-                      ),
-                      child: _buildMockMetric(
-                        context,
-                        label: _overlayMetricLabel(name),
-                        value: _formatPreviewValue(name),
-                        color: signalColor,
-                        theme: previewTheme,
-                        baseFontSize: baseFontSize,
-                      ),
-                    ),
-                  )
-                  .toList(),
+              children: activeIndicators.map((name) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: Responsive.vp(context, 0.8)),
+                  child: _buildMockMetric(
+                    context,
+                    label: _overlayMetricLabel(name),
+                    value: _formatPreviewValue(name),
+                    color: signalColor,
+                    theme: previewTheme,
+                    baseFontSize: baseFontSize,
+                  ),
+                );
+              }).toList(),
             )
           else
             Row(

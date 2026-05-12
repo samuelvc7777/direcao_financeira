@@ -333,6 +333,7 @@ class _FakeHomeTabNavigation implements HomeTabNavigation {
 class _FakeRealtimeClient implements RealtimeClient {
   @override
   final RxBool isOnline = true.obs;
+  final handlers = <String, void Function(dynamic payload)>{};
 
   @override
   void connect({required String token}) {}
@@ -344,10 +345,18 @@ class _FakeRealtimeClient implements RealtimeClient {
   void disconnect() {}
 
   @override
-  void off(String event) {}
+  void off(String event) {
+    handlers.remove(event);
+  }
 
   @override
-  void on(String event, void Function(dynamic payload) handler) {}
+  void on(String event, void Function(dynamic payload) handler) {
+    handlers[event] = handler;
+  }
+
+  void emit(String event, [dynamic payload]) {
+    handlers[event]?.call(payload);
+  }
 }
 
 void main() {
@@ -357,6 +366,7 @@ void main() {
     late _FakeTransactionRepository transactionRepository;
     late _FakeCategoryRepository categoryRepository;
     late _FakeCreditCardRepository creditCardRepository;
+    late _FakeRealtimeClient realtimeClient;
     late HomeController controller;
 
     setUp(() {
@@ -378,6 +388,7 @@ void main() {
         ];
       categoryRepository = _FakeCategoryRepository();
       creditCardRepository = _FakeCreditCardRepository();
+      realtimeClient = _FakeRealtimeClient();
       controller = HomeController(
         getStoredUserUseCase: GetStoredUserUseCase(_FakeAuthRepository()),
         logoutUseCase: LogoutUseCase(_FakeAuthRepository()),
@@ -393,7 +404,7 @@ void main() {
         ),
         dashboardRefreshNotifier: DefaultDashboardRefreshNotifier(),
         homeTabNavigation: _FakeHomeTabNavigation(),
-        realtimeClient: _FakeRealtimeClient(),
+        realtimeClient: realtimeClient,
       );
     });
 
@@ -446,6 +457,40 @@ void main() {
           'Combustivel',
         );
         expect(controller.gastosPorCategoria.single.amountCents, 5000);
+      },
+    );
+
+    test(
+      'recarrega gastos por categoria em eventos realtime de transacao',
+      () async {
+        controller.onInit();
+        await Future<void>.delayed(Duration.zero);
+
+        transactionRepository.requestedMonths.clear();
+        transactionRepository.response = [
+          TransactionEntity(
+            id: 2,
+            type: TransactionType.expense,
+            status: TransactionStatus.cleared,
+            assetType: AssetType.bankAccount,
+            amountCents: 7500,
+            categoryId: 9,
+            description: 'Mercado',
+            transactionDate: DateTime(2026, 3, 12),
+            categoryName: 'Mercado',
+            categoryColor: '#10B981',
+          ),
+        ];
+
+        realtimeClient.emit('transaction.updated');
+        await Future<void>.delayed(Duration.zero);
+
+        expect(transactionRepository.requestedMonths, isNotEmpty);
+        expect(controller.gastosPorCategoria.single.categoryLabel, 'Mercado');
+        expect(controller.gastosPorCategoria.single.amountCents, 7500);
+
+        controller.onClose();
+        expect(realtimeClient.handlers, isEmpty);
       },
     );
 

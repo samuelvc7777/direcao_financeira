@@ -187,7 +187,7 @@ class AccessibilityController extends GetxController
       );
     }
 
-    return {'Uber': true, '99': true, 'inDrive': true, 'MoveSj': false};
+    return {'Uber': true, '99': true, 'inDrive': true, 'MoveSj': true};
   }
 
   Future<void> _handleRaceDetected(dynamic arguments) async {

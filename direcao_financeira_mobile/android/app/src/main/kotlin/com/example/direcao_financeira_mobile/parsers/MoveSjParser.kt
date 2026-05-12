@@ -8,6 +8,8 @@ class MoveSjParser {
     private val priceRegex = Regex("R\\$\\s*\\d+(?:[.,]\\d+)?")
     private val ratingRegex =
         Regex("\\d+(?:[.,]\\d+)?\\s*[\\u2605\\u2B50]", RegexOption.IGNORE_CASE)
+    private val ratingValueRegex =
+        Regex("^\\d(?:[.,]\\d{1,2})\\s*(?:[\\u2605\\u2B50])?$", RegexOption.IGNORE_CASE)
     private val routeStepRegex =
         Regex(
             "\\d+(?:[.,]\\d+)?\\s*(?:km|m)\\s*\\((?:(?:\\d+)\\s*hora(?:s)?\\s*)?(?:\\d+)\\s*min\\)",
@@ -32,6 +34,17 @@ class MoveSjParser {
         )
     private val routeKeywordRegex =
         Regex("\\b(?:km|min|hora|horas)\\b", RegexOption.IGNORE_CASE)
+
+    data class OcrLine(
+        val text: String,
+        val left: Int,
+        val top: Int,
+        val right: Int,
+        val bottom: Int,
+    ) {
+        val centerX: Int get() = (left + right) / 2
+        val centerY: Int get() = (top + bottom) / 2
+    }
 
     fun isOfferScreen(rootNode: AccessibilityNodeInfo): Boolean {
         return isOfferScreenFromLines(collectVisibleTexts(rootNode))
@@ -80,6 +93,60 @@ class MoveSjParser {
         )
     }
 
+    fun parseOcrOffer(
+        rawText: String,
+        lines: List<String>,
+    ): Map<String, Any>? {
+        if (rawText.isBlank()) {
+            return null
+        }
+
+        if (!isOfferScreenFromLines(lines)) {
+            return null
+        }
+
+        return parseOfferFromLines(
+            lines = lines,
+            priceText = priceRegex.find(rawText)?.value ?: "R$ 0,00",
+            ratingText = ratingRegex.find(rawText)?.value,
+        )
+    }
+
+    fun parsePositionedOcrOffer(
+        rawText: String,
+        ocrLines: List<OcrLine>,
+    ): Map<String, Any>? {
+        if (rawText.isBlank() || ocrLines.isEmpty()) {
+            return null
+        }
+
+        val orderedLines =
+            ocrLines
+                .filter { it.text.trim().isNotEmpty() }
+                .sortedWith(compareBy<OcrLine> { it.top }.thenBy { it.left })
+
+        val textLines = orderedLines.map { it.text.trim() }
+        if (!isOfferScreenFromLines(textLines)) {
+            return null
+        }
+
+        val offerData = parseOfferFromOcrLines(
+            rawText = rawText,
+            ocrLines = orderedLines,
+        )
+
+        val originAddress = offerData["origin_address"]?.toString().orEmpty()
+        val destinationAddress = offerData["destination_address"]?.toString().orEmpty()
+        val kmTotal = (offerData["km_total"] as? Number)?.toDouble() ?: 0.0
+        val totalMinutes = (offerData["minutos_total"] as? Number)?.toInt() ?: 0
+
+        if (originAddress.isBlank() || destinationAddress.isBlank() || kmTotal <= 0.0 || totalMinutes <= 0) {
+            return null
+        }
+
+        return offerData
+    }
+
     internal fun parseOfferFromLines(
         lines: List<String>,
         priceText: String = "R$ 0,00",
@@ -98,6 +165,32 @@ class MoveSjParser {
             "origin_address" to (parsedOffer.originAddress ?: ""),
             "destination_address" to (parsedOffer.destinationAddress ?: ""),
         )
+    }
+
+    internal fun parseOfferFromOcrLines(
+        rawText: String,
+        ocrLines: List<OcrLine>,
+    ): Map<String, Any> {
+        val textLines = ocrLines.map { it.text.trim() }
+        val parsedOffer = extractOfferDetailsFromOcrLines(ocrLines)
+
+        return mutableMapOf<String, Any>(
+            "app" to "MoveSj",
+            "platform_name" to "MoveSj",
+            "valor_bruto" to (extractBestPrice(rawText, ocrLines) ?: "R$ 0,00"),
+            "km_total" to parsedOffer.metrics.totalKm,
+            "minutos_total" to parsedOffer.metrics.totalMinutes,
+            "avaliacao" to sanitizeRating(extractBestRating(ocrLines)),
+            "passenger_name" to (parsedOffer.passengerName ?: ""),
+            "origin_address" to (parsedOffer.originAddress ?: ""),
+            "destination_address" to (parsedOffer.destinationAddress ?: ""),
+        ).also {
+            if (it["km_total"] == 0.0 || it["minutos_total"] == 0) {
+                val fallback = extractOfferDetails(textLines)
+                it["km_total"] = fallback.metrics.totalKm
+                it["minutos_total"] = fallback.metrics.totalMinutes
+            }
+        }
     }
 
     internal fun isOfferScreenFromLines(lines: List<String>): Boolean {
@@ -200,6 +293,65 @@ class MoveSjParser {
         )
     }
 
+    private fun extractOfferDetailsFromOcrLines(ocrLines: List<OcrLine>): MoveSjParsedOffer {
+        val normalizedLines = normalizeOcrLines(ocrLines)
+        val textLines = normalizedLines.map { it.text }
+        val passengerName = extractPassengerNameFromOcrLines(normalizedLines)
+        val addresses = extractAddressesFromOcrLines(normalizedLines, passengerName)
+        val offerMetrics = extractOfferMetrics(textLines)
+
+        return MoveSjParsedOffer(
+            passengerName = passengerName,
+            originAddress = addresses.first,
+            destinationAddress = addresses.second,
+            metrics = offerMetrics,
+        )
+    }
+
+    private fun normalizeOcrLines(ocrLines: List<OcrLine>): List<OcrLine> {
+        val normalizedLines = mutableListOf<OcrLine>()
+
+        ocrLines
+            .map { it.copy(text = it.text.trim()) }
+            .filter { it.text.isNotEmpty() }
+            .sortedWith(compareBy<OcrLine> { it.top }.thenBy { it.left })
+            .forEach { line ->
+                if (normalizedLines.lastOrNull()?.text == line.text) {
+                    return@forEach
+                }
+                normalizedLines.add(line)
+            }
+
+        return normalizedLines
+    }
+
+    private fun extractBestPrice(
+        rawText: String,
+        ocrLines: List<OcrLine>,
+    ): String? {
+        val priceLines =
+            ocrLines
+                .filter { priceRegex.containsMatchIn(it.text) }
+                .sortedWith(
+                    compareByDescending<OcrLine> { (it.right - it.left) * (it.bottom - it.top) }
+                        .thenBy { it.top },
+                )
+
+        priceLines.firstOrNull()?.let { line ->
+            priceRegex.find(line.text)?.value?.let { return it }
+        }
+
+        return priceRegex.find(rawText)?.value
+    }
+
+    private fun extractBestRating(ocrLines: List<OcrLine>): String? {
+        val pageWidth = inferPageWidth(ocrLines)
+        return ocrLines.firstOrNull { line ->
+            line.centerX < pageWidth * 0.45f &&
+                (ratingRegex.containsMatchIn(line.text) || ratingValueRegex.matches(line.text.trim()))
+        }?.text
+    }
+
     private fun collectVisibleTexts(rootNode: AccessibilityNodeInfo): List<String> {
         return normalizeVisibleTexts(collectNonEmptyTexts(rootNode))
     }
@@ -224,7 +376,10 @@ class MoveSjParser {
     }
 
     private fun extractPassengerName(lines: List<String>): String? {
-        val ratingIndex = lines.indexOfFirst { ratingRegex.containsMatchIn(it) }
+        val ratingIndex =
+            lines.indexOfFirst { line ->
+                ratingRegex.containsMatchIn(line) || ratingValueRegex.matches(line.trim())
+            }
         if (ratingIndex >= 0) {
             for (index in (ratingIndex - 1).coerceAtLeast(0) downTo (ratingIndex - 3).coerceAtLeast(0)) {
                 val candidate = lines[index]
@@ -234,8 +389,44 @@ class MoveSjParser {
             }
         }
 
+        val metricsIndex =
+            lines.indexOfFirst { line ->
+                offerDistanceRegex.containsMatchIn(line) || offerMinutesRegex.containsMatchIn(line)
+            }
+        val headerCandidates =
+            if (metricsIndex > 0) lines.take(metricsIndex) else lines
+
+        headerCandidates.lastOrNull(::isPassengerCandidate)?.let { return it }
         lines.firstOrNull(::isPassengerCandidate)?.let { return it }
         return null
+    }
+
+    private fun extractPassengerNameFromOcrLines(lines: List<OcrLine>): String? {
+        val pageWidth = inferPageWidth(lines)
+        val firstMetricTop =
+            lines.firstOrNull { offerDistanceRegex.containsMatchIn(it.text) || offerMinutesRegex.containsMatchIn(it.text) }
+                ?.top
+                ?: Int.MAX_VALUE
+
+        val ratingLine =
+            lines.firstOrNull { line ->
+                line.centerX < pageWidth * 0.45f &&
+                    (ratingRegex.containsMatchIn(line.text) || ratingValueRegex.matches(line.text.trim()))
+            }
+
+        if (ratingLine != null) {
+            lines
+                .filter { it.bottom <= ratingLine.top && it.centerX < pageWidth * 0.45f }
+                .sortedByDescending { it.top }
+                .firstOrNull { isPassengerCandidate(it.text) }
+                ?.let { return it.text }
+        }
+
+        return lines
+            .filter { it.centerX < pageWidth * 0.45f && it.top < firstRouteTop(lines) }
+            .sortedByDescending { it.top }
+            .firstOrNull { isPassengerCandidate(it.text) }
+            ?.text
     }
 
     private fun isPassengerCandidate(line: String): Boolean {
@@ -259,7 +450,8 @@ class MoveSjParser {
             !normalized.contains("motorista") &&
             !normalized.contains("sao joao") &&
             !normalized.contains("centro") &&
-            !ratingRegex.containsMatchIn(line)
+            !ratingRegex.containsMatchIn(line) &&
+            !ratingValueRegex.matches(line.trim())
     }
 
     private fun extractAddresses(
@@ -288,6 +480,64 @@ class MoveSjParser {
         val distinctAddresses = distinctAddressBlocks(routeAddresses + fallbackAddresses)
 
         return distinctAddresses.getOrNull(0) to distinctAddresses.getOrNull(1)
+    }
+
+    private fun extractAddressesFromOcrLines(
+        lines: List<OcrLine>,
+        passengerName: String?,
+    ): Pair<String?, String?> {
+        val routeLines =
+            lines
+                .filter { line ->
+                    routeStepRegex.containsMatchIn(line.text) &&
+                        !line.text.contains("R$", ignoreCase = true)
+                }
+                .sortedBy { it.top }
+
+        if (routeLines.isEmpty()) {
+            return extractAddresses(lines.map { it.text }, passengerName)
+        }
+
+        val addressBlocks =
+            routeLines.mapIndexedNotNull { index, routeLine ->
+                val nextRouteTop = routeLines.getOrNull(index + 1)?.top ?: Int.MAX_VALUE
+                extractAddressBlockBelowRouteLine(
+                    lines = lines,
+                    routeLine = routeLine,
+                    nextRouteTop = nextRouteTop,
+                    passengerName = passengerName,
+                )
+            }
+
+        val distinctAddresses = distinctAddressBlocks(addressBlocks)
+        if (distinctAddresses.size >= 2) {
+            return distinctAddresses[0] to distinctAddresses[1]
+        }
+
+        return extractAddresses(lines.map { it.text }, passengerName)
+    }
+
+    private fun extractAddressBlockBelowRouteLine(
+        lines: List<OcrLine>,
+        routeLine: OcrLine,
+        nextRouteTop: Int,
+        passengerName: String?,
+    ): String? {
+        val collected = mutableListOf<String>()
+        extractInlineAddressFromRouteLine(routeLine.text, passengerName)?.let(collected::add)
+
+        lines
+            .filter { line ->
+                line.top > routeLine.top &&
+                    line.top < nextRouteTop &&
+                    isAddressCandidate(line.text, passengerName)
+            }
+            .sortedWith(compareBy<OcrLine> { it.top }.thenBy { it.left })
+            .forEach { line ->
+                collected.add(line.text)
+            }
+
+        return joinAddressLines(collected)
     }
 
     private fun buildAddressBlock(
@@ -423,7 +673,22 @@ class MoveSjParser {
             !normalized.contains("cartao") &&
             !normalized.contains("dinheiro") &&
             !normalized.contains("motorista") &&
-            !ratingRegex.containsMatchIn(line)
+            !ratingRegex.containsMatchIn(line) &&
+            !ratingValueRegex.matches(line.trim())
+    }
+
+    private fun inferPageWidth(lines: List<OcrLine>): Int {
+        return lines.maxOfOrNull { it.right }?.coerceAtLeast(1) ?: 1
+    }
+
+    private fun firstRouteTop(lines: List<OcrLine>): Int {
+        return lines
+            .filter { line ->
+                routeStepRegex.containsMatchIn(line.text) &&
+                    !line.text.contains("R$", ignoreCase = true)
+            }
+            .minOfOrNull { it.top }
+            ?: Int.MAX_VALUE
     }
 
     private fun findNodeByRegex(

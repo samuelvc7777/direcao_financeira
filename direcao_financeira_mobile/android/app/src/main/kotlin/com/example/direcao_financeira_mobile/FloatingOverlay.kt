@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -20,6 +21,8 @@ import kotlin.math.max
 class FloatingOverlay(
     private val context: Context,
 ) {
+    private val logTag = "DF-MoveSjDebug"
+    private val lockLogPrefix = "LOCK_DEBUG"
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var cardView: LinearLayout? = null
@@ -37,6 +40,7 @@ class FloatingOverlay(
 
     fun show(data: Map<String, Any>) {
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        Log.d(logTag, "$lockLogPrefix overlay_show_called app=${data["platform_name"] ?: data["app"]} isShowing=$isShowing")
         val signature = buildLayoutSignature()
         val shouldRebuild =
             !isShowing || overlayView == null || currentLayoutParams == null || layoutSignature != signature
@@ -57,7 +61,9 @@ class FloatingOverlay(
         if (isShowing && overlayView != null) {
             try {
                 windowManager?.removeView(overlayView)
+                Log.d(logTag, "$lockLogPrefix overlay_hide_success")
             } catch (_: Exception) {
+                Log.d(logTag, "$lockLogPrefix overlay_hide_failure")
             }
         }
 
@@ -99,9 +105,21 @@ class FloatingOverlay(
 
         val row =
             LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                weightSum = enabledIndicators().size.toFloat().coerceAtLeast(1f)
+                orientation =
+                    if (sidePosition) {
+                        LinearLayout.VERTICAL
+                    } else {
+                        LinearLayout.HORIZONTAL
+                    }
+                gravity =
+                    if (sidePosition) {
+                        Gravity.START
+                    } else {
+                        Gravity.CENTER_VERTICAL
+                    }
+                if (!sidePosition) {
+                    weightSum = enabledIndicators().size.toFloat().coerceAtLeast(1f)
+                }
             }
         metricsRow = row
 
@@ -110,11 +128,20 @@ class FloatingOverlay(
                 LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     layoutParams =
-                        LinearLayout.LayoutParams(
-                            0,
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            1f,
-                        )
+                        if (sidePosition) {
+                            LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                            ).apply {
+                                bottomMargin = dpToPx(12f)
+                            }
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f,
+                            )
+                        }
                 }
 
             val labelView =
@@ -217,8 +244,13 @@ class FloatingOverlay(
             }
 
         currentLayoutParams = params
+        Log.d(
+            logTag,
+            "$lockLogPrefix overlay_add_view type=${params.type} flags=${params.flags} x=${params.x} y=${params.y}",
+        )
         wm.addView(container, params)
         isShowing = true
+        Log.d(logTag, "$lockLogPrefix overlay_add_view_success")
     }
 
     private fun bindData(data: Map<String, Any>) {
@@ -251,6 +283,10 @@ class FloatingOverlay(
 
         overlayView?.let { view ->
             currentLayoutParams?.let { params ->
+                Log.d(
+                    logTag,
+                    "$lockLogPrefix overlay_update_view x=${params.x} y=${params.y} app=$appName summary=${summaryTextView?.text}",
+                )
                 windowManager?.updateViewLayout(view, params)
             }
         }

@@ -13,3 +13,13 @@ class CreateDetectedRideUseCase {
     return repository.createDetectedRide(ride);
   }
 }
+
+class CreateFinishedRideUseCase {
+  CreateFinishedRideUseCase(this.repository);
+
+  final IRideRepository repository;
+
+  Future<Either<Failure, Unit>> call(DetectedRideDraftEntity ride) {
+    return repository.createFinishedRide(ride);
+  }
+}

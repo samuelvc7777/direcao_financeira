@@ -8,6 +8,7 @@ import '../../domain/entities/active_shift_entity.dart';
 import '../../domain/entities/finish_shift_result_entity.dart';
 import '../../domain/entities/journey_statistics_entity.dart';
 import '../../domain/entities/location_tracking_status_entity.dart';
+import '../../domain/entities/manual_shift_draft_entity.dart';
 import '../../domain/entities/paged_result_entity.dart';
 import '../../domain/entities/shift_route_entity.dart';
 import '../../domain/entities/shift_entity.dart';
@@ -292,6 +293,109 @@ class JourneyRepositoryImpl implements IJourneyRepository {
       );
       return Left(
         apiErrorMapper.mapToFailure(e, fallback: 'Erro ao finalizar o turno.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, FinishShiftResultEntity>> addManualShift(
+    ManualShiftDraftEntity shift,
+  ) async {
+    if (shift.totalDrivenKm <= 0) {
+      return Left(
+        ValidationFailure('Informe uma quilometragem maior que zero.'),
+      );
+    }
+    if (!shift.endTime.isAfter(shift.startTime)) {
+      return Left(
+        ValidationFailure('O horario final precisa ser depois do inicial.'),
+      );
+    }
+
+    try {
+      final activeShift = await localDataSource.getActiveShift();
+      if (activeShift != null) {
+        return Left(
+          ValidationFailure(
+            'Finalize o turno em andamento antes de adicionar um turno manual.',
+          ),
+        );
+      }
+
+      await localDataSource.addManualFinishedShift(
+        totalDrivenKm: shift.totalDrivenKm,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+      );
+
+      final syncedCount = realtimeClient.isOnline.value
+          ? await syncService.syncPendingShifts()
+          : 0;
+      final pendingCount =
+          (await localDataSource.getPendingFinishedShifts()).length;
+
+      return Right(
+        FinishShiftResultEntity(
+          synced: pendingCount == 0 && syncedCount > 0,
+          pendingSyncCount: pendingCount,
+        ),
+      );
+    } on ValidationFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.addManualShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao adicionar o turno manual.',
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteShift(ShiftEntity shift) async {
+    try {
+      if (shift.isPendingSync && shift.localId != null) {
+        await localDataSource.removePendingFinishedShift(shift.localId!);
+        await routeLocalDataSource.deleteRoute(shift.localId!);
+        return const Right(null);
+      }
+
+      final remoteShiftId = shift.remoteShiftId;
+      if (remoteShiftId != null) {
+        if (!realtimeClient.isOnline.value) {
+          return Left(
+            NetworkFailure(
+              'Conecte-se a internet para excluir um turno sincronizado.',
+            ),
+          );
+        }
+
+        await remoteDataSource.deleteShift(remoteShiftId);
+        if (shift.localId != null) {
+          await routeLocalDataSource.deleteRoute(shift.localId!);
+        }
+        return const Right(null);
+      }
+
+      if (shift.localId != null) {
+        await localDataSource.removePendingFinishedShift(shift.localId!);
+        await routeLocalDataSource.deleteRoute(shift.localId!);
+        return const Right(null);
+      }
+
+      return Left(ValidationFailure('Nao foi possivel identificar o turno.'));
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.deleteShift',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao excluir o turno.'),
       );
     }
   }

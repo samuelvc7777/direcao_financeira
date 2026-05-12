@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../widgets/app_loading_indicator.dart';
 import '../journey_controller.dart';
+import 'manual_shift_form_sheet.dart';
 
 class ShiftStartPanel extends StatelessWidget {
   const ShiftStartPanel({super.key, required this.controller});
@@ -66,6 +67,53 @@ class ShiftStartPanel extends StatelessWidget {
                   disabledBackgroundColor: const Color(
                     0xFF1B873F,
                   ).withValues(alpha: 0.45),
+                  disabledForegroundColor: Colors.white70,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      Responsive.sp(context, 14).clamp(10.0, 18.0),
+                    ),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: Responsive.vp(context, 1.0).clamp(6.0, 10.0)),
+          SizedBox(
+            width: double.infinity,
+            height: Responsive.vp(context, 6.0).clamp(48.0, 56.0),
+            child: Obx(
+              () => ElevatedButton.icon(
+                onPressed: controller.canAddManualShift
+                    ? () => ManualShiftFormSheet.show(
+                        context,
+                        controller: controller,
+                      )
+                    : null,
+                icon: controller.isAddingManualShift.value
+                    ? const AppLoadingIndicator(
+                        size: AppLoadingSize.compact,
+                        accentColor: Colors.white,
+                        onDark: true,
+                      )
+                    : Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: Colors.white,
+                        size: Responsive.sp(context, 22).clamp(18.0, 26.0),
+                      ),
+                label: Text(
+                  'ADICIONAR TURNO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: Responsive.sp(context, 15).clamp(13.0, 17.0),
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  disabledBackgroundColor: AppColors.royalBlue.withValues(
+                    alpha: 0.45,
+                  ),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(

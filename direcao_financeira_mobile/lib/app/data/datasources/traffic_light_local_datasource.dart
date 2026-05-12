@@ -30,7 +30,7 @@ class TrafficLightLocalDataSourceImpl implements ITrafficLightLocalDataSource {
           'Uber': true,
           '99': true,
           'inDrive': true,
-          'MoveSj': false,
+          'MoveSj': true,
         },
         fontSize: 15.0,
         opacity: 100.0,

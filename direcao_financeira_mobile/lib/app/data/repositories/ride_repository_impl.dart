@@ -164,6 +164,31 @@ class RideRepositoryImpl implements IRideRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> createFinishedRide(
+    DetectedRideDraftEntity ride,
+  ) async {
+    try {
+      await remoteDataSource.createRideWithStatus(
+        ride: ride,
+        status: 'FINISHED',
+        paymentMethod: ride.paymentMethod,
+      );
+      return const Right(unit);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'RideRepositoryImpl.createFinishedRide',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao salvar corrida finalizada.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> finishRide({
     required int rideId,
     required String paymentMethod,

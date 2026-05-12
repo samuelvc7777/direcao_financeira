@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'home_controller.dart';
 import 'widgets/accounts_section.dart';
@@ -24,50 +26,59 @@ class HomeView extends GetView<HomeController> {
         leadingIcon: Icons.dashboard_rounded,
         showBackButton: false,
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final horizontalPadding = width < 360
-              ? 12.0
-              : width < 430
-              ? 16.0
-              : 20.0;
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const AppLoadingScreen(
+            label: 'Carregando dashboard...',
+            accentColor: AppColors.royalBlue,
+          );
+        }
 
-          return Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: context.theme.scaffoldBackgroundColor,
-            ),
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                8,
-                horizontalPadding,
-                100,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final horizontalPadding = width < 360
+                ? 12.0
+                : width < 430
+                ? 16.0
+                : 20.0;
+
+            return Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: context.theme.scaffoldBackgroundColor,
               ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: Column(
-                    children: [
-                      const MonthSelector(),
-                      const BalanceCard(),
-                      const AccountsSection(),
-                      CreditCardsSection(controller: controller),
-                      const ExpensesChartSection(),
-                      RecentTransactionsSection(
-                        onViewAllTransactions: controller.openTransactionsTab,
-                      ),
-                      const GoalsSection(),
-                    ],
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  8,
+                  horizontalPadding,
+                  100,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: Column(
+                      children: [
+                        const MonthSelector(),
+                        const BalanceCard(),
+                        const AccountsSection(),
+                        CreditCardsSection(controller: controller),
+                        const ExpensesChartSection(),
+                        RecentTransactionsSection(
+                          onViewAllTransactions: controller.openTransactionsTab,
+                        ),
+                        const GoalsSection(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      }),
     );
   }
 }

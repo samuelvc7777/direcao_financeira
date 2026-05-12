@@ -4,6 +4,7 @@ import '../entities/active_shift_entity.dart';
 import '../entities/finish_shift_result_entity.dart';
 import '../entities/journey_statistics_entity.dart';
 import '../entities/location_tracking_status_entity.dart';
+import '../entities/manual_shift_draft_entity.dart';
 import '../entities/paged_result_entity.dart';
 import '../entities/shift_route_entity.dart';
 import '../entities/shift_entity.dart';
@@ -71,6 +72,26 @@ class FinishShiftUseCase {
 
   Future<Either<Failure, FinishShiftResultEntity>> call() async {
     return await repository.finishShift();
+  }
+}
+
+class CreateManualShiftUseCase {
+  final IJourneyRepository repository;
+  CreateManualShiftUseCase(this.repository);
+
+  Future<Either<Failure, FinishShiftResultEntity>> call(
+    ManualShiftDraftEntity shift,
+  ) async {
+    return await repository.addManualShift(shift);
+  }
+}
+
+class DeleteShiftUseCase {
+  final IJourneyRepository repository;
+  DeleteShiftUseCase(this.repository);
+
+  Future<Either<Failure, void>> call(ShiftEntity shift) async {
+    return await repository.deleteShift(shift);
   }
 }
 

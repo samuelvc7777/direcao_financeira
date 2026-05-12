@@ -220,6 +220,11 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
   }
 
   @override
+  Future<void> deleteShift(int shiftId) async {
+    await dio.delete('/journey/$shiftId');
+  }
+
+  @override
   Future<ShiftRouteModel> getShiftRoute(int shiftId) async {
     final response = await dio.get('/journey/$shiftId/route');
     final data = response.data;

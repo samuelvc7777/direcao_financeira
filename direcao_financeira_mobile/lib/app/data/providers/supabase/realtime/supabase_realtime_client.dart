@@ -82,7 +82,10 @@ class SupabaseRealtimeClient implements RealtimeClient {
         .from(SupabaseTableNames.transactions)
         .stream(primaryKey: ['id'])
         .eq('userId', userId)
-        .listen((_) => _emit('transaction.created'));
+        .listen((_) {
+          _emit('transaction.changed');
+          _emit('transaction.created');
+        });
 
     _shiftsSubscription ??= client
         .from(SupabaseTableNames.shifts)

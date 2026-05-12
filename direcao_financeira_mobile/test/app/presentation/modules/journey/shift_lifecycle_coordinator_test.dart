@@ -4,6 +4,7 @@ import 'package:direcao_financeira_mobile/app/domain/entities/active_shift_entit
 import 'package:direcao_financeira_mobile/app/domain/entities/finish_shift_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/manual_shift_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/paged_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_route_entity.dart';
@@ -19,8 +20,9 @@ class _FakeJourneyRepository implements IJourneyRepository {
   Either<Failure, FinishShiftResultEntity> finishResult = const Right(
     FinishShiftResultEntity(synced: true, pendingSyncCount: 0),
   );
-  Either<Failure, LocationTrackingStatusEntity> readinessResult =
-      Right(_readyStatus);
+  Either<Failure, LocationTrackingStatusEntity> readinessResult = Right(
+    _readyStatus,
+  );
 
   static const _readyStatus = LocationTrackingStatusEntity(
     isTrackingActive: true,
@@ -40,6 +42,16 @@ class _FakeJourneyRepository implements IJourneyRepository {
   @override
   Future<Either<Failure, FinishShiftResultEntity>> finishShift() async =>
       finishResult;
+
+  @override
+  Future<Either<Failure, FinishShiftResultEntity>> addManualShift(
+    ManualShiftDraftEntity shift,
+  ) async =>
+      const Right(FinishShiftResultEntity(synced: true, pendingSyncCount: 0));
+
+  @override
+  Future<Either<Failure, void>> deleteShift(ShiftEntity shift) async =>
+      const Right(null);
 
   @override
   Future<Either<Failure, void>> pauseShift() async => pauseResult;
@@ -126,9 +138,7 @@ void main() {
     });
 
     test('nao inicia turno quando validacao de localizacao falha', () async {
-      repository.readinessResult = Left(
-        ValidationFailure('gps desligado'),
-      );
+      repository.readinessResult = Left(ValidationFailure('gps desligado'));
 
       final started = await coordinator.startShift(
         onTrackingStatusResolved: (_) {},

@@ -160,11 +160,78 @@ class NinetyNineParser {
         lines: List<String>,
         passengerName: String?,
     ): Pair<String?, String?> {
+        val routeAnchoredAddresses = extractAddressesFromRouteStats(lines, passengerName)
+        if (routeAnchoredAddresses.first != null || routeAnchoredAddresses.second != null) {
+            return routeAnchoredAddresses
+        }
+
         val candidates =
             lines.filter { isAddressCandidate(it, passengerName) }
                 .distinct()
 
         return candidates.getOrNull(0) to candidates.getOrNull(1)
+    }
+
+    private fun extractAddressesFromRouteStats(
+        lines: List<String>,
+        passengerName: String?,
+    ): Pair<String?, String?> {
+        val addresses = mutableListOf<String>()
+
+        lines.forEachIndexed { index, line ->
+            if (!statsRegex.containsMatchIn(line)) {
+                return@forEachIndexed
+            }
+
+            extractAddressFromStatLine(line, passengerName)?.let { address ->
+                addresses.add(address)
+                return@forEachIndexed
+            }
+
+            val nextAddress = findNextAddressCandidate(lines, startIndex = index + 1, passengerName = passengerName)
+            if (nextAddress != null) {
+                addresses.add(nextAddress)
+            }
+        }
+
+        val distinctAddresses = addresses.distinct()
+        return distinctAddresses.getOrNull(0) to distinctAddresses.getOrNull(1)
+    }
+
+    private fun extractAddressFromStatLine(
+        line: String,
+        passengerName: String?,
+    ): String? {
+        val match = statsRegex.find(line) ?: return null
+        val candidate = line.substring(match.range.last + 1).trim()
+        if (isAddressCandidate(candidate, passengerName)) {
+            return candidate
+        }
+
+        return null
+    }
+
+    private fun findNextAddressCandidate(
+        lines: List<String>,
+        startIndex: Int,
+        passengerName: String?,
+    ): String? {
+        for (index in startIndex until lines.size) {
+            val currentLine = lines[index].trim()
+            if (currentLine.isEmpty()) {
+                continue
+            }
+
+            if (statsRegex.containsMatchIn(currentLine)) {
+                return null
+            }
+
+            if (isAddressCandidate(currentLine, passengerName)) {
+                return currentLine
+            }
+        }
+
+        return null
     }
 
     private fun isAddressCandidate(
@@ -202,6 +269,10 @@ class NinetyNineParser {
                 "min",
                 "r$",
                 "passageiro",
+                "google",
+                "maquina",
+                "premium",
+                "novo",
             )
 
         if (blockedTerms.any { normalized.contains(it) }) {

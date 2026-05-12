@@ -158,7 +158,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
                             Text(
                               state.errorMessage ?? 'Nenhum turno encontrado',
                               style: TextStyle(
-                                color: colorScheme.onSurface.withValues(alpha: 0.54),
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.54,
+                                ),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -185,7 +187,12 @@ class ShiftHistorySection extends GetView<JourneyController> {
                               4.0,
                             ).clamp(12.0, 20.0),
                           ),
-                          child: ShiftCard(shift: shift),
+                          child: ShiftCard(
+                            shift: shift,
+                            isDeleting: controller.isDeletingShift(shift),
+                            onDelete: () =>
+                                controller.requestDeleteShift(shift),
+                          ),
                         ),
                       _ShiftPaginationFooter(controller: controller),
                     ],
@@ -208,9 +215,9 @@ class ShiftHistorySection extends GetView<JourneyController> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.royalBlue,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: AppColors.royalBlue),
           ),
           child: child!,
         );

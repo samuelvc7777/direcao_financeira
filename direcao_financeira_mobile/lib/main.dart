@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/core/bindings/app_binding.dart';
 import 'app/core/config/app_environment.dart';
 import 'app/core/location/location_tracking_service.dart';
+import 'app/core/notifications/notification_permission_service.dart';
 import 'app/core/theme/app_scroll_behavior.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/data/local/get_storage_session_store.dart';
@@ -59,6 +60,9 @@ void main() async {
       : AppRoutes.login;
 
   await initializeLocationTrackingService(storage);
+  const notificationPermissionService = NotificationPermissionService();
+  await notificationPermissionService
+      .requestAndroidNotificationPermissionIfNeeded();
 
   final isDarkMode = storage.read<bool>('isDarkMode');
   final themeMode = isDarkMode == null

@@ -27,6 +27,8 @@ import '../presentation/modules/journey/journey_view.dart';
 import '../presentation/modules/journey/journey_binding.dart';
 import '../presentation/modules/journey/add_ride_binding.dart';
 import '../presentation/modules/journey/add_ride_view.dart';
+import '../presentation/modules/journey/import_ride_photo_binding.dart';
+import '../presentation/modules/journey/import_ride_photo_view.dart';
 import '../presentation/modules/journey/operational_metrics_view.dart';
 import '../presentation/modules/journey/daily_statistics_view.dart';
 import '../presentation/modules/journey/ride_details_view.dart';
@@ -60,6 +62,7 @@ class AppRoutes {
   static const String shiftRoute = '/journey/shift-route';
   static const String journeyRideDetails = '/journey/ride-details';
   static const String journeyAddRide = '/journey/add-ride';
+  static const String journeyImportRidePhoto = '/journey/import-ride-photo';
   static const String trafficLightSettings = '/traffic-light-settings';
   static const String costsGainsSettings = '/costs-gains-settings';
   static const String costsGainsWizard = '/costs-gains-wizard';
@@ -119,6 +122,13 @@ class AppPages {
       name: AppRoutes.journeyAddRide,
       page: () => const AddRideView(),
       binding: AddRideBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.journeyImportRidePhoto,
+      page: () => const ImportRidePhotoView(),
+      binding: ImportRidePhotoBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

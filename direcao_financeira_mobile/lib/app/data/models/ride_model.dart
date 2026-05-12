@@ -1,5 +1,5 @@
-import '../../domain/entities/ride_entity.dart';
 import '../../domain/entities/detected_ride_draft_entity.dart';
+import '../../domain/entities/ride_entity.dart';
 
 class RideModel extends RideEntity {
   const RideModel({
@@ -38,6 +38,9 @@ class RideModel extends RideEntity {
 
     final durationSeconds = json['totalTime'] as int? ?? 0;
     final platformName = (json['platformName'] as String?)?.trim();
+    final originAddress = (json['originAddress'] as String?)?.trim();
+    final destinationAddress = (json['destinationAddress'] as String?)?.trim();
+    final passengerName = (json['passengerName'] as String?)?.trim();
 
     return RideModel(
       id: json['id'] as int,
@@ -50,10 +53,15 @@ class RideModel extends RideEntity {
       grossValueCents: json['grossValueCents'] as int? ?? 0,
       date: formattedDate,
       time: formattedTime,
-      origin: json['originAddress'] as String? ?? 'Origem não informada',
-      destination:
-          json['destinationAddress'] as String? ?? 'Destino não informado',
-      passenger: json['passengerName'] as String? ?? 'Não informado',
+      origin: originAddress?.isNotEmpty == true
+          ? originAddress!
+          : 'Origem nao informada',
+      destination: destinationAddress?.isNotEmpty == true
+          ? destinationAddress!
+          : 'Destino nao informado',
+      passenger: passengerName?.isNotEmpty == true
+          ? passengerName!
+          : 'Nao informado',
       totalKm: (json['totalKm'] as num?)?.toDouble() ?? 0,
       totalTimeSeconds: durationSeconds,
       durationMinutes: durationSeconds ~/ 60,

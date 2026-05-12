@@ -299,7 +299,7 @@ class _MapCanvasState extends State<_MapCanvas> {
           children: [
             TileLayer(
               urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-              userAgentPackageName: 'com.example.direcao_financeira_mobile',
+              userAgentPackageName: 'br.com.direcaofinanceira.app',
             ),
             PolylineLayer(
               polylines: [

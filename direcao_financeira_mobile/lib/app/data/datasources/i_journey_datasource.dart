@@ -23,5 +23,6 @@ abstract class IJourneyDataSource {
     PendingFinishedShiftModel shift,
     ShiftRouteModel? trackedRoute,
   );
+  Future<void> deleteShift(int shiftId);
   Future<ShiftRouteModel> getShiftRoute(int shiftId);
 }

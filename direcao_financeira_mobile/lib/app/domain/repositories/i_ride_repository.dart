@@ -29,6 +29,10 @@ abstract class IRideRepository {
     DetectedRideDraftEntity ride,
   );
 
+  Future<Either<Failure, Unit>> createFinishedRide(
+    DetectedRideDraftEntity ride,
+  );
+
   Future<Either<Failure, Unit>> finishRide({
     required int rideId,
     required String paymentMethod,

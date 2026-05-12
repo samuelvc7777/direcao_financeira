@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../../routes/app_pages.dart';
 import 'journey_controller.dart';
 import 'widgets/journey_status_banner.dart';
 import 'widgets/rides_list_section.dart';
@@ -179,6 +180,23 @@ class _JourneyViewState extends State<JourneyView> {
             );
           }),
         ),
+        floatingActionButton: _selectedTabIndex == 1
+            ? FloatingActionButton.extended(
+                heroTag: 'import-ride-photo',
+                onPressed: () async {
+                  final result = await Get.toNamed(
+                    AppRoutes.journeyImportRidePhoto,
+                  );
+                  if (result == true) {
+                    await controller.refreshJourneyData(silent: true);
+                  }
+                },
+                backgroundColor: AppColors.royalBlue,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.photo_camera_back_rounded),
+                label: const Text('Importar print'),
+              )
+            : null,
       ),
     );
   }

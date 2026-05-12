@@ -261,6 +261,20 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
   }
 
   @override
+  Future<void> deleteShift(int shiftId) async {
+    final userId = await userScope.getCurrentUserId();
+    await client
+        .from(SupabaseTableNames.shiftRoutes)
+        .delete()
+        .eq('shiftId', shiftId);
+    await client
+        .from(SupabaseTableNames.shifts)
+        .delete()
+        .eq('id', shiftId)
+        .eq('userId', userId);
+  }
+
+  @override
   Future<ShiftRouteModel> getShiftRoute(int shiftId) async {
     final row = await client
         .from(SupabaseTableNames.shiftRoutes)
@@ -335,8 +349,8 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         .select()
         .eq('userId', userId)
         .eq('status', 'FINISHED')
-        .gte('createdAt', range.start.toUtc().toIso8601String())
-        .lt('createdAt', range.endExclusive.toUtc().toIso8601String())
+        .gte('createdAt', _formatLocalTimestamp(range.start))
+        .lt('createdAt', _formatLocalTimestamp(range.endExclusive))
         .order('createdAt', ascending: false);
 
     return (rows as List)
@@ -358,5 +372,14 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
 
   String _formatDateOnly(DateTime dateTime) {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+  }
+
+  String _formatLocalTimestamp(DateTime value) {
+    final local = value.toLocal();
+    String two(int number) => number.toString().padLeft(2, '0');
+    String three(int number) => number.toString().padLeft(3, '0');
+    return '${local.year}-${two(local.month)}-${two(local.day)}T'
+        '${two(local.hour)}:${two(local.minute)}:${two(local.second)}.'
+        '${three(local.millisecond)}';
   }
 }

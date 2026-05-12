@@ -7,9 +7,16 @@ import '../../../../domain/entities/shift_entity.dart';
 import '../../../../routes/app_pages.dart';
 
 class ShiftCard extends StatelessWidget {
-  const ShiftCard({super.key, required this.shift});
+  const ShiftCard({
+    super.key,
+    required this.shift,
+    this.onDelete,
+    this.isDeleting = false,
+  });
 
   final ShiftEntity shift;
+  final VoidCallback? onDelete;
+  final bool isDeleting;
 
   @override
   Widget build(BuildContext context) {
@@ -81,10 +88,11 @@ class ShiftCard extends StatelessWidget {
                       ),
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal:
-                              Responsive.hp(context, 2.0).clamp(6.0, 10.0),
-                          vertical:
-                              Responsive.vp(context, 0.4).clamp(3.0, 5.0),
+                          horizontal: Responsive.hp(
+                            context,
+                            2.0,
+                          ).clamp(6.0, 10.0),
+                          vertical: Responsive.vp(context, 0.4).clamp(3.0, 5.0),
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.warning.withValues(alpha: 0.16),
@@ -94,7 +102,10 @@ class ShiftCard extends StatelessWidget {
                           'Pendente',
                           style: TextStyle(
                             color: AppColors.warning,
-                            fontSize: Responsive.sp(context, 11).clamp(10.0, 12.0),
+                            fontSize: Responsive.sp(
+                              context,
+                              11,
+                            ).clamp(10.0, 12.0),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -166,9 +177,7 @@ class ShiftCard extends StatelessWidget {
                   ],
                 ),
                 if (shift.drivenKm != null || shift.hasRoute) ...[
-                  SizedBox(
-                    height: Responsive.vp(context, 0.8).clamp(4.0, 8.0),
-                  ),
+                  SizedBox(height: Responsive.vp(context, 0.8).clamp(4.0, 8.0)),
                   if (shift.drivenKm != null)
                     Row(
                       children: [
@@ -184,8 +193,10 @@ class ShiftCard extends StatelessWidget {
                           '${shift.drivenKm} km rodados',
                           style: TextStyle(
                             color: AppColors.electricCyan,
-                            fontSize:
-                                Responsive.sp(context, 14).clamp(12.0, 16.0),
+                            fontSize: Responsive.sp(
+                              context,
+                              14,
+                            ).clamp(12.0, 16.0),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -196,19 +207,18 @@ class ShiftCard extends StatelessWidget {
                       height: Responsive.vp(context, 1.0).clamp(6.0, 10.0),
                     ),
                     InkWell(
-                      onTap: () => Get.toNamed(
-                        AppRoutes.shiftRoute,
-                        arguments: shift,
-                      ),
+                      onTap: () =>
+                          Get.toNamed(AppRoutes.shiftRoute, arguments: shift),
                       borderRadius: BorderRadius.circular(
                         Responsive.sp(context, 8).clamp(6.0, 10.0),
                       ),
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal:
-                              Responsive.hp(context, 3.0).clamp(10.0, 14.0),
-                          vertical:
-                              Responsive.vp(context, 0.5).clamp(4.0, 8.0),
+                          horizontal: Responsive.hp(
+                            context,
+                            3.0,
+                          ).clamp(10.0, 14.0),
+                          vertical: Responsive.vp(context, 0.5).clamp(4.0, 8.0),
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.electricCyan.withValues(alpha: 0.1),
@@ -222,17 +232,25 @@ class ShiftCard extends StatelessWidget {
                             Icon(
                               Icons.map_outlined,
                               color: AppColors.electricCyan,
-                              size: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                              size: Responsive.sp(
+                                context,
+                                14,
+                              ).clamp(12.0, 16.0),
                             ),
                             SizedBox(
-                              width: Responsive.hp(context, 1.5).clamp(4.0, 8.0),
+                              width: Responsive.hp(
+                                context,
+                                1.5,
+                              ).clamp(4.0, 8.0),
                             ),
                             Text(
                               'Ver Rota',
                               style: TextStyle(
                                 color: AppColors.electricCyan,
-                                fontSize:
-                                    Responsive.sp(context, 12).clamp(10.0, 14.0),
+                                fontSize: Responsive.sp(
+                                  context,
+                                  12,
+                                ).clamp(10.0, 14.0),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -245,12 +263,37 @@ class ShiftCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            shift.isPendingSync
-                ? Icons.sync_problem_rounded
-                : Icons.check_circle_rounded,
-            color: shift.isPendingSync ? AppColors.warning : AppColors.royalBlue,
-            size: Responsive.sp(context, 24).clamp(20.0, 28.0),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: 'Excluir turno',
+                onPressed: isDeleting ? null : onDelete,
+                icon: isDeleting
+                    ? SizedBox(
+                        width: Responsive.sp(context, 18).clamp(16.0, 20.0),
+                        height: Responsive.sp(context, 18).clamp(16.0, 20.0),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.rose,
+                        ),
+                      )
+                    : Icon(
+                        Icons.delete_outline_rounded,
+                        color: AppColors.rose,
+                        size: Responsive.sp(context, 22).clamp(18.0, 24.0),
+                      ),
+              ),
+              Icon(
+                shift.isPendingSync
+                    ? Icons.sync_problem_rounded
+                    : Icons.check_circle_rounded,
+                color: shift.isPendingSync
+                    ? AppColors.warning
+                    : AppColors.royalBlue,
+                size: Responsive.sp(context, 22).clamp(18.0, 24.0),
+              ),
+            ],
           ),
         ],
       ),

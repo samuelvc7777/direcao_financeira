@@ -9,6 +9,7 @@ import 'package:direcao_financeira_mobile/app/domain/entities/active_shift_entit
 import 'package:direcao_financeira_mobile/app/domain/entities/finish_shift_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/manual_shift_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/paged_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_route_entity.dart';
@@ -22,18 +23,19 @@ import 'package:get/get.dart';
 class _FakeJourneyRepository implements IJourneyRepository {
   final trackingController =
       StreamController<LocationTrackingStatusEntity>.broadcast();
-  Either<Failure, LocationTrackingStatusEntity> trackingStatusResult = const Right(
-    LocationTrackingStatusEntity(
-      isTrackingActive: true,
-      isLocationServiceEnabled: true,
-      hasForegroundPermission: true,
-      hasBackgroundPermission: true,
-      isPreciseLocation: true,
-      isPaused: false,
-      totalDistanceMeters: 1000,
-      idleTimeSeconds: 10,
-    ),
-  );
+  Either<Failure, LocationTrackingStatusEntity> trackingStatusResult =
+      const Right(
+        LocationTrackingStatusEntity(
+          isTrackingActive: true,
+          isLocationServiceEnabled: true,
+          hasForegroundPermission: true,
+          hasBackgroundPermission: true,
+          isPreciseLocation: true,
+          isPaused: false,
+          totalDistanceMeters: 1000,
+          idleTimeSeconds: 10,
+        ),
+      );
   Either<Failure, int> syncResult = const Right(2);
 
   @override
@@ -49,11 +51,19 @@ class _FakeJourneyRepository implements IJourneyRepository {
 
   @override
   Future<Either<Failure, LocationTrackingStatusEntity>>
-  ensureReadyForShiftStart() async =>
-      throw UnimplementedError();
+  ensureReadyForShiftStart() async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, FinishShiftResultEntity>> finishShift() async =>
+      throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, FinishShiftResultEntity>> addManualShift(
+    ManualShiftDraftEntity shift,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, void>> deleteShift(ShiftEntity shift) async =>
       throw UnimplementedError();
 
   @override
@@ -83,14 +93,16 @@ class _FakeJourneyRepository implements IJourneyRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, void>> pauseShift() async => throw UnimplementedError();
+  Future<Either<Failure, void>> pauseShift() async =>
+      throw UnimplementedError();
 
   @override
   Future<Either<Failure, void>> resumeShift() async =>
       throw UnimplementedError();
 
   @override
-  Future<Either<Failure, void>> startShift() async => throw UnimplementedError();
+  Future<Either<Failure, void>> startShift() async =>
+      throw UnimplementedError();
 }
 
 class _FakeJourneyRealtimeBridge implements JourneyRealtimeBridge {
@@ -206,81 +218,87 @@ void main() {
       expect(synced, 2);
     });
 
-    test('faz fallback quando tracking status e sincronizacao falham', () async {
-      repository.trackingStatusResult = Left(ServerFailure('offline'));
-      repository.syncResult = Left(ServerFailure('offline'));
+    test(
+      'faz fallback quando tracking status e sincronizacao falham',
+      () async {
+        repository.trackingStatusResult = Left(ServerFailure('offline'));
+        repository.syncResult = Left(ServerFailure('offline'));
 
-      final status = await coordinator.loadTrackingStatus();
-      final synced = await coordinator.syncPendingShifts();
+        final status = await coordinator.loadTrackingStatus();
+        final synced = await coordinator.syncPendingShifts();
 
-      expect(status, isNull);
-      expect(synced, 0);
-    });
+        expect(status, isNull);
+        expect(synced, 0);
+      },
+    );
 
-    test('bind conecta observers, stream e callback de corrida sem vazar apos unbind', () async {
-      final connectionChanges = <bool>[];
-      final accessibilityChanges = <bool>[];
-      final trackingChanges = <LocationTrackingStatusEntity>[];
-      var rideChanges = 0;
+    test(
+      'bind conecta observers, stream e callback de corrida sem vazar apos unbind',
+      () async {
+        final connectionChanges = <bool>[];
+        final accessibilityChanges = <bool>[];
+        final trackingChanges = <LocationTrackingStatusEntity>[];
+        var rideChanges = 0;
 
-      coordinator.bind(
-        onConnectionChanged: (isOnlineNow) async {
-          connectionChanges.add(isOnlineNow);
-        },
-        onTrackingStatusChanged: trackingChanges.add,
-        onRideChanged: () => rideChanges++,
-        onAccessibilityChanged: accessibilityChanges.add,
-      );
+        coordinator.bind(
+          onConnectionChanged: (isOnlineNow) async {
+            connectionChanges.add(isOnlineNow);
+          },
+          onTrackingStatusChanged: trackingChanges.add,
+          onRideChanged: () => rideChanges++,
+          onAccessibilityChanged: accessibilityChanges.add,
+        );
 
-      expect(bridge.bindCalls, 1);
+        expect(bridge.bindCalls, 1);
 
-      bridge.isOnline.value = false;
-      accessibilityService.isServiceEnabled.value = false;
-      await Future<void>.delayed(Duration.zero);
+        bridge.isOnline.value = false;
+        accessibilityService.isServiceEnabled.value = false;
+        await Future<void>.delayed(Duration.zero);
 
-      repository.trackingController.add(
-        const LocationTrackingStatusEntity(
-          isTrackingActive: false,
-          isLocationServiceEnabled: true,
-          hasForegroundPermission: true,
-          hasBackgroundPermission: true,
-          isPreciseLocation: true,
-          isPaused: true,
-          totalDistanceMeters: 250,
-          idleTimeSeconds: 20,
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
+        repository.trackingController.add(
+          const LocationTrackingStatusEntity(
+            isTrackingActive: false,
+            isLocationServiceEnabled: true,
+            hasForegroundPermission: true,
+            hasBackgroundPermission: true,
+            isPreciseLocation: true,
+            isPaused: true,
+            totalDistanceMeters: 250,
+            idleTimeSeconds: 20,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      bridge.onRideChanged?.call();
-      expect(connectionChanges, [false]);
-      expect(accessibilityChanges, [false]);
-      expect(trackingChanges.single.totalDistanceMeters, 250);
-      expect(rideChanges, 1);
+        bridge.onRideChanged?.call();
+        expect(connectionChanges, [false]);
+        expect(accessibilityChanges, [false]);
+        expect(trackingChanges.single.totalDistanceMeters, 250);
+        expect(rideChanges, 1);
 
-      await coordinator.unbind();
-      expect(bridge.unbound, isTrue);
+        await coordinator.unbind();
+        expect(bridge.unbound, isTrue);
 
-      bridge.isOnline.value = true;
-      accessibilityService.isServiceEnabled.value = true;
-      repository.trackingController.add(
-        const LocationTrackingStatusEntity(
-          isTrackingActive: true,
-          isLocationServiceEnabled: true,
-          hasForegroundPermission: true,
-          hasBackgroundPermission: true,
-          isPreciseLocation: true,
-          isPaused: false,
-          totalDistanceMeters: 500,
-          idleTimeSeconds: 0,
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
+        bridge.isOnline.value = true;
+        accessibilityService.isServiceEnabled.value = true;
+        repository.trackingController.add(
+          const LocationTrackingStatusEntity(
+            isTrackingActive: true,
+            isLocationServiceEnabled: true,
+            hasForegroundPermission: true,
+            hasBackgroundPermission: true,
+            isPreciseLocation: true,
+            isPaused: false,
+            totalDistanceMeters: 500,
+            idleTimeSeconds: 0,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      expect(connectionChanges, [false]);
-      expect(accessibilityChanges, [false]);
-      expect(trackingChanges, hasLength(1));
-    });
+        expect(connectionChanges, [false]);
+        expect(accessibilityChanges, [false]);
+        expect(trackingChanges, hasLength(1));
+      },
+    );
 
     test('toggleAssistant ativa e desativa o overlay', () async {
       final feedbacks = <String>[];
@@ -309,29 +327,32 @@ void main() {
       expect(appBubbleService.bubbleRunning, isFalse);
     });
 
-    test('toggleAssistant avisa quando permissao de overlay esta negada', () async {
-      final feedbacks = <String>[];
-      final busyStates = <bool>[];
-      final assistantStates = <bool>[];
-      appBubbleService.permissionGranted = false;
+    test(
+      'toggleAssistant avisa quando permissao de overlay esta negada',
+      () async {
+        final feedbacks = <String>[];
+        final busyStates = <bool>[];
+        final assistantStates = <bool>[];
+        appBubbleService.permissionGranted = false;
 
-      await coordinator.toggleAssistant(
-        isAssistantActive: false,
-        onAssistantStateChanged: assistantStates.add,
-        onBusyStateChanged: busyStates.add,
-        showSuccess: (title, message) => feedbacks.add('$title:$message'),
-        showWarning: (title, message) => feedbacks.add('$title:$message'),
-        showError: (title, message) => feedbacks.add('$title:$message'),
-      );
+        await coordinator.toggleAssistant(
+          isAssistantActive: false,
+          onAssistantStateChanged: assistantStates.add,
+          onBusyStateChanged: busyStates.add,
+          showSuccess: (title, message) => feedbacks.add('$title:$message'),
+          showWarning: (title, message) => feedbacks.add('$title:$message'),
+          showError: (title, message) => feedbacks.add('$title:$message'),
+        );
 
-      expect(appBubbleService.openedOverlaySettings, isTrue);
-      expect(assistantStates, isEmpty);
-      expect(busyStates, [true, false]);
-      expect(
-        feedbacks.single,
-        'Permissao necessaria:Libere a permissao de sobreposicao para ativar o Assistente.',
-      );
-    });
+        expect(appBubbleService.openedOverlaySettings, isTrue);
+        expect(assistantStates, isEmpty);
+        expect(busyStates, [true, false]);
+        expect(
+          feedbacks.single,
+          'Permissao necessaria:Libere a permissao de sobreposicao para ativar o Assistente.',
+        );
+      },
+    );
 
     test('toggleAssistant informa erro quando inicializacao falha', () async {
       final feedbacks = <String>[];

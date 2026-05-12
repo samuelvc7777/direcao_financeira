@@ -25,6 +25,8 @@ class JourneyBinding extends Bindings {
     Get.lazyPut(() => PauseShiftUseCase(Get.find()));
     Get.lazyPut(() => ResumeShiftUseCase(Get.find()));
     Get.lazyPut(() => FinishShiftUseCase(Get.find()));
+    Get.lazyPut(() => CreateManualShiftUseCase(Get.find()));
+    Get.lazyPut(() => DeleteShiftUseCase(Get.find()));
     Get.lazyPut(() => SyncPendingJourneyUseCase(Get.find()));
     Get.lazyPut(() => EnsureReadyForShiftStartUseCase(Get.find()));
     Get.lazyPut(() => GetLocationTrackingStatusUseCase(Get.find()));
@@ -56,6 +58,8 @@ class JourneyBinding extends Bindings {
         getActiveShift: Get.find(),
         getDailyStatistics: Get.find(),
         getShiftHistory: Get.find(),
+        createManualShift: Get.find(),
+        deleteShiftUseCase: Get.find(),
         getRidesUseCase: Get.find(),
         getCostsGainsSettings: Get.isRegistered<GetCostsGainsSettingsUseCase>()
             ? Get.find<GetCostsGainsSettingsUseCase>()

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../datasources/i_ride_datasource.dart';
 import '../../../../domain/entities/detected_ride_draft_entity.dart';
@@ -62,12 +63,10 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
     String? cancelReason,
   }) async {
     final userId = await userScope.getCurrentUserId();
-    final createdAt = (ride.detectedAt ?? DateTime.now())
-        .toUtc()
-        .toIso8601String();
+    final createdAt = _formatLocalTimestamp(ride.detectedAt ?? DateTime.now());
     final now = DateTime.now().toUtc().toIso8601String();
 
-    await client.from(SupabaseTableNames.rides).insert({
+    final payload = {
       'userId': userId,
       'status': status,
       'platformName': ride.platformName,
@@ -84,7 +83,17 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
       'cancelReason': cancelReason,
       'createdAt': createdAt,
       'updatedAt': now,
-    });
+    };
+
+    try {
+      await client.from(SupabaseTableNames.rides).insert(payload);
+    } on PostgrestException catch (error) {
+      debugPrint(
+        '[SupabaseRideRemoteDataSource] Erro ao inserir corrida: '
+        'code=${error.code} message=${error.message} details=${error.details} hint=${error.hint} payload=$payload',
+      );
+      rethrow;
+    }
   }
 
   @override
@@ -134,13 +143,22 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
         .from(SupabaseTableNames.rides)
         .select()
         .eq('userId', userId)
-        .gte('createdAt', range.start.toUtc().toIso8601String())
-        .lt('createdAt', range.endExclusive.toUtc().toIso8601String());
+        .gte('createdAt', _formatLocalTimestamp(range.start))
+        .lt('createdAt', _formatLocalTimestamp(range.endExclusive));
 
     if (status == null || status.isEmpty) {
       return query;
     }
 
     return query.eq('status', status);
+  }
+
+  String _formatLocalTimestamp(DateTime value) {
+    final local = value.toLocal();
+    String two(int number) => number.toString().padLeft(2, '0');
+    String three(int number) => number.toString().padLeft(3, '0');
+    return '${local.year}-${two(local.month)}-${two(local.day)}T'
+        '${two(local.hour)}:${two(local.minute)}:${two(local.second)}.'
+        '${three(local.millisecond)}';
   }
 }

@@ -280,6 +280,10 @@ class ProviderBinding extends Bindings {
       CreateDetectedRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
+    Get.put<CreateFinishedRideUseCase>(
+      CreateFinishedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
     Get.put<FinishRideUseCase>(
       FinishRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
@@ -454,6 +458,10 @@ class ProviderBinding extends Bindings {
     );
     Get.put<CreateDetectedRideUseCase>(
       CreateDetectedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
+    Get.put<CreateFinishedRideUseCase>(
+      CreateFinishedRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
     Get.put<FinishRideUseCase>(

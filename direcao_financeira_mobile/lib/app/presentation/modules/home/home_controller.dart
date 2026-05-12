@@ -66,6 +66,12 @@ class HomeController extends GetxController {
   final currentTabIndex = 0.obs;
   Worker? _dashboardRefreshWorker;
   int _dashboardLoadToken = 0;
+  static const _dashboardRealtimeEvents = <String>[
+    'transaction.created',
+    'transaction.updated',
+    'transaction.deleted',
+    'transaction.changed',
+  ];
   static const _invoicePaymentExpenseCategoryName =
       'Pagamento interno de fatura';
   static const _invoicePaymentIncomeCategoryName =
@@ -85,15 +91,17 @@ class HomeController extends GetxController {
   }
 
   void _setupSocketListeners() {
-    realtimeClient.on('transaction.created', (_) {
-      loadDashboardData(silent: true);
-    });
+    for (final event in _dashboardRealtimeEvents) {
+      realtimeClient.on(event, (_) => loadDashboardData(silent: true));
+    }
   }
 
   @override
   void onClose() {
     _dashboardRefreshWorker?.dispose();
-    realtimeClient.off('transaction.created');
+    for (final event in _dashboardRealtimeEvents) {
+      realtimeClient.off(event);
+    }
     super.onClose();
   }
 
@@ -108,51 +116,56 @@ class HomeController extends GetxController {
       isLoading.value = true;
     }
 
-    final bankAccountsFuture = loadBankAccountsUseCase();
-    final creditCardsFuture = loadCreditCardsUseCase();
-    final transactionsFuture = getTransactionsUseCase(month);
+    try {
+      final bankAccountsFuture = loadBankAccountsUseCase();
+      final creditCardsFuture = loadCreditCardsUseCase();
+      final transactionsFuture = getTransactionsUseCase(month);
 
-    final bankResult = await bankAccountsFuture;
-    final cardResult = await creditCardsFuture;
-    final transactionResult = await transactionsFuture;
+      final bankResult = await bankAccountsFuture;
+      final cardResult = await creditCardsFuture;
+      final transactionResult = await transactionsFuture;
 
-    if (loadToken != _dashboardLoadToken) {
-      return;
-    }
+      if (loadToken != _dashboardLoadToken) {
+        return;
+      }
 
-    bankResult.fold(
-      (failure) => debugPrint(
-        '[HomeController] Erro ao carregar contas: ${failure.message}',
-      ),
-      (data) => contas.assignAll(data.where((a) => a.isActive).toList()),
-    );
+      bankResult.fold(
+        (failure) => debugPrint(
+          '[HomeController] Erro ao carregar contas: ${failure.message}',
+        ),
+        (data) => contas.assignAll(data.where((a) => a.isActive).toList()),
+      );
 
-    cardResult.fold(
-      (failure) => debugPrint(
-        '[HomeController] Erro ao carregar cartoes: ${failure.message}',
-      ),
-      (data) => cartoes.assignAll(data.where((c) => c.isActive).toList()),
-    );
+      cardResult.fold(
+        (failure) => debugPrint(
+          '[HomeController] Erro ao carregar cartoes: ${failure.message}',
+        ),
+        (data) => cartoes.assignAll(data.where((c) => c.isActive).toList()),
+      );
 
-    transactionResult.fold(
-      (failure) => debugPrint(
-        '[HomeController] Erro ao carregar transacoes: ${failure.message}',
-      ),
-      (data) {
-        final sortedData = List<TransactionEntity>.from(data)
-          ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
-        final visibleTransactions = sortedData
-            .where((transaction) => !transaction.isInternalInvoicePayment)
-            .toList();
-        ultimasTransacoes.assignAll(visibleTransactions);
-        gastosPorCategoria.assignAll(
-          _buildExpenseChartItems(visibleTransactions),
-        );
-      },
-    );
-
-    if (!silent) {
-      isLoading.value = false;
+      transactionResult.fold(
+        (failure) => debugPrint(
+          '[HomeController] Erro ao carregar transacoes: ${failure.message}',
+        ),
+        (data) {
+          final sortedData = List<TransactionEntity>.from(data)
+            ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+          final visibleTransactions = sortedData
+              .where((transaction) => !transaction.isInternalInvoicePayment)
+              .toList();
+          ultimasTransacoes.assignAll(visibleTransactions);
+          gastosPorCategoria.assignAll(
+            _buildExpenseChartItems(visibleTransactions),
+          );
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[HomeController] Erro inesperado no dashboard: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      if (loadToken == _dashboardLoadToken && (!silent || isLoading.value)) {
+        isLoading.value = false;
+      }
     }
   }
 

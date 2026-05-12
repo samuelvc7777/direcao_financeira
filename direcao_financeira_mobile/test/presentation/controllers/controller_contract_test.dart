@@ -10,6 +10,7 @@ import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart'
 import 'package:direcao_financeira_mobile/app/domain/entities/finish_shift_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/manual_shift_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/paged_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/active_shift_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
@@ -372,6 +373,9 @@ class _FakeJourneyRepository implements IJourneyRepository {
   Either<Failure, LocationTrackingStatusEntity>? trackingStatusResult;
   Either<Failure, PagedResultEntity<ShiftEntity>>? shiftHistoryResult;
   Either<Failure, int>? syncPendingShiftsResult;
+  Either<Failure, FinishShiftResultEntity>? addManualShiftResult;
+  ManualShiftDraftEntity? lastManualShift;
+  ShiftEntity? deletedShift;
 
   @override
   Future<Either<Failure, LocationTrackingStatusEntity>>
@@ -380,6 +384,21 @@ class _FakeJourneyRepository implements IJourneyRepository {
   @override
   Future<Either<Failure, FinishShiftResultEntity>> finishShift() async =>
       const Right(FinishShiftResultEntity(synced: true, pendingSyncCount: 0));
+
+  @override
+  Future<Either<Failure, FinishShiftResultEntity>> addManualShift(
+    ManualShiftDraftEntity shift,
+  ) async {
+    lastManualShift = shift;
+    return addManualShiftResult ??
+        const Right(FinishShiftResultEntity(synced: true, pendingSyncCount: 0));
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteShift(ShiftEntity shift) async {
+    deletedShift = shift;
+    return const Right(null);
+  }
 
   @override
   Future<Either<Failure, ActiveShiftEntity?>> getActiveShift() async =>
@@ -455,6 +474,11 @@ class _FakeRideRepository implements IRideRepository {
 
   @override
   Future<Either<Failure, Unit>> createDetectedRide(
+    DetectedRideDraftEntity ride,
+  ) async => const Right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> createFinishedRide(
     DetectedRideDraftEntity ride,
   ) async => const Right(unit);
 
@@ -633,6 +657,8 @@ JourneyController _buildJourneyController({
     getActiveShift: GetActiveShiftUseCase(journeyRepository),
     getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
     getShiftHistory: GetShiftHistoryUseCase(journeyRepository),
+    createManualShift: CreateManualShiftUseCase(journeyRepository),
+    deleteShiftUseCase: DeleteShiftUseCase(journeyRepository),
     getRidesUseCase: GetRidesUseCase(rideRepository),
     getCostsGainsSettings: null,
     shiftLifecycleCoordinator: ShiftLifecycleCoordinator(
@@ -721,6 +747,10 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(controller.contas.single.id, 99);
+
+    controller.isLoading.value = true;
+    await controller.loadDashboardData(silent: true);
+    expect(controller.isLoading.value, isFalse);
 
     controller.openTransactionsTab();
     expect(navigation.openedTransactionsTab, isTrue);
@@ -979,6 +1009,35 @@ void main() {
       expect(accessibilityService.lastTrafficLightValue, isTrue);
 
       controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'CreateManualShiftUseCase envia dados do turno manual ao repositorio',
+    () async {
+      final journeyRepository = _FakeJourneyRepository();
+      final useCase = CreateManualShiftUseCase(journeyRepository);
+
+      final result = await useCase(
+        ManualShiftDraftEntity(
+          totalDrivenKm: 124.5,
+          startTime: DateTime(2026, 5, 12, 8),
+          endTime: DateTime(2026, 5, 12, 16, 30),
+        ),
+      );
+
+      expect(result.isRight(), isTrue);
+      expect(journeyRepository.lastManualShift?.totalDrivenKm, 124.5);
+      expect(
+        journeyRepository.lastManualShift?.startTime,
+        DateTime(2026, 5, 12, 8),
+      );
+      expect(
+        journeyRepository.lastManualShift?.endTime,
+        DateTime(2026, 5, 12, 16, 30),
+      );
+
       await journeyRepository.dispose();
     },
   );
@@ -1362,6 +1421,7 @@ void main() {
 
       final summary = controller.operationalSummaryData;
       final paymentMethods = controller.paymentMethodsSectionState;
+      final initialRidesState = controller.ridesSectionState;
 
       expect(summary.grossEarningsCents, 15000);
       expect(summary.totalCostsCents, 4500);
@@ -1370,6 +1430,10 @@ void main() {
       expect(paymentMethods.totalFinishedRides, 2);
       expect(paymentMethods.mappedCount, 2);
       expect(paymentMethods.hasUnmappedRides, isFalse);
+      expect(
+        initialRidesState.visibleRides.map((ride) => ride.id),
+        orderedEquals([3, 2, 1]),
+      );
 
       controller.changeRideStatusFilter('Pendentes');
       final ridesState = controller.ridesSectionState;
@@ -1377,6 +1441,13 @@ void main() {
       expect(ridesState.totalVisibleCount, 1);
       expect(ridesState.visibleCount, 1);
       expect(ridesState.visibleRides.single.status, 'PENDING');
+
+      controller.changeRideStatusFilter('Finalizados');
+      final finishedRidesState = controller.ridesSectionState;
+      expect(
+        finishedRidesState.visibleRides.map((ride) => ride.id),
+        orderedEquals([2, 1]),
+      );
 
       controller.onClose();
       await journeyRepository.dispose();

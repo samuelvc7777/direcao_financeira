@@ -4,5 +4,6 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
     android:canTakeScreenshot="true"
-    android:canRetrieveWindowContent="true"
+    android:canRetrieveWindowContent="false"
+    android:packageNames="com.app99.driver,br.com.devbase.movesj.prestador"
     android:notificationTimeout="350" />

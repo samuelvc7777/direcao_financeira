@@ -12,6 +12,11 @@ abstract class IJourneyLocalDataSource {
   Future<PendingFinishedShiftModel> finishShift({
     required double totalDrivenKm,
   });
+  Future<PendingFinishedShiftModel> addManualFinishedShift({
+    required double totalDrivenKm,
+    required DateTime startTime,
+    required DateTime endTime,
+  });
   Future<List<PendingFinishedShiftModel>> getPendingFinishedShifts();
   Future<void> removePendingFinishedShift(int localId);
   Future<void> clearActiveShift();
@@ -156,6 +161,46 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       pendingShifts.map((item) => item.toJson()).toList(),
     );
     await clearActiveShift();
+    return pendingShift;
+  }
+
+  @override
+  Future<PendingFinishedShiftModel> addManualFinishedShift({
+    required double totalDrivenKm,
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    if (totalDrivenKm <= 0) {
+      throw ArgumentError.value(
+        totalDrivenKm,
+        'totalDrivenKm',
+        'A quilometragem precisa ser maior que zero.',
+      );
+    }
+    if (!endTime.isAfter(startTime)) {
+      throw ArgumentError.value(
+        endTime,
+        'endTime',
+        'O horario final precisa ser depois do horario inicial.',
+      );
+    }
+
+    final pendingShift = PendingFinishedShiftModel(
+      localId: DateTime.now().microsecondsSinceEpoch,
+      remoteShiftId: null,
+      startTime: startTime,
+      endTime: endTime,
+      createdAt: DateTime.now(),
+      idleTimeSeconds: 0,
+      totalDrivenKm: totalDrivenKm,
+    );
+
+    final pendingShifts = await getPendingFinishedShifts();
+    pendingShifts.add(pendingShift);
+    await storage.write(
+      _pendingShiftsKey,
+      pendingShifts.map((item) => item.toJson()).toList(),
+    );
     return pendingShift;
   }
 
