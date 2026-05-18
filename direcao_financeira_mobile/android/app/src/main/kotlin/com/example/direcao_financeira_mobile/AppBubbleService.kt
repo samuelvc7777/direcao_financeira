@@ -35,6 +35,8 @@ class AppBubbleService : Service() {
     private var menuView: View? = null
     private var trafficLightActionView: TextView? = null
     private var trafficLightIconView: TextView? = null
+    private var recordingActionView: TextView? = null
+    private var recordingIconView: TextView? = null
     private var bubbleLayoutParams: WindowManager.LayoutParams? = null
     private var menuLayoutParams: WindowManager.LayoutParams? = null
 
@@ -213,6 +215,16 @@ class AppBubbleService : Service() {
             )
         menuContainer.addView(ridesAction.first)
 
+        val recordingsAction =
+            createMenuActionRow(
+                label = getString(R.string.app_bubble_action_recordings),
+                iconGlyph = "\uD83C\uDFA5",
+                accentColor = 0xFFE05A5A.toInt(),
+                topMargin = 8.dp,
+                onClick = { dispatchBubbleAction(ACTION_OPEN_JOURNEY_RECORDINGS) },
+            )
+        menuContainer.addView(recordingsAction.first)
+
         val trafficLightAction =
             createMenuActionRow(
                 label = resolveTrafficLightActionLabel(),
@@ -224,6 +236,18 @@ class AppBubbleService : Service() {
         trafficLightActionView = trafficLightAction.second
         trafficLightIconView = trafficLightAction.third
         menuContainer.addView(trafficLightAction.first)
+
+        val recordingAction =
+            createMenuActionRow(
+                label = resolveRecordingActionLabel(),
+                iconGlyph = "\u25CF",
+                accentColor = resolveRecordingAccentColor(),
+                topMargin = 8.dp,
+                onClick = { dispatchBubbleAction(ACTION_TOGGLE_RECORDING) },
+            )
+        recordingActionView = recordingAction.second
+        recordingIconView = recordingAction.third
+        menuContainer.addView(recordingAction.first)
 
         val params =
             WindowManager.LayoutParams(
@@ -343,6 +367,32 @@ class AppBubbleService : Service() {
         updateTrafficLightIconAccent()
     }
 
+    private fun resolveRecordingActionLabel(): String {
+        return if (RecordingForegroundService.isRecording()) {
+            getString(R.string.app_bubble_action_disable_recording)
+        } else {
+            getString(R.string.app_bubble_action_enable_recording)
+        }
+    }
+
+    private fun resolveRecordingAccentColor(): Int {
+        return if (RecordingForegroundService.isRecording()) {
+            0xFFE05A5A.toInt()
+        } else {
+            0xFF3DDC84.toInt()
+        }
+    }
+
+    private fun updateRecordingVisualState() {
+        recordingActionView?.text = resolveRecordingActionLabel()
+        recordingIconView?.background =
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 14.dp.toFloat()
+                setColor(resolveRecordingAccentColor())
+            }
+    }
+
     private fun moveBubbleToMenuAnchor() {
         val view = bubbleView ?: return
         val params = bubbleLayoutParams ?: return
@@ -378,6 +428,8 @@ class AppBubbleService : Service() {
         menuView = null
         trafficLightActionView = null
         trafficLightIconView = null
+        recordingActionView = null
+        recordingIconView = null
         menuLayoutParams = null
     }
 
@@ -498,8 +550,12 @@ class AppBubbleService : Service() {
             "com.direcao_financeira.app_bubble.OPEN_JOURNEY_SHIFTS"
         const val ACTION_OPEN_JOURNEY_RIDES =
             "com.direcao_financeira.app_bubble.OPEN_JOURNEY_RIDES"
+        const val ACTION_OPEN_JOURNEY_RECORDINGS =
+            "com.direcao_financeira.app_bubble.OPEN_JOURNEY_RECORDINGS"
         const val ACTION_TOGGLE_TRAFFIC_LIGHT =
             "com.direcao_financeira.app_bubble.TOGGLE_TRAFFIC_LIGHT"
+        const val ACTION_TOGGLE_RECORDING =
+            "com.direcao_financeira.app_bubble.TOGGLE_RECORDING"
         private const val NOTIFICATION_CHANNEL_ID = "direcao_financeira_app_bubble"
         private const val NOTIFICATION_ID = 4021
         private const val PREFERENCES_NAME = "direcao_financeira_app_bubble"

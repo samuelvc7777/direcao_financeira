@@ -11,10 +11,13 @@ import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/manual_shift_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/paged_result_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/recording_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_route_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_journey_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/repositories/i_recording_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/journey_use_cases.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/recording_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/journey/journey_runtime_coordinator.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,12 +181,63 @@ class _FakeAppBubbleService implements AppBubbleService {
   }
 }
 
+class _FakeRecordingRepository implements IRecordingRepository {
+  RecordingEntity? activeRecording;
+  Either<Failure, RecordingEntity> startResult = Right(
+    RecordingEntity(
+      id: '1',
+      status: RecordingStatus.recording,
+      filePath: '/tmp/recording.mp4',
+      startedAt: DateTime(2026),
+    ),
+  );
+  Either<Failure, RecordingEntity?> stopResult = const Right(null);
+
+  @override
+  Future<Either<Failure, Unit>> deleteRecording(String id) async =>
+      const Right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> openRecording(
+    RecordingEntity recording,
+  ) async => const Right(unit);
+
+  @override
+  Future<Either<Failure, RecordingEntity?>> getActiveRecording() async =>
+      Right(activeRecording);
+
+  @override
+  Future<Either<Failure, PagedResultEntity<RecordingEntity>>> getRecordings({
+    String period = 'day',
+    String? date,
+    String? endDate,
+    String? status,
+    int offset = 0,
+    int limit = 20,
+  }) async => const Right(
+    PagedResultEntity(items: [], totalCount: 0, offset: 0, limit: 20),
+  );
+
+  @override
+  Future<Either<Failure, RecordingEntity>> startRecording() async {
+    startResult.fold((_) {}, (recording) => activeRecording = recording);
+    return startResult;
+  }
+
+  @override
+  Future<Either<Failure, RecordingEntity?>> stopRecording() async {
+    activeRecording = null;
+    return stopResult;
+  }
+}
+
 void main() {
   group('JourneyRuntimeCoordinator', () {
     late _FakeJourneyRepository repository;
     late _FakeJourneyRealtimeBridge bridge;
     late _FakeAccessibilityService accessibilityService;
     late _FakeAppBubbleService appBubbleService;
+    late _FakeRecordingRepository recordingRepository;
     late JourneyRuntimeCoordinator coordinator;
 
     setUp(() {
@@ -191,6 +245,7 @@ void main() {
       bridge = _FakeJourneyRealtimeBridge();
       accessibilityService = _FakeAccessibilityService();
       appBubbleService = _FakeAppBubbleService();
+      recordingRepository = _FakeRecordingRepository();
       coordinator = JourneyRuntimeCoordinator(
         journeyRealtimeBridge: bridge,
         getLocationTrackingStatusUseCase: GetLocationTrackingStatusUseCase(
@@ -202,6 +257,11 @@ void main() {
         syncPendingJourneyUseCase: SyncPendingJourneyUseCase(repository),
         accessibilityService: accessibilityService,
         appBubbleService: appBubbleService,
+        getActiveRecordingUseCase: GetActiveRecordingUseCase(
+          recordingRepository,
+        ),
+        startRecordingUseCase: StartRecordingUseCase(recordingRepository),
+        stopRecordingUseCase: StopRecordingUseCase(recordingRepository),
       );
     });
 
@@ -376,6 +436,36 @@ void main() {
         feedbacks.single,
         'Nao foi possivel ativar:Falhou ao iniciar o Assistente neste momento.',
       );
+    });
+
+    test('toggleRecording ativa e para gravacao', () async {
+      final feedbacks = <String>[];
+      final busyStates = <bool>[];
+      final recordingStates = <RecordingEntity?>[];
+
+      await coordinator.toggleRecording(
+        isRecordingActive: false,
+        onRecordingStateChanged: recordingStates.add,
+        onBusyStateChanged: busyStates.add,
+        showSuccess: (title, message) => feedbacks.add('$title:$message'),
+        showWarning: (title, message) => feedbacks.add('$title:$message'),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+      );
+
+      expect(recordingStates.single?.isActive, isTrue);
+      expect(feedbacks.single, contains('Gravacao ativa'));
+
+      await coordinator.toggleRecording(
+        isRecordingActive: true,
+        onRecordingStateChanged: recordingStates.add,
+        onBusyStateChanged: busyStates.add,
+        showSuccess: (title, message) => feedbacks.add('$title:$message'),
+        showWarning: (title, message) => feedbacks.add('$title:$message'),
+        showError: (title, message) => feedbacks.add('$title:$message'),
+      );
+
+      expect(recordingStates.last, isNull);
+      expect(busyStates, [true, false, true, false]);
     });
   });
 }

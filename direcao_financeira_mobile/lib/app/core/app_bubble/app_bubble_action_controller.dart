@@ -63,8 +63,14 @@ class AppBubbleActionController extends GetxController {
       case 'open_journey_rides':
         await _openJourney(initialTabIndex: 1);
         break;
+      case 'open_journey_recordings':
+        await _openJourney(initialTabIndex: 2);
+        break;
       case 'toggle_traffic_light':
         await _toggleTrafficLight();
+        break;
+      case 'toggle_recording':
+        await _toggleRecording();
         break;
       default:
         developer.log('Acao da bolinha desconhecida: $action');
@@ -93,6 +99,23 @@ class AppBubbleActionController extends GetxController {
     }
 
     await Get.find<JourneyController>().toggleTrafficLight();
+  }
+
+  Future<void> _toggleRecording() async {
+    JourneyBinding().dependencies();
+
+    await Get.offAllNamed(
+      AppRoutes.initial,
+      arguments: const {'initialIndex': 2, 'journeyInitialTabIndex': 2},
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
+    if (!Get.isRegistered<JourneyController>()) {
+      return;
+    }
+
+    await Get.find<JourneyController>().toggleRecording();
   }
 
   Future<void> _waitForNavigationReady() async {

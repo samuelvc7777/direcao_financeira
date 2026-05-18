@@ -129,6 +129,8 @@ class ShiftStartPanel extends StatelessWidget {
           ShiftQuickToggleButton.trafficLight(controller: controller),
           SizedBox(height: Responsive.vp(context, 0.2).clamp(2.0, 6.0)),
           ShiftQuickToggleButton.assistant(controller: controller),
+          SizedBox(height: Responsive.vp(context, 0.2).clamp(2.0, 6.0)),
+          ShiftQuickToggleButton.recording(controller: controller),
         ],
       ),
     );
@@ -265,6 +267,8 @@ class ShiftActivePanel extends StatelessWidget {
         ShiftQuickToggleButton.trafficLight(controller: controller),
         SizedBox(height: Responsive.vp(context, 0.2).clamp(2.0, 6.0)),
         ShiftQuickToggleButton.assistant(controller: controller),
+        SizedBox(height: Responsive.vp(context, 0.2).clamp(2.0, 6.0)),
+        ShiftQuickToggleButton.recording(controller: controller),
       ],
     );
   }
@@ -336,10 +340,14 @@ class ShiftQuickToggleButton extends StatelessWidget {
   const ShiftQuickToggleButton.assistant({super.key, required this.controller})
     : _kind = _QuickToggleKind.assistant;
 
+  const ShiftQuickToggleButton.recording({super.key, required this.controller})
+    : _kind = _QuickToggleKind.recording;
+
   final JourneyController controller;
   final _QuickToggleKind _kind;
 
   bool get _isTrafficLight => _kind == _QuickToggleKind.trafficLight;
+  bool get _isRecording => _kind == _QuickToggleKind.recording;
 
   @override
   Widget build(BuildContext context) {
@@ -349,9 +357,13 @@ class ShiftQuickToggleButton extends StatelessWidget {
       final isActive = _isTrafficLight
           ? controller.isAccessibilityServiceEnabled &&
                 controller.isTrafficLightActive.value
+          : _isRecording
+          ? controller.isRecordingActive
           : controller.isAssistantActive.value;
       final activeColor = _isTrafficLight
           ? AppColors.emerald
+          : _isRecording
+          ? AppColors.rose
           : AppColors.electricCyan;
       final inactiveColor = isDark
           ? Colors.white70
@@ -359,10 +371,15 @@ class ShiftQuickToggleButton extends StatelessWidget {
       final label = _isTrafficLight
           ? (isActive ? 'Desativar semáforo' : 'Ativar semáforo')
           : (isActive ? 'Desativar Assistente' : 'Ativar Assistente');
+      final effectiveLabel = _isRecording
+          ? (isActive ? 'Parar gravacao' : 'Ativar gravacao')
+          : label;
 
       return InkWell(
         onTap: _isTrafficLight
             ? controller.toggleTrafficLight
+            : _isRecording
+            ? controller.toggleRecording
             : controller.toggleAssistant,
         borderRadius: BorderRadius.circular(
           Responsive.sp(context, 12).clamp(8.0, 16.0),
@@ -376,10 +393,14 @@ class ShiftQuickToggleButton extends StatelessWidget {
             children: [
               if (_isTrafficLight && isActive)
                 PulseIcon(icon: Icons.traffic_rounded, color: activeColor)
+              else if (_isRecording && isActive)
+                PulseIcon(icon: Icons.videocam_rounded, color: activeColor)
               else
                 Icon(
                   _isTrafficLight
                       ? Icons.traffic_rounded
+                      : _isRecording
+                      ? Icons.videocam_rounded
                       : Icons.assistant_rounded,
                   color: isActive ? activeColor : inactiveColor,
                   size: Responsive.sp(context, 18).clamp(16.0, 20.0),
@@ -387,7 +408,7 @@ class ShiftQuickToggleButton extends StatelessWidget {
               SizedBox(width: Responsive.hp(context, 2.0).clamp(6.0, 10.0)),
               Flexible(
                 child: Text(
-                  label,
+                  effectiveLabel,
                   style: TextStyle(
                     color: isActive ? activeColor : inactiveColor,
                     fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
@@ -489,4 +510,4 @@ class _PulseIconState extends State<PulseIcon>
   }
 }
 
-enum _QuickToggleKind { trafficLight, assistant }
+enum _QuickToggleKind { trafficLight, assistant, recording }

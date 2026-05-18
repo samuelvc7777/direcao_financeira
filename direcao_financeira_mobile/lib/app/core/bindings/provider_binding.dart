@@ -12,6 +12,8 @@ import '../../data/datasources/i_ride_datasource.dart';
 import '../../data/datasources/journey_local_datasource.dart';
 import '../../data/datasources/journey_route_local_datasource.dart';
 import '../../data/datasources/location_tracking_datasource.dart';
+import '../../data/datasources/recording_local_datasource.dart';
+import '../../data/datasources/recording_native_datasource.dart';
 import '../../data/datasources/ride_local_datasource.dart';
 import '../../data/datasources/subscription_datasource.dart';
 import '../../data/datasources/subscription_store_datasource.dart';
@@ -43,6 +45,7 @@ import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/credit_card_repository.dart';
 import '../../data/repositories/costs_gains_repository.dart';
 import '../../data/repositories/journey_repository_impl.dart';
+import '../../data/repositories/recording_repository_impl.dart';
 import '../../data/repositories/ride_repository_impl.dart';
 import '../../data/repositories/subscription_repository.dart';
 import '../../data/repositories/traffic_light_repository.dart';
@@ -53,6 +56,7 @@ import '../../domain/repositories/i_category_repository.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
 import '../../domain/repositories/i_costs_gains_repository.dart';
 import '../../domain/repositories/i_journey_repository.dart';
+import '../../domain/repositories/i_recording_repository.dart';
 import '../../domain/repositories/i_ride_repository.dart';
 import '../../domain/repositories/i_subscription_repository.dart';
 import '../../domain/repositories/i_traffic_light_repository.dart';
@@ -60,6 +64,7 @@ import '../../domain/repositories/i_transaction_repository.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
 import '../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../domain/usecases/ride_status_use_cases.dart';
+import '../../domain/usecases/recording_use_cases.dart';
 import '../config/app_environment.dart';
 import '../network/api_error_mapper.dart';
 import '../network/api_request_logger.dart';
@@ -201,6 +206,14 @@ class ProviderBinding extends Bindings {
       TrafficLightLocalDataSourceImpl(storage: Get.find()),
       permanent: true,
     );
+    Get.put<IRecordingLocalDataSource>(
+      RecordingLocalDataSourceImpl(storage: Get.find()),
+      permanent: true,
+    );
+    Get.put<IRecordingNativeDataSource>(
+      RecordingNativeDataSourceImpl(),
+      permanent: true,
+    );
 
     Get.put<IAuthRepository>(
       AuthRepository(
@@ -304,6 +317,14 @@ class ProviderBinding extends Bindings {
       TrafficLightRepositoryImpl(localDataSource: Get.find()),
       permanent: true,
     );
+    Get.put<IRecordingRepository>(
+      RecordingRepositoryImpl(
+        localDataSource: Get.find(),
+        nativeDataSource: Get.find(),
+      ),
+      permanent: true,
+    );
+    _registerRecordingUseCases();
   }
 
   void _registerSupabaseProvider() {
@@ -383,6 +404,14 @@ class ProviderBinding extends Bindings {
     );
     Get.put<ITrafficLightLocalDataSource>(
       TrafficLightLocalDataSourceImpl(storage: Get.find()),
+      permanent: true,
+    );
+    Get.put<IRecordingLocalDataSource>(
+      RecordingLocalDataSourceImpl(storage: Get.find()),
+      permanent: true,
+    );
+    Get.put<IRecordingNativeDataSource>(
+      RecordingNativeDataSourceImpl(),
       permanent: true,
     );
     Get.put<ICostsGainsSettingsDataSource>(
@@ -492,6 +521,14 @@ class ProviderBinding extends Bindings {
       TrafficLightRepositoryImpl(localDataSource: Get.find()),
       permanent: true,
     );
+    Get.put<IRecordingRepository>(
+      RecordingRepositoryImpl(
+        localDataSource: Get.find(),
+        nativeDataSource: Get.find(),
+      ),
+      permanent: true,
+    );
+    _registerRecordingUseCases();
     Get.put<ICostsGainsRepository>(
       CostsGainsRepository(
         dataSource: Get.find(),
@@ -510,6 +547,33 @@ class ProviderBinding extends Bindings {
     );
     Get.put<SaveCostsGainsSettingsUseCase>(
       SaveCostsGainsSettingsUseCase(Get.find<ICostsGainsRepository>()),
+      permanent: true,
+    );
+  }
+
+  void _registerRecordingUseCases() {
+    Get.put<GetRecordingsUseCase>(
+      GetRecordingsUseCase(Get.find<IRecordingRepository>()),
+      permanent: true,
+    );
+    Get.put<GetActiveRecordingUseCase>(
+      GetActiveRecordingUseCase(Get.find<IRecordingRepository>()),
+      permanent: true,
+    );
+    Get.put<StartRecordingUseCase>(
+      StartRecordingUseCase(Get.find<IRecordingRepository>()),
+      permanent: true,
+    );
+    Get.put<StopRecordingUseCase>(
+      StopRecordingUseCase(Get.find<IRecordingRepository>()),
+      permanent: true,
+    );
+    Get.put<DeleteRecordingUseCase>(
+      DeleteRecordingUseCase(Get.find<IRecordingRepository>()),
+      permanent: true,
+    );
+    Get.put<OpenRecordingUseCase>(
+      OpenRecordingUseCase(Get.find<IRecordingRepository>()),
       permanent: true,
     );
   }

@@ -20,6 +20,7 @@ import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity
 import 'package:direcao_financeira_mobile/app/domain/entities/costs_gains_settings_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/detected_ride_draft_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/plan_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/recording_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_import_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/shift_entity.dart';
@@ -35,6 +36,7 @@ import 'package:direcao_financeira_mobile/app/domain/repositories/i_bank_account
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_category_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_credit_card_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_journey_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/repositories/i_recording_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_ride_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_subscription_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_transaction_repository.dart';
@@ -44,6 +46,7 @@ import 'package:direcao_financeira_mobile/app/domain/usecases/category_use_cases
 import 'package:direcao_financeira_mobile/app/domain/usecases/credit_card_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/get_rides_usecase.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/journey_use_cases.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/recording_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/ride_status_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/subscription_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/transaction_use_cases.dart';
@@ -582,6 +585,47 @@ class _FakeRideRepository implements IRideRepository {
       const Right(unit);
 }
 
+class _FakeRecordingRepository implements IRecordingRepository {
+  @override
+  Future<Either<Failure, Unit>> deleteRecording(String id) async =>
+      const Right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> openRecording(
+    RecordingEntity recording,
+  ) async => const Right(unit);
+
+  @override
+  Future<Either<Failure, RecordingEntity?>> getActiveRecording() async =>
+      const Right(null);
+
+  @override
+  Future<Either<Failure, PagedResultEntity<RecordingEntity>>> getRecordings({
+    String period = 'day',
+    String? date,
+    String? endDate,
+    String? status,
+    int offset = 0,
+    int limit = 20,
+  }) async => const Right(
+    PagedResultEntity(items: [], totalCount: 0, offset: 0, limit: 20),
+  );
+
+  @override
+  Future<Either<Failure, RecordingEntity>> startRecording() async => Right(
+    RecordingEntity(
+      id: '1',
+      status: RecordingStatus.recording,
+      filePath: '/tmp/recording.mp4',
+      startedAt: DateTime(2026),
+    ),
+  );
+
+  @override
+  Future<Either<Failure, RecordingEntity?>> stopRecording() async =>
+      const Right(null);
+}
+
 class _FakeHomeTabNavigation implements HomeTabNavigation {
   bool openedTransactionsTab = false;
 
@@ -686,6 +730,7 @@ JourneyController _buildJourneyController({
   required _FakeJourneyRealtimeBridge journeyRealtimeBridge,
   required _FakeAppBubbleService appBubbleService,
 }) {
+  final recordingRepository = _FakeRecordingRepository();
   return JourneyController(
     getActiveShift: GetActiveShiftUseCase(journeyRepository),
     getDailyStatistics: GetDailyStatisticsUseCase(journeyRepository),
@@ -694,6 +739,9 @@ JourneyController _buildJourneyController({
     deleteShiftUseCase: DeleteShiftUseCase(journeyRepository),
     getRidesUseCase: GetRidesUseCase(rideRepository),
     deleteRideUseCase: DeleteRideUseCase(rideRepository),
+    getRecordingsUseCase: GetRecordingsUseCase(recordingRepository),
+    deleteRecordingUseCase: DeleteRecordingUseCase(recordingRepository),
+    openRecordingUseCase: OpenRecordingUseCase(recordingRepository),
     getCostsGainsSettings: null,
     shiftLifecycleCoordinator: ShiftLifecycleCoordinator(
       startShiftUseCase: StartShiftUseCase(journeyRepository),
@@ -715,6 +763,9 @@ JourneyController _buildJourneyController({
       syncPendingJourneyUseCase: SyncPendingJourneyUseCase(journeyRepository),
       accessibilityService: accessibilityService,
       appBubbleService: appBubbleService,
+      getActiveRecordingUseCase: GetActiveRecordingUseCase(recordingRepository),
+      startRecordingUseCase: StartRecordingUseCase(recordingRepository),
+      stopRecordingUseCase: StopRecordingUseCase(recordingRepository),
     ),
   );
 }
@@ -1168,11 +1219,11 @@ void main() {
   );
 
   test(
-    'JourneyController atualiza Km Rodados com km local em blocos de 1 km',
+    'JourneyController atualiza Km Rodados com km local em precisao decimal',
     () async {
       final journeyRepository = _FakeJourneyRepository()
         ..activeShift = buildActiveShift().copyWith(currentDrivenKm: 0)
-        ..trackingStatus = buildTrackingStatus(totalDistanceMeters: 0);
+        ..trackingStatus = buildTrackingStatus(totalDistanceMeters: 400);
       final rideRepository = _FakeRideRepository();
       final accessibilityService = _FakeAccessibilityService();
       final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
@@ -1189,25 +1240,19 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
-      expect(controller.drivenKm.value, '10.0 km');
-
-      journeyRepository.trackingController.add(
-        buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 400),
-      );
-      await Future<void>.delayed(Duration.zero);
-      expect(controller.drivenKm.value, '10.0 km');
+      expect(controller.drivenKm.value, '10.4 km');
 
       journeyRepository.trackingController.add(
         buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 1100),
       );
       await Future<void>.delayed(Duration.zero);
-      expect(controller.drivenKm.value, '11.0 km');
+      expect(controller.drivenKm.value, '11.1 km');
 
       journeyRepository.trackingController.add(
         buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 1900),
       );
       await Future<void>.delayed(Duration.zero);
-      expect(controller.drivenKm.value, '11.0 km');
+      expect(controller.drivenKm.value, '11.9 km');
 
       journeyRepository.trackingController.add(
         buildTrackingStatus(isTrackingActive: true, totalDistanceMeters: 2000),
@@ -1253,7 +1298,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(controller.totalTime.value, '02:00:00');
-      expect(controller.drivenKm.value, '11.0 km');
+      expect(controller.drivenKm.value, '11.1 km');
       expect(controller.averageKmh.value, '5.5 km/h');
 
       journeyRepository.trackingController.add(
@@ -1265,8 +1310,8 @@ void main() {
       );
       await Future<void>.delayed(Duration.zero);
       expect(controller.totalTime.value, '02:00:00');
-      expect(controller.drivenKm.value, '11.0 km');
-      expect(controller.averageKmh.value, '5.5 km/h');
+      expect(controller.drivenKm.value, '11.9 km');
+      expect(controller.averageKmh.value, '6.0 km/h');
 
       journeyRepository.trackingController.add(
         buildTrackingStatus(

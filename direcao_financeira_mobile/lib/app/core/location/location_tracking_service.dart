@@ -15,7 +15,7 @@ import '../../data/models/tracked_route_point_model.dart';
 const _journeyActiveShiftKey = 'journey_local_active_shift';
 const _notificationChannelId = 'journey_location_tracking';
 const _notificationId = 4812;
-const _journeyTrackingDistanceFilterMeters = 10;
+const _journeyTrackingDistanceFilterMeters = 25;
 const _minimumTrackedSpeedKmH = 10.0;
 const _minimumTrackedSpeedMetersPerSecond = _minimumTrackedSpeedKmH / 3.6;
 const _idleGracePeriod = Duration(minutes: 4);
@@ -249,6 +249,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
   String? lastEmittedIssueMessage;
   bool? lastEmittedTrackingActive;
   int? lastEmittedIdleTimeSeconds;
+  int? lastNotificationKmMarker;
+  String? lastNotificationIssueMessage;
 
   ActiveShiftModel? readActiveShift() {
     final rawShift = storage.read(_journeyActiveShiftKey);
@@ -383,15 +385,27 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     service.invoke('tracking_status', payload);
 
     if (service is AndroidServiceInstance) {
-      final distanceKm =
-          ((payload['totalDistanceMeters'] as num?)?.toDouble() ?? 0) / 1000;
-      final content =
-          payload['issueMessage'] as String? ??
-          '${distanceKm.toStringAsFixed(1)} km monitorados';
-      await service.setForegroundNotificationInfo(
-        title: 'Turno em andamento',
-        content: content,
-      );
+      final issueMessage = payload['issueMessage'] as String?;
+      if (issueMessage != null) {
+        if (issueMessage != lastNotificationIssueMessage) {
+          lastNotificationIssueMessage = issueMessage;
+          await service.setForegroundNotificationInfo(
+            title: 'Turno em andamento',
+            content: issueMessage,
+          );
+        }
+      } else {
+        lastNotificationIssueMessage = null;
+        final wholeKmMarker = currentDistanceMeters ~/ 1000;
+        if (lastNotificationKmMarker == null ||
+            wholeKmMarker != lastNotificationKmMarker) {
+          lastNotificationKmMarker = wholeKmMarker;
+          await service.setForegroundNotificationInfo(
+            title: 'Turno em andamento',
+            content: '$wholeKmMarker km monitorados',
+          );
+        }
+      }
     }
   }
 
@@ -519,6 +533,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     lastEmittedIssueMessage = null;
     lastEmittedTrackingActive = null;
     lastEmittedIdleTimeSeconds = null;
+    lastNotificationKmMarker = null;
+    lastNotificationIssueMessage = null;
 
     await startTrackingStream();
   });
@@ -539,6 +555,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     lastEmittedIssueMessage = null;
     lastEmittedTrackingActive = null;
     lastEmittedIdleTimeSeconds = null;
+    lastNotificationKmMarker = null;
+    lastNotificationIssueMessage = null;
 
     await startTrackingStream();
   });
@@ -678,6 +696,7 @@ LocationSettings _buildLocationSettings() {
     return AndroidSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: _journeyTrackingDistanceFilterMeters,
+      intervalDuration: const Duration(seconds: 10),
       forceLocationManager: false,
     );
   }

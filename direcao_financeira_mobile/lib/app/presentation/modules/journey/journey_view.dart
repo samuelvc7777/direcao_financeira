@@ -8,6 +8,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../../routes/app_pages.dart';
 import 'journey_controller.dart';
 import 'widgets/journey_status_banner.dart';
+import 'widgets/recordings_list_section.dart';
 import 'widgets/rides_list_section.dart';
 import 'widgets/shift_history_section.dart';
 
@@ -29,7 +30,7 @@ class _JourneyViewState extends State<JourneyView> {
 
     final args = Get.arguments;
     _selectedTabIndex = args is Map
-        ? (args['journeyInitialTabIndex'] as int? ?? 0).clamp(0, 1)
+        ? (args['journeyInitialTabIndex'] as int? ?? 0).clamp(0, 2)
         : 0;
   }
 
@@ -38,7 +39,7 @@ class _JourneyViewState extends State<JourneyView> {
     final colorScheme = context.theme.colorScheme;
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       initialIndex: _selectedTabIndex,
       child: Scaffold(
         backgroundColor: context.theme.scaffoldBackgroundColor,
@@ -145,7 +146,12 @@ class _JourneyViewState extends State<JourneyView> {
                                     1.5,
                                   ).clamp(6.0, 10.0),
                                 ),
-                                const Text('Turnos'),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: const Text('Turnos'),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -166,7 +172,38 @@ class _JourneyViewState extends State<JourneyView> {
                                     1.5,
                                   ).clamp(6.0, 10.0),
                                 ),
-                                const Text('Corridas'),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: const Text('Corridas'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.videocam_rounded,
+                                  size: Responsive.sp(
+                                    context,
+                                    18,
+                                  ).clamp(16.0, 20.0),
+                                ),
+                                SizedBox(
+                                  width: Responsive.hp(
+                                    context,
+                                    1.5,
+                                  ).clamp(6.0, 10.0),
+                                ),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: const Text('Gravacoes'),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -223,7 +260,11 @@ class _JourneyTabsBody extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: const TabBarView(
                 physics: BouncingScrollPhysics(),
-                children: [ShiftHistorySection(), RidesListSection()],
+                children: [
+                  ShiftHistorySection(),
+                  RidesListSection(),
+                  RecordingsListSection(),
+                ],
               ),
             ),
           ),

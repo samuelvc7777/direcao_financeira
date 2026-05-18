@@ -4,6 +4,7 @@ import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
+import '../../../domain/usecases/recording_use_cases.dart';
 import '../../../domain/usecases/ride_status_use_cases.dart';
 import 'journey_controller.dart';
 import 'journey_runtime_coordinator.dart';
@@ -35,6 +36,12 @@ class JourneyBinding extends Bindings {
     Get.lazyPut(() => GetShiftRouteUseCase(Get.find()));
     Get.lazyPut(() => GetRidesUseCase(Get.find()));
     Get.lazyPut(() => DeleteRideUseCase(Get.find()));
+    Get.lazyPut(() => GetRecordingsUseCase(Get.find()));
+    Get.lazyPut(() => GetActiveRecordingUseCase(Get.find()));
+    Get.lazyPut(() => StartRecordingUseCase(Get.find()));
+    Get.lazyPut(() => StopRecordingUseCase(Get.find()));
+    Get.lazyPut(() => DeleteRecordingUseCase(Get.find()));
+    Get.lazyPut(() => OpenRecordingUseCase(Get.find()));
     Get.lazyPut(
       () => ShiftLifecycleCoordinator(
         startShiftUseCase: Get.find(),
@@ -52,6 +59,9 @@ class JourneyBinding extends Bindings {
         syncPendingJourneyUseCase: Get.find(),
         accessibilityService: Get.find(),
         appBubbleService: Get.find(),
+        getActiveRecordingUseCase: Get.find(),
+        startRecordingUseCase: Get.find(),
+        stopRecordingUseCase: Get.find(),
       ),
     );
 
@@ -64,6 +74,9 @@ class JourneyBinding extends Bindings {
         deleteShiftUseCase: Get.find(),
         getRidesUseCase: Get.find(),
         deleteRideUseCase: Get.find(),
+        getRecordingsUseCase: Get.find(),
+        deleteRecordingUseCase: Get.find(),
+        openRecordingUseCase: Get.find(),
         getCostsGainsSettings: Get.isRegistered<GetCostsGainsSettingsUseCase>()
             ? Get.find<GetCostsGainsSettingsUseCase>()
             : null,

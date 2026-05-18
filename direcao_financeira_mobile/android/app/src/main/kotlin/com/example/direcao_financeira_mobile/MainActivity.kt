@@ -10,16 +10,20 @@ import android.provider.Settings
 import android.text.TextUtils
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val accessibilityChannelName = "com.direcao_financeira/accessibility"
     private val appBubbleChannelName = "com.direcao_financeira/app_bubble"
     private val appBubbleActionsChannelName = "com.direcao_financeira/app_bubble_actions"
     private val locationPermissionsChannelName = "com.direcao_financeira/location_permissions"
+    private val recordingChannelName = "com.direcao_financeira/recording"
     private var backgroundLocationPermissionResult: MethodChannel.Result? = null
+    private var recordingPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -110,6 +114,49 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, recordingChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "requestPermissions" -> requestRecordingPermissions(result)
+                    "isRecording" -> result.success(RecordingForegroundService.isRecording())
+                    "startRecording" -> {
+                        if (!RecordingForegroundService.hasRuntimePermissions(this)) {
+                            result.error(
+                                "PERMISSION_DENIED",
+                                "Permissoes de camera e microfone nao foram concedidas.",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
+                        val session = RecordingForegroundService.start(this)
+                        result.success(session.toMap())
+                    }
+                    "stopRecording" -> {
+                        val session = RecordingForegroundService.stop(this)
+                        result.success(session?.toMap())
+                    }
+                    "openRecording" -> {
+                        val args = call.arguments as? Map<*, *>
+                        val filePath = args?.get("filePath")?.toString()
+                        if (filePath.isNullOrBlank()) {
+                            result.error("INVALID_ARGUMENTS", "Arquivo da gravacao ausente.", null)
+                            return@setMethodCallHandler
+                        }
+                        if (openRecordingFile(filePath)) {
+                            result.success(true)
+                        } else {
+                            result.error(
+                                "OPEN_FAILED",
+                                "Nao foi possivel abrir o arquivo da gravacao.",
+                                null,
+                            )
+                        }
+                    }
+                    "openAppSettings" -> result.success(openAppDetailsSettings())
+                    else -> result.notImplemented()
+                }
+            }
+
         AppBubbleActionBridge.attach(
             MethodChannel(
                 flutterEngine.dartExecutor.binaryMessenger,
@@ -129,6 +176,12 @@ class MainActivity : FlutterActivity() {
         if (requestCode == REQUEST_BACKGROUND_LOCATION_PERMISSION) {
             backgroundLocationPermissionResult?.success(true)
             backgroundLocationPermissionResult = null
+        }
+        if (requestCode == REQUEST_RECORDING_PERMISSIONS) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            recordingPermissionResult?.success(granted)
+            recordingPermissionResult = null
         }
     }
 
@@ -151,7 +204,9 @@ class MainActivity : FlutterActivity() {
             when (rawAction) {
                 AppBubbleService.ACTION_OPEN_JOURNEY_SHIFTS -> "open_journey_shifts"
                 AppBubbleService.ACTION_OPEN_JOURNEY_RIDES -> "open_journey_rides"
+                AppBubbleService.ACTION_OPEN_JOURNEY_RECORDINGS -> "open_journey_recordings"
                 AppBubbleService.ACTION_TOGGLE_TRAFFIC_LIGHT -> "toggle_traffic_light"
+                AppBubbleService.ACTION_TOGGLE_RECORDING -> "toggle_recording"
                 else -> null
             }
 
@@ -210,6 +265,43 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun requestRecordingPermissions(result: MethodChannel.Result) {
+        if (recordingPermissionResult != null) {
+            result.error(
+                "REQUEST_IN_PROGRESS",
+                "Ja existe uma solicitacao de permissao de gravacao em andamento.",
+                null,
+            )
+            return
+        }
+
+        val permissions = mutableListOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val missing = permissions.filter { permission ->
+            ContextCompat.checkSelfPermission(this, permission) !=
+                PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missing.isEmpty()) {
+            result.success(true)
+            return
+        }
+
+        recordingPermissionResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            missing.toTypedArray(),
+            REQUEST_RECORDING_PERMISSIONS,
+        )
+    }
+
     private fun hasForegroundLocationPermission(): Boolean {
         val fineGranted =
             ContextCompat.checkSelfPermission(
@@ -239,8 +331,32 @@ class MainActivity : FlutterActivity() {
         }.getOrDefault(false)
     }
 
+    private fun openRecordingFile(filePath: String): Boolean {
+        val file = File(filePath)
+        if (!file.exists()) {
+            return false
+        }
+
+        val uri = FileProvider.getUriForFile(
+            this,
+            "$packageName.recording_file_provider",
+            file,
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "video/mp4")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return runCatching {
+            startActivity(Intent.createChooser(intent, "Abrir gravacao"))
+            true
+        }.getOrDefault(false)
+    }
+
     companion object {
         private const val REQUEST_BACKGROUND_LOCATION_PERMISSION = 7301
+        private const val REQUEST_RECORDING_PERMISSIONS = 7302
     }
 }
 

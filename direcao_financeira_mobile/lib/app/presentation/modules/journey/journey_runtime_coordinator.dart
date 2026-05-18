@@ -5,17 +5,24 @@ import 'package:get/get.dart';
 
 import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/accessibility/accessibility_service.dart';
+import '../../../core/errors/failures.dart';
 import '../../../core/network/journey_realtime_bridge.dart';
 import '../../../domain/entities/location_tracking_status_entity.dart';
+import '../../../domain/entities/recording_entity.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
+import '../../../domain/usecases/recording_use_cases.dart';
 
-typedef JourneyConnectionChangedCallback = Future<void> Function(bool isOnlineNow);
+typedef JourneyConnectionChangedCallback =
+    Future<void> Function(bool isOnlineNow);
 typedef JourneyTrackingChangedCallback =
     void Function(LocationTrackingStatusEntity status);
 typedef JourneyAssistantStateCallback = void Function(bool isActive);
 typedef JourneyTrafficLightStateCallback = void Function(bool isActive);
 typedef JourneyBusyStateCallback = void Function(bool isBusy);
-typedef JourneyRuntimeFeedbackCallback = void Function(String title, String message);
+typedef JourneyRuntimeFeedbackCallback =
+    void Function(String title, String message);
+typedef JourneyRecordingStateCallback =
+    void Function(RecordingEntity? recording);
 
 class JourneyRuntimeCoordinator {
   JourneyRuntimeCoordinator({
@@ -25,6 +32,9 @@ class JourneyRuntimeCoordinator {
     required this.syncPendingJourneyUseCase,
     required this.accessibilityService,
     required this.appBubbleService,
+    required this.getActiveRecordingUseCase,
+    required this.startRecordingUseCase,
+    required this.stopRecordingUseCase,
   });
 
   final JourneyRealtimeBridge journeyRealtimeBridge;
@@ -33,6 +43,9 @@ class JourneyRuntimeCoordinator {
   final SyncPendingJourneyUseCase syncPendingJourneyUseCase;
   final AccessibilityService accessibilityService;
   final AppBubbleService appBubbleService;
+  final GetActiveRecordingUseCase getActiveRecordingUseCase;
+  final StartRecordingUseCase startRecordingUseCase;
+  final StopRecordingUseCase stopRecordingUseCase;
 
   Worker? _accessibilityWorker;
   Worker? _connectionWorker;
@@ -79,6 +92,65 @@ class JourneyRuntimeCoordinator {
     required JourneyAssistantStateCallback onAssistantStateChanged,
   }) async {
     onAssistantStateChanged(await appBubbleService.isBubbleRunning());
+  }
+
+  Future<void> loadRecordingStatus({
+    required JourneyRecordingStateCallback onRecordingStateChanged,
+  }) async {
+    final result = await getActiveRecordingUseCase();
+    result.fold((_) => onRecordingStateChanged(null), onRecordingStateChanged);
+  }
+
+  Future<void> toggleRecording({
+    required bool isRecordingActive,
+    required JourneyRecordingStateCallback onRecordingStateChanged,
+    required JourneyBusyStateCallback onBusyStateChanged,
+    required JourneyRuntimeFeedbackCallback showSuccess,
+    required JourneyRuntimeFeedbackCallback showWarning,
+    required JourneyRuntimeFeedbackCallback showError,
+  }) async {
+    onBusyStateChanged(true);
+    try {
+      if (isRecordingActive) {
+        final result = await stopRecordingUseCase();
+        result.fold(
+          (failure) => showError('Nao foi possivel parar', failure.message),
+          (recording) {
+            onRecordingStateChanged(null);
+            showSuccess(
+              'Gravacao finalizada',
+              'O video foi salvo na lista de gravacoes.',
+            );
+          },
+        );
+        return;
+      }
+
+      final result = await startRecordingUseCase();
+      result.fold(
+        (failure) {
+          if (failure is ValidationFailure) {
+            showWarning('Permissao necessaria', failure.message);
+          } else {
+            showError('Nao foi possivel gravar', failure.message);
+          }
+        },
+        (recording) {
+          onRecordingStateChanged(recording);
+          showSuccess(
+            'Gravacao ativa',
+            'Audio e video estao sendo gravados com notificacao visivel.',
+          );
+        },
+      );
+    } catch (_) {
+      showError(
+        'Nao foi possivel gravar',
+        'Falhou ao alternar a gravacao neste momento.',
+      );
+    } finally {
+      onBusyStateChanged(false);
+    }
   }
 
   Future<void> toggleAssistant({

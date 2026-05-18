@@ -21,7 +21,7 @@ class HomeView extends GetView<HomeController> {
     return Scaffold(
       backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(
-        title: 'Dashboard',
+        title: 'Início',
         subtitle: 'Resumo financeiro do mes',
         leadingIcon: Icons.dashboard_rounded,
         showBackButton: false,

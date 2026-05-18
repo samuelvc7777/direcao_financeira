@@ -12,12 +12,14 @@ import '../../../domain/entities/journey_statistics_entity.dart';
 import '../../../domain/entities/location_tracking_status_entity.dart';
 import '../../../domain/entities/manual_shift_draft_entity.dart';
 import '../../../domain/entities/online_hourly_projection_entity.dart';
+import '../../../domain/entities/recording_entity.dart';
 import '../../../domain/entities/ride_entity.dart';
 import '../../../domain/entities/shift_entity.dart';
 import '../../../domain/services/online_hourly_projection_calculator.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
+import '../../../domain/usecases/recording_use_cases.dart';
 import '../../../domain/usecases/ride_status_use_cases.dart';
 import 'journey_runtime_coordinator.dart';
 import 'journey_statistics_display_data.dart';
@@ -26,6 +28,8 @@ import 'shift_lifecycle_coordinator.dart';
 class JourneyController extends GetxController with WidgetsBindingObserver {
   static const int _historyPageSize = 20;
   static const int _statisticsCacheLimit = 12;
+  static const double _trackingUiRefreshDistanceMeters = 100.0;
+  static const Duration _trackingUiRefreshInterval = Duration(seconds: 15);
 
   final GetActiveShiftUseCase getActiveShift;
   final GetDailyStatisticsUseCase getDailyStatistics;
@@ -34,6 +38,9 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final DeleteShiftUseCase deleteShiftUseCase;
   final GetRidesUseCase getRidesUseCase;
   final DeleteRideUseCase deleteRideUseCase;
+  final GetRecordingsUseCase getRecordingsUseCase;
+  final DeleteRecordingUseCase deleteRecordingUseCase;
+  final OpenRecordingUseCase openRecordingUseCase;
   final GetCostsGainsSettingsUseCase? getCostsGainsSettings;
   final ShiftLifecycleCoordinator shiftLifecycleCoordinator;
   final JourneyRuntimeCoordinator runtimeCoordinator;
@@ -46,6 +53,9 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required this.deleteShiftUseCase,
     required this.getRidesUseCase,
     required this.deleteRideUseCase,
+    required this.getRecordingsUseCase,
+    required this.deleteRecordingUseCase,
+    required this.openRecordingUseCase,
     required this.getCostsGainsSettings,
     required this.shiftLifecycleCoordinator,
     required this.runtimeCoordinator,
@@ -56,12 +66,15 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final isAddingManualShift = false.obs;
   final deletingShiftKey = RxnString();
   final deletingRideId = RxnInt();
+  final deletingRecordingId = RxnString();
   final isPauseShiftLoading = false.obs;
   final isFinishingShift = false.obs;
   final isLoadingMoreShifts = false.obs;
   final isLoadingMoreRides = false.obs;
+  final isLoadingMoreRecordings = false.obs;
   final hasMoreShifts = false.obs;
   final hasMoreRides = false.obs;
+  final hasMoreRecordings = false.obs;
   final selectedFilter = 'day'.obs; // day, week, month, year, custom
   final customStartDate = Rxn<DateTime>();
   final customEndDate = Rxn<DateTime>();
@@ -70,6 +83,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final metricsError = RxnString();
   final historyError = RxnString();
   final ridesError = RxnString();
+  final recordingsError = RxnString();
 
   Timer? _timer;
   Worker? _journeyMetricsWorker;
@@ -92,16 +106,23 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   }
 
   final ridesList = <RideEntity>[].obs;
+  final recordingsList = <RecordingEntity>[].obs;
   final paymentMethodSummary = <PaymentMethodSummaryItem>[].obs;
   final isPaymentMethodSectionExpanded = false.obs;
   final selectedRideStatusFilter = 'Todos'.obs;
+  final selectedRecordingStatusFilter = 'Todos'.obs;
   final shiftsTotalCount = 0.obs;
   final ridesHistoryTotalCount = 0.obs;
+  final recordingsHistoryTotalCount = 0.obs;
   final paymentMethodFinishedRidesCount = 0.obs;
 
   List<RideEntity> get filteredRidesList =>
       ridesList.where(_matchesSelectedRideStatus).toList(growable: false);
   int get filteredRidesCount => filteredRidesList.length;
+  List<RecordingEntity> get filteredRecordingsList => recordingsList
+      .where(_matchesSelectedRecordingStatus)
+      .toList(growable: false);
+  int get filteredRecordingsCount => filteredRecordingsList.length;
   int get mappedPaymentMethodCount =>
       paymentMethodSummary.fold(0, (total, item) => total + item.count);
 
@@ -115,6 +136,14 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     }
     selectedRideStatusFilter.value = filter;
     ridesHistoryTotalCount.value = filteredRidesCount;
+  }
+
+  void changeRecordingStatusFilter(String filter) {
+    if (selectedRecordingStatusFilter.value == filter) {
+      return;
+    }
+    selectedRecordingStatusFilter.value = filter;
+    recordingsHistoryTotalCount.value = filteredRecordingsCount;
   }
 
   void openRideDetails(RideEntity ride) {
@@ -174,6 +203,67 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  Future<void> requestDeleteRecording(RecordingEntity recording) async {
+    if (deletingRecordingId.value == recording.id) {
+      return;
+    }
+
+    final shouldDelete = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Excluir gravacao'),
+        content: Text(
+          'Deseja excluir a gravacao de ${_formatRecordingDate(recording.startedAt)}? Esta acao nao pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Get.back(result: true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+
+    if (shouldDelete == true) {
+      await deleteRecording(recording);
+    }
+  }
+
+  Future<bool> deleteRecording(RecordingEntity recording) async {
+    deletingRecordingId.value = recording.id;
+    try {
+      final result = await deleteRecordingUseCase(recording.id);
+      return await result.fold(
+        (failure) async {
+          _showError('Nao foi possivel excluir', failure.message);
+          return false;
+        },
+        (_) async {
+          _showSuccess('Gravacao excluida com sucesso.');
+          await refreshJourneyData(silent: true);
+          return true;
+        },
+      );
+    } finally {
+      if (deletingRecordingId.value == recording.id) {
+        deletingRecordingId.value = null;
+      }
+    }
+  }
+
+  Future<void> openRecording(RecordingEntity recording) async {
+    final result = await openRecordingUseCase(recording);
+    result.fold(
+      (failure) => _showError('Nao foi possivel abrir', failure.message),
+      (_) {},
+    );
+  }
+
   final totalShifts = '0'.obs;
   final totalTime = '00:00:00'.obs;
   final averageTime = '00:00:00'.obs;
@@ -198,6 +288,8 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final isTrafficLightActive = false.obs;
   final isAssistantActive = false.obs;
   final isAssistantBusy = false.obs;
+  final activeRecording = Rxn<RecordingEntity>();
+  final isRecordingBusy = false.obs;
   int _statisticsTotalTimeBaseSeconds = 0;
   int _statisticsIdleTimeBaseSeconds = 0;
 
@@ -210,7 +302,9 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       activeShiftError.value != null ||
       metricsError.value != null ||
       historyError.value != null ||
-      ridesError.value != null;
+      ridesError.value != null ||
+      recordingsError.value != null;
+  bool get isRecordingActive => activeRecording.value?.isActive ?? false;
   bool get canStartShift =>
       !isLoading.value && !isStartingShift.value && !hasActiveShift;
   bool get canAddManualShift =>
@@ -264,7 +358,8 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     return activeShiftError.value ??
         metricsError.value ??
         historyError.value ??
-        ridesError.value;
+        ridesError.value ??
+        recordingsError.value;
   }
 
   JourneyHistorySectionState get historySectionState =>
@@ -284,6 +379,18 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     isLoadingMore: isLoadingMoreRides.value,
     errorMessage: ridesError.value,
   );
+
+  JourneyRecordingsSectionState get recordingsSectionState =>
+      JourneyRecordingsSectionState(
+        selectedStatusFilter: selectedRecordingStatusFilter.value,
+        visibleRecordings: List<RecordingEntity>.unmodifiable(
+          filteredRecordingsList,
+        ),
+        totalVisibleCount: recordingsHistoryTotalCount.value,
+        periodLabel: dateLabel,
+        isLoadingMore: isLoadingMoreRecordings.value,
+        errorMessage: recordingsError.value,
+      );
 
   JourneyPaymentMethodsSectionState get paymentMethodsSectionState =>
       JourneyPaymentMethodsSectionState(
@@ -347,7 +454,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       onConnectionChanged: _handleConnectionStatusChanged,
       onTrackingStatusChanged: _handleTrackingStatusUpdated,
       onRideChanged: () {
-        refreshJourneyData(silent: true, showErrors: false);
+        unawaited(refreshJourneyData(silent: true, showErrors: false));
       },
       onAccessibilityChanged: _handleAccessibilityStatusChanged,
     );
@@ -355,6 +462,9 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     _loadTrackingStatus();
     runtimeCoordinator.loadAssistantStatus(
       onAssistantStateChanged: (isActive) => isAssistantActive.value = isActive,
+    );
+    runtimeCoordinator.loadRecordingStatus(
+      onRecordingStateChanged: (recording) => activeRecording.value = recording,
     );
   }
 
@@ -636,7 +746,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   double get operationalDrivenKm {
     var km = totalShiftDrivenKm.value;
     if (_shouldUseLiveJourneyKm) {
-      km += currentKm.value.floorToDouble();
+      km += currentKm.value;
     }
     return km;
   }
@@ -789,6 +899,12 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
             showErrors: showErrors,
             generation: generation,
           ),
+        _loadRecordingsData(
+          startDateParam: params.startDateParam,
+          endDateParam: params.endDateParam,
+          showErrors: showErrors,
+          generation: generation,
+        ),
       ]);
     } catch (error, stackTrace) {
       debugPrint('[JourneyController] Erro inesperado ao carregar: $error');
@@ -1044,6 +1160,8 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
   Future<void> loadMoreRides() async {}
 
+  Future<void> loadMoreRecordings() async {}
+
   Future<void> openTrackingSettings() async {
     final status = trackingStatus.value;
     if (status == null) {
@@ -1126,6 +1244,12 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         generation: generation,
       ),
       _loadRidesData(
+        startDateParam: params.startDateParam,
+        endDateParam: params.endDateParam,
+        showErrors: showErrors,
+        generation: generation,
+      ),
+      _loadRecordingsData(
         startDateParam: params.startDateParam,
         endDateParam: params.endDateParam,
         showErrors: showErrors,
@@ -1288,6 +1412,65 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     _rebuildPaymentMethodSummary();
   }
 
+  Future<void> _loadRecordingsData({
+    required String? startDateParam,
+    required String? endDateParam,
+    required bool showErrors,
+    int? generation,
+  }) async {
+    const limit = 100;
+    var offset = 0;
+    final allRecordings = <RecordingEntity>[];
+
+    while (true) {
+      final recordingsResult = await getRecordingsUseCase(
+        period: selectedFilter.value,
+        date: startDateParam,
+        endDate: endDateParam,
+        status: null,
+        offset: offset,
+        limit: limit,
+      );
+
+      if (!_isCurrentPeriodRefresh(generation)) {
+        return;
+      }
+
+      final shouldContinue = await recordingsResult.fold<Future<bool>>(
+        (failure) async {
+          recordingsList.clear();
+          recordingsHistoryTotalCount.value = 0;
+          hasMoreRecordings.value = false;
+          _handleLoadFailure(
+            context: 'gravacoes',
+            message: failure.message,
+            showErrors: showErrors,
+          );
+          return false;
+        },
+        (recordingsPage) async {
+          recordingsError.value = null;
+          allRecordings.addAll(recordingsPage.items);
+          offset += recordingsPage.items.length;
+          return recordingsPage.hasMore && recordingsPage.items.isNotEmpty;
+        },
+      );
+
+      if (!shouldContinue) {
+        break;
+      }
+    }
+
+    if (!_isCurrentPeriodRefresh(generation) || recordingsError.value != null) {
+      return;
+    }
+
+    allRecordings.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    recordingsList.assignAll(allRecordings);
+    hasMoreRecordings.value = false;
+    recordingsHistoryTotalCount.value = filteredRecordingsCount;
+  }
+
   List<RideEntity> _sortRidesForPresentation(List<RideEntity> rides) {
     final sorted = List<RideEntity>.from(rides);
     sorted.sort((a, b) {
@@ -1361,6 +1544,15 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     return ride.status.trim().toUpperCase() == selectedStatus;
   }
 
+  bool _matchesSelectedRecordingStatus(RecordingEntity recording) {
+    final selectedStatus = _selectedRecordingStatusQuery;
+    if (selectedStatus == null) {
+      return true;
+    }
+
+    return recording.status.trim().toUpperCase() == selectedStatus;
+  }
+
   void _rebuildPaymentMethodSummary() {
     final counts = <String, int>{};
 
@@ -1405,6 +1597,19 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         return 'FINISHED';
       case 'Cancelados':
         return 'CANCELED';
+      default:
+        return null;
+    }
+  }
+
+  String? get _selectedRecordingStatusQuery {
+    switch (selectedRecordingStatusFilter.value) {
+      case 'Gravando':
+        return RecordingStatus.recording;
+      case 'Concluidas':
+        return RecordingStatus.completed;
+      case 'Falhas':
+        return RecordingStatus.failed;
       default:
         return null;
     }
@@ -1619,6 +1824,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         ridesError.value =
             'Nao foi possivel carregar as corridas. $normalizedMessage';
         break;
+      case 'gravacoes':
+        recordingsError.value =
+            'Nao foi possivel carregar as gravacoes. $normalizedMessage';
+        break;
     }
 
     if (showErrors) {
@@ -1637,9 +1846,8 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         _lastTrackingUiRefreshAt == null ||
         _lastTrackingUiDistanceMeters == null ||
         (status.totalDistanceMeters - _lastTrackingUiDistanceMeters!).abs() >=
-            100 ||
-        now.difference(_lastTrackingUiRefreshAt!) >=
-            const Duration(seconds: 15);
+            _trackingUiRefreshDistanceMeters ||
+        now.difference(_lastTrackingUiRefreshAt!) >= _trackingUiRefreshInterval;
 
     final previousStatus = trackingStatus.value;
     final shouldRefreshStatusUi =
@@ -1691,7 +1899,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
           ? activeShift.value?.idleTimeSeconds ?? 0
           : 0,
       liveElapsedSeconds: _statisticsLiveElapsedSeconds,
-      liveDrivenKm: currentKm.value.floorToDouble(),
+      liveDrivenKm: currentKm.value,
       includeLiveTime: _shouldUseLiveJourneyTime,
       includeLiveKm: _shouldUseLiveJourneyKm,
     );
@@ -2138,6 +2346,33 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       ),
     );
   }
+
+  Future<void> toggleRecording() async {
+    if (isRecordingBusy.value) return;
+    await runtimeCoordinator.toggleRecording(
+      isRecordingActive: isRecordingActive,
+      onRecordingStateChanged: (recording) => activeRecording.value = recording,
+      onBusyStateChanged: (isBusy) => isRecordingBusy.value = isBusy,
+      showSuccess: (title, message) {
+        _showSnackbar(
+          title: title,
+          message: message,
+          backgroundColor: const Color(0xFF03A696),
+        );
+        refreshJourneyData(silent: true, showErrors: false);
+      },
+      showWarning: (title, message) => _showSnackbar(
+        title: title,
+        message: message,
+        backgroundColor: Colors.orangeAccent,
+      ),
+      showError: (title, message) => _showSnackbar(
+        title: title,
+        message: message,
+        backgroundColor: Colors.redAccent,
+      ),
+    );
+  }
 }
 
 class OperationalCostBreakdownItem {
@@ -2205,6 +2440,32 @@ class JourneyPaymentMethodsSectionState {
 
   int get unmappedCount => totalFinishedRides - mappedCount;
   bool get hasUnmappedRides => unmappedCount > 0;
+}
+
+class JourneyRecordingsSectionState {
+  const JourneyRecordingsSectionState({
+    required this.selectedStatusFilter,
+    required this.visibleRecordings,
+    required this.totalVisibleCount,
+    required this.periodLabel,
+    required this.isLoadingMore,
+    required this.errorMessage,
+  });
+
+  final String selectedStatusFilter;
+  final List<RecordingEntity> visibleRecordings;
+  final int totalVisibleCount;
+  final String periodLabel;
+  final bool isLoadingMore;
+  final String? errorMessage;
+
+  int get visibleCount => visibleRecordings.length;
+  bool get isEmpty => visibleRecordings.isEmpty;
+}
+
+String _formatRecordingDate(DateTime value) {
+  final local = value.toLocal();
+  return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 }
 
 class JourneyOperationalSummaryData {
