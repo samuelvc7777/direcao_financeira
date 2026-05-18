@@ -16,12 +16,17 @@ const _journeyActiveShiftKey = 'journey_local_active_shift';
 const _notificationChannelId = 'journey_location_tracking';
 const _notificationId = 4812;
 const _journeyTrackingDistanceFilterMeters = 25;
+const _journeyTrackingEconomyDistanceFilterMeters = 75;
 const _minimumTrackedSpeedKmH = 10.0;
 const _minimumTrackedSpeedMetersPerSecond = _minimumTrackedSpeedKmH / 3.6;
 const _idleGracePeriod = Duration(minutes: 4);
 const _idleTickInterval = Duration(seconds: 30);
 const _minimumStatusEmitDistanceMeters = 100.0;
 const _minimumStatusEmitInterval = Duration(seconds: 15);
+const _activeLocationInterval = Duration(seconds: 10);
+const _economyLocationInterval = Duration(seconds: 30);
+
+enum _TrackingPowerMode { active, economy }
 
 Future<void> initializeLocationTrackingService(GetStorage storage) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -244,6 +249,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
   int? currentLocalShiftId;
   DateTime? currentStartedAt;
   bool isPaused = false;
+  bool isSwitchingPowerMode = false;
+  var trackingPowerMode = _TrackingPowerMode.active;
   DateTime? lastStatusEmittedAt;
   double? lastEmittedDistanceMeters;
   String? lastEmittedIssueMessage;
@@ -420,12 +427,111 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     });
   }
 
-  Future<void> cancelTrackingStream() async {
+  Future<void> cancelPositionStream() async {
     await positionSubscription?.cancel();
     positionSubscription = null;
+  }
+
+  Future<void> cancelTrackingStream() async {
+    await cancelPositionStream();
     idleRefreshTimer?.cancel();
     idleRefreshTimer = null;
   }
+
+  late Future<void> Function() startPositionStream;
+
+  Future<void> switchTrackingPowerMode(_TrackingPowerMode mode) async {
+    if (trackingPowerMode == mode || isSwitchingPowerMode) {
+      return;
+    }
+
+    isSwitchingPowerMode = true;
+    try {
+      trackingPowerMode = mode;
+      await startPositionStream();
+    } finally {
+      isSwitchingPowerMode = false;
+    }
+  }
+
+  startPositionStream = () async {
+    await cancelPositionStream();
+
+    final locationSettings = _buildLocationSettings(mode: trackingPowerMode);
+    positionSubscription =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (position) async {
+            final observedAt = position.timestamp.toLocal();
+            if (position.speed < _minimumTrackedSpeedMetersPerSecond) {
+              final currentRoute = await routeDataSource.getRouteByLocalShiftId(
+                currentLocalShiftId!,
+                includePoints: false,
+              );
+              await registerLowSpeedObservation(
+                observedAt: observedAt,
+                currentDrivenKm:
+                    (currentRoute?.totalDistanceMeters ?? 0) / 1000,
+              );
+
+              final shift = readActiveShift();
+              final lowSpeedSince = shift?.lowSpeedSince;
+              if (trackingPowerMode == _TrackingPowerMode.active &&
+                  lowSpeedSince != null &&
+                  observedAt.difference(lowSpeedSince) >= _idleGracePeriod) {
+                await switchTrackingPowerMode(_TrackingPowerMode.economy);
+              }
+
+              await emitStatus(
+                isTrackingActive: true,
+                totalDistanceMeters: currentRoute?.totalDistanceMeters ?? 0,
+              );
+              return;
+            }
+
+            var movementPosition = position;
+            if (trackingPowerMode == _TrackingPowerMode.economy) {
+              await switchTrackingPowerMode(_TrackingPowerMode.active);
+              try {
+                movementPosition = await Geolocator.getCurrentPosition(
+                  locationSettings: _buildLocationSettings(
+                    mode: _TrackingPowerMode.active,
+                  ),
+                );
+              } catch (_) {
+                movementPosition = position;
+              }
+            }
+
+            final updatedRoute = await routeDataSource.appendPoint(
+              localShiftId: currentLocalShiftId!,
+              point: TrackedRoutePointModel(
+                latitude: movementPosition.latitude,
+                longitude: movementPosition.longitude,
+                accuracyMeters: movementPosition.accuracy,
+                recordedAt: movementPosition.timestamp.toLocal(),
+              ),
+            );
+            final resumedMovement = await finishStoppedPeriod(
+              observedAt: movementPosition.timestamp.toLocal(),
+              currentDrivenKm: (updatedRoute?.totalDistanceMeters ?? 0) / 1000,
+            );
+
+            await emitStatus(
+              isTrackingActive: true,
+              totalDistanceMeters: updatedRoute?.totalDistanceMeters ?? 0,
+              force: resumedMovement,
+            );
+          },
+          onError: (error) async {
+            await emitStatus(
+              issueMessage:
+                  'Nao foi possivel continuar rastreando a localizacao do turno.',
+              isTrackingActive: false,
+              force: true,
+            );
+          },
+        );
+  };
 
   Future<void> startTrackingStream() async {
     await cancelTrackingStream();
@@ -458,61 +564,10 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       localShiftId: currentLocalShiftId!,
       startedAt: currentStartedAt!,
     );
+    trackingPowerMode = _TrackingPowerMode.active;
     await markPotentialIdleStart();
     await startIdleRefreshTimer();
-
-    final locationSettings = _buildLocationSettings();
-    positionSubscription =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (position) async {
-            final observedAt = position.timestamp.toLocal();
-            if (position.speed < _minimumTrackedSpeedMetersPerSecond) {
-              final currentRoute = await routeDataSource.getRouteByLocalShiftId(
-                currentLocalShiftId!,
-                includePoints: false,
-              );
-              await registerLowSpeedObservation(
-                observedAt: observedAt,
-                currentDrivenKm:
-                    (currentRoute?.totalDistanceMeters ?? 0) / 1000,
-              );
-
-              await emitStatus(
-                isTrackingActive: true,
-                totalDistanceMeters: currentRoute?.totalDistanceMeters ?? 0,
-              );
-              return;
-            }
-
-            final updatedRoute = await routeDataSource.appendPoint(
-              localShiftId: currentLocalShiftId!,
-              point: TrackedRoutePointModel(
-                latitude: position.latitude,
-                longitude: position.longitude,
-                accuracyMeters: position.accuracy,
-                recordedAt: position.timestamp.toLocal(),
-              ),
-            );
-            final resumedMovement = await finishStoppedPeriod(
-              observedAt: position.timestamp.toLocal(),
-              currentDrivenKm: (updatedRoute?.totalDistanceMeters ?? 0) / 1000,
-            );
-
-            await emitStatus(
-              isTrackingActive: true,
-              totalDistanceMeters: updatedRoute?.totalDistanceMeters ?? 0,
-              force: resumedMovement,
-            );
-          },
-          onError: (error) async {
-            await emitStatus(
-              issueMessage:
-                  'Nao foi possivel continuar rastreando a localizacao do turno.',
-              isTrackingActive: false,
-              force: true,
-            );
-          },
-        );
+    await startPositionStream();
 
     await emitStatus(isTrackingActive: true, force: true);
   }
@@ -691,18 +746,27 @@ String? _buildTrackingIssueMessage({
   return null;
 }
 
-LocationSettings _buildLocationSettings() {
+LocationSettings _buildLocationSettings({
+  _TrackingPowerMode mode = _TrackingPowerMode.active,
+}) {
+  final isEconomyMode = mode == _TrackingPowerMode.economy;
   if (Platform.isAndroid) {
     return AndroidSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: _journeyTrackingDistanceFilterMeters,
-      intervalDuration: const Duration(seconds: 10),
+      accuracy: isEconomyMode ? LocationAccuracy.medium : LocationAccuracy.high,
+      distanceFilter: isEconomyMode
+          ? _journeyTrackingEconomyDistanceFilterMeters
+          : _journeyTrackingDistanceFilterMeters,
+      intervalDuration: isEconomyMode
+          ? _economyLocationInterval
+          : _activeLocationInterval,
       forceLocationManager: false,
     );
   }
 
-  return const LocationSettings(
-    accuracy: LocationAccuracy.high,
-    distanceFilter: _journeyTrackingDistanceFilterMeters,
+  return LocationSettings(
+    accuracy: isEconomyMode ? LocationAccuracy.medium : LocationAccuracy.high,
+    distanceFilter: isEconomyMode
+        ? _journeyTrackingEconomyDistanceFilterMeters
+        : _journeyTrackingDistanceFilterMeters,
   );
 }

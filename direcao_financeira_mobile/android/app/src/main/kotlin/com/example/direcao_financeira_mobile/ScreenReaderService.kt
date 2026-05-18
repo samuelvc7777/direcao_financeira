@@ -14,6 +14,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import com.example.direcao_financeira_mobile.parsers.MoveSjParser
 import com.example.direcao_financeira_mobile.parsers.NinetyNineOcrParser
 import com.google.mlkit.vision.common.InputImage
@@ -29,15 +30,17 @@ class ScreenReaderService : AccessibilityService() {
     private val moveSjDriverPackage = "br.com.devbase.movesj.prestador"
     private val minimumProcessingIntervalMs = 350L
     private val minimumOcrIntervalMs = 3000L
-    private val minimumMoveSjOcrIntervalMs = 1000L
+    private val minimumMoveSjOcrIntervalMs = 2000L
     private val ninetyNineReadDelayMs = 300L
     private val moveSjReadDelayMs = 450L
     private val moveSjRetryDelayMs = 650L
-    private val maxMoveSjOcrAttempts = 3
+    private val maxMoveSjOcrAttempts = 2
     private val ocrWatchdogTimeoutMs = 8000L
     private val overlayDisplayDelayMs = 200L
     private val repeatedOfferQuietWindowMs = 2500L
     private val duplicateOfferWindowMs = 20000L
+    private val duplicateOcrFingerprintWindowMs = 6000L
+    private val maxOcrPrefilterLines = 80
 
     private val moveSjParser = MoveSjParser()
     private val ninetyNineOcrParser = NinetyNineOcrParser()
@@ -48,6 +51,8 @@ class ScreenReaderService : AccessibilityService() {
     private var lastProcessedPackage: String? = null
     private var lastProcessedAtElapsed = 0L
     private var lastOcrAtElapsed = 0L
+    private var lastOcrFingerprint = ""
+    private var lastOcrFingerprintAtElapsed = 0L
     private var lastAcceptedOfferAtElapsed = 0L
     private var lastAcceptedOfferSignature = ""
     private var lastAcceptedMoveSjCoreSignature = ""
@@ -59,6 +64,13 @@ class ScreenReaderService : AccessibilityService() {
     private var pendingNinetyNineRunnable: Runnable? = null
     private var pendingMoveSjRunnable: Runnable? = null
     private var pendingOverlayRunnable: Runnable? = null
+
+    private data class OcrScreenCandidate(
+        val shouldRunOcr: Boolean,
+        val fingerprint: String,
+        val strongSignalCount: Int,
+        val lineCount: Int,
+    )
 
     companion object {
         private var channel: MethodChannel? = null
@@ -159,7 +171,21 @@ class ScreenReaderService : AccessibilityService() {
                             "attempt" to safeAttempt,
                         ),
                 )
-                requestMoveSjOcr(displayId, safeAttempt)
+                val candidate = buildOcrScreenCandidate("MoveSj")
+                if (!candidate.shouldRunOcr) {
+                    logLockscreenMessage(
+                        "ocr_skip_prefilter",
+                        extra =
+                            mapOf(
+                                "source" to "MoveSj",
+                                "attempt" to safeAttempt,
+                                "lineCount" to candidate.lineCount,
+                                "strongSignalCount" to candidate.strongSignalCount,
+                            ),
+                    )
+                    return@Runnable
+                }
+                requestMoveSjOcr(displayId, safeAttempt, candidate)
             }
 
         pendingMoveSjRunnable = runnable
@@ -183,7 +209,20 @@ class ScreenReaderService : AccessibilityService() {
                             "displayId" to displayId,
                         ),
                 )
-                requestNinetyNineOcr(displayId)
+                val candidate = buildOcrScreenCandidate("99")
+                if (!candidate.shouldRunOcr) {
+                    logLockscreenMessage(
+                        "ocr_skip_prefilter",
+                        extra =
+                            mapOf(
+                                "source" to "99",
+                                "lineCount" to candidate.lineCount,
+                                "strongSignalCount" to candidate.strongSignalCount,
+                            ),
+                    )
+                    return@Runnable
+                }
+                requestNinetyNineOcr(displayId, candidate)
             }
 
         pendingNinetyNineRunnable = runnable
@@ -200,20 +239,20 @@ class ScreenReaderService : AccessibilityService() {
             return
         }
         if (!isMeaningfulOffer(offerData)) {
-            logLockscreenMessage("process_offer_not_meaningful", extra = offerData)
+            logLockscreenMessage("process_offer_not_meaningful", extra = offerLogSummary(offerData))
             return
         }
 
         val signature = buildOfferSignature(offerData)
         val appKey = resolveOfferAppKey(offerData)
         val moveSjCoreSignature = buildMoveSjCoreSignature(offerData)
-        Log.d(logTag, "MoveSj processOffer signature=$signature payload=$offerData")
+        Log.d(logTag, "MoveSj processOffer signature=$signature summary=${offerLogSummary(offerData)}")
         if (
             isDuplicateOffer(signature) ||
                 (appKey == "MoveSj" && isDuplicateMoveSjCoreOffer(moveSjCoreSignature))
         ) {
             Log.d(logTag, "MoveSj oferta ignorada por assinatura duplicada.")
-            logLockscreenMessage("process_offer_duplicate_signature", extra = offerData)
+            logLockscreenMessage("process_offer_duplicate_signature", extra = offerLogSummary(offerData))
             return
         }
 
@@ -229,7 +268,7 @@ class ScreenReaderService : AccessibilityService() {
         pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
         pendingOverlayRunnable =
             Runnable {
-                logLockscreenMessage("overlay_show_attempt", extra = offerData)
+                logLockscreenMessage("overlay_show_attempt", extra = offerLogSummary(offerData))
                 runCatching {
                     floatingOverlay?.show(offerData)
                 }.onFailure { error ->
@@ -245,6 +284,15 @@ class ScreenReaderService : AccessibilityService() {
 
         rideOfferNotificationDispatcher?.show(offerData)
         notifyFlutter(offerData)
+    }
+
+    private fun offerLogSummary(offerData: Map<String, Any>): Map<String, Any?> {
+        return mapOf(
+            "app" to (offerData["platform_name"] ?: offerData["app"]),
+            "valor" to offerData["valor_bruto"],
+            "km" to offerData["km_total"],
+            "min" to offerData["minutos_total"],
+        )
     }
 
     private fun isSupportedRidePackage(packageName: String): Boolean {
@@ -428,9 +476,125 @@ class ScreenReaderService : AccessibilityService() {
         return normalized.lowercase().replace(" ", "")
     }
 
+    private fun normalizedText(value: String?): String {
+        if (value.isNullOrBlank()) {
+            return ""
+        }
+
+        val normalized =
+            Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+
+        return normalized.lowercase()
+    }
+
+    private fun buildOcrScreenCandidate(source: String): OcrScreenCandidate {
+        val root = rootInActiveWindow
+            ?: return OcrScreenCandidate(
+                shouldRunOcr = true,
+                fingerprint = "",
+                strongSignalCount = 0,
+                lineCount = 0,
+            )
+        val lines = collectVisibleNodeTexts(root).distinct().take(maxOcrPrefilterLines)
+        if (lines.isEmpty()) {
+            return OcrScreenCandidate(
+                shouldRunOcr = true,
+                fingerprint = "",
+                strongSignalCount = 0,
+                lineCount = 0,
+            )
+        }
+
+        val normalizedLines = lines.map(::normalizedText)
+        val strongSignalCount =
+            normalizedLines.count { line ->
+                line.contains("r$") ||
+                    line.contains("aceitar") ||
+                    line.contains("recusar") ||
+                    line.contains("km") ||
+                    line.contains("min") ||
+                    line.contains("preco") ||
+                    line.contains("perfil")
+            }
+        val shouldRunOcr = strongSignalCount > 0 || lines.size < 4
+        val fingerprint =
+            normalizedLines
+                .filter { line ->
+                    line.contains("r$") ||
+                        line.contains("aceitar") ||
+                        line.contains("recusar") ||
+                        line.contains("km") ||
+                        line.contains("min") ||
+                        line.contains("preco") ||
+                        line.contains("perfil")
+                }
+                .take(16)
+                .joinToString("|")
+                .ifBlank {
+                    normalizedLines.take(12).joinToString("|")
+                }
+
+        return OcrScreenCandidate(
+            shouldRunOcr = shouldRunOcr,
+            fingerprint = "$source|${normalizeFingerprintValue(fingerprint)}",
+            strongSignalCount = strongSignalCount,
+            lineCount = lines.size,
+        )
+    }
+
+    private fun collectVisibleNodeTexts(
+        node: AccessibilityNodeInfo,
+        result: MutableList<String> = mutableListOf(),
+    ): List<String> {
+        val text = node.text?.toString()?.trim()
+        if (!text.isNullOrEmpty()) {
+            result.add(text)
+        }
+
+        val description = node.contentDescription?.toString()?.trim()
+        if (!description.isNullOrEmpty()) {
+            result.add(description)
+        }
+
+        if (result.size >= maxOcrPrefilterLines) {
+            return result
+        }
+
+        for (index in 0 until node.childCount) {
+            if (result.size >= maxOcrPrefilterLines) {
+                break
+            }
+            val child = node.getChild(index) ?: continue
+            collectVisibleNodeTexts(child, result)
+        }
+
+        return result
+    }
+
+    private fun shouldSkipDuplicateOcr(candidate: OcrScreenCandidate): Boolean {
+        if (candidate.fingerprint.isBlank() || lastOcrFingerprint.isBlank()) {
+            return false
+        }
+
+        return candidate.fingerprint == lastOcrFingerprint &&
+            SystemClock.elapsedRealtime() - lastOcrFingerprintAtElapsed <
+            duplicateOcrFingerprintWindowMs
+    }
+
+    private fun markOcrFingerprint(candidate: OcrScreenCandidate) {
+        if (candidate.fingerprint.isBlank()) {
+            return
+        }
+
+        lastOcrFingerprint = candidate.fingerprint
+        lastOcrFingerprintAtElapsed = SystemClock.elapsedRealtime()
+    }
+
     private fun requestMoveSjOcr(
         displayId: Int,
         attempt: Int = 1,
+        candidate: OcrScreenCandidate = buildOcrScreenCandidate("MoveSj"),
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             logLockscreenMessage("ocr_skip_sdk_too_old")
@@ -449,15 +613,39 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         val now = SystemClock.elapsedRealtime()
-        if (now - lastOcrAtElapsed < minimumMoveSjOcrIntervalMs) {
+        if (attempt == 1 && shouldSkipDuplicateOcr(candidate)) {
+            logLockscreenMessage(
+                "ocr_skip_duplicate_prefingerprint",
+                extra =
+                    mapOf(
+                        "source" to "MoveSj",
+                        "attempt" to attempt,
+                        "lineCount" to candidate.lineCount,
+                        "strongSignalCount" to candidate.strongSignalCount,
+                    ),
+            )
+            return
+        }
+        val isSameOcrScreen = candidate.fingerprint.isNotBlank() &&
+            candidate.fingerprint == lastOcrFingerprint
+        if (
+            attempt == 1 &&
+            isSameOcrScreen &&
+            now - lastOcrAtElapsed < minimumMoveSjOcrIntervalMs
+        ) {
             logLockscreenMessage(
                 "ocr_skip_cooldown",
-                extra = mapOf("elapsedSinceLastOcrMs" to (now - lastOcrAtElapsed)),
+                extra =
+                    mapOf(
+                        "source" to "MoveSj",
+                        "elapsedSinceLastOcrMs" to (now - lastOcrAtElapsed),
+                    ),
             )
             return
         }
 
         lastOcrAtElapsed = now
+        markOcrFingerprint(candidate)
         val ocrToken =
             beginOcrRequest(
                 extra =
@@ -465,6 +653,7 @@ class ScreenReaderService : AccessibilityService() {
                         "source" to "MoveSj",
                         "displayId" to displayId,
                         "attempt" to attempt,
+                        "strongSignalCount" to candidate.strongSignalCount,
                     ),
             )
 
@@ -544,7 +733,10 @@ class ScreenReaderService : AccessibilityService() {
         }
     }
 
-    private fun requestNinetyNineOcr(displayId: Int) {
+    private fun requestNinetyNineOcr(
+        displayId: Int,
+        candidate: OcrScreenCandidate = buildOcrScreenCandidate("99"),
+    ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             logLockscreenMessage("ocr_skip_sdk_too_old")
             return
@@ -556,21 +748,41 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         val now = SystemClock.elapsedRealtime()
-        if (now - lastOcrAtElapsed < minimumOcrIntervalMs) {
+        if (shouldSkipDuplicateOcr(candidate)) {
+            logLockscreenMessage(
+                "ocr_skip_duplicate_prefingerprint",
+                extra =
+                    mapOf(
+                        "source" to "99",
+                        "lineCount" to candidate.lineCount,
+                        "strongSignalCount" to candidate.strongSignalCount,
+                    ),
+            )
+            return
+        }
+        val isSameOcrScreen = candidate.fingerprint.isNotBlank() &&
+            candidate.fingerprint == lastOcrFingerprint
+        if (isSameOcrScreen && now - lastOcrAtElapsed < minimumOcrIntervalMs) {
             logLockscreenMessage(
                 "ocr_skip_cooldown",
-                extra = mapOf("elapsedSinceLastOcrMs" to (now - lastOcrAtElapsed)),
+                extra =
+                    mapOf(
+                        "source" to "99",
+                        "elapsedSinceLastOcrMs" to (now - lastOcrAtElapsed),
+                    ),
             )
             return
         }
 
         lastOcrAtElapsed = now
+        markOcrFingerprint(candidate)
         val ocrToken =
             beginOcrRequest(
                 extra =
                     mapOf(
                         "source" to "99",
                         "displayId" to displayId,
+                        "strongSignalCount" to candidate.strongSignalCount,
                     ),
             )
 
@@ -786,11 +998,10 @@ class ScreenReaderService : AccessibilityService() {
                                 "attempt" to attempt,
                                 "lineCount" to lines.size,
                                 "parsedOffer" to (offerData != null),
-                                "sampleLines" to lines.take(8).joinToString(" | "),
                             ),
                     )
                     if (offerData != null) {
-                        logLockscreenMessage("ocr_offer_parsed", extra = offerData)
+                        logLockscreenMessage("ocr_offer_parsed", extra = offerLogSummary(offerData))
                         processOffer(offerData)
                     } else if (shouldRetryMoveSjParse(lines, attempt)) {
                         scheduleMoveSjRetry(
@@ -867,11 +1078,10 @@ class ScreenReaderService : AccessibilityService() {
                                 "source" to "99",
                                 "lineCount" to lines.size,
                                 "parsedOffer" to (offerData != null),
-                                "sampleLines" to lines.take(8).joinToString(" | "),
                             ),
                     )
                     if (offerData != null) {
-                        logLockscreenMessage("ocr_offer_parsed", extra = offerData)
+                        logLockscreenMessage("ocr_offer_parsed", extra = offerLogSummary(offerData))
                         processOffer(offerData)
                     }
                 }.onFailure { error ->
@@ -933,12 +1143,12 @@ class ScreenReaderService : AccessibilityService() {
             runCatching {
                 val currentChannel = channel
                 if (currentChannel == null) {
-                    logLockscreenMessage("flutter_notify_channel_null", extra = data)
+                    logLockscreenMessage("flutter_notify_channel_null", extra = offerLogSummary(data))
                     return@runCatching
                 }
 
                 currentChannel.invokeMethod("onRaceDetected", data)
-                Log.d(logTag, "MoveSj invokeMethod onRaceDetected payload=$data")
+                Log.d(logTag, "MoveSj invokeMethod onRaceDetected summary=${offerLogSummary(data)}")
             }.onFailure { error ->
                 logLockscreenMessage(
                     "flutter_notify_failure",
