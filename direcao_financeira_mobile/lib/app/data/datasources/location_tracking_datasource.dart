@@ -145,6 +145,11 @@ class LocationTrackingDataSourceImpl implements ILocationTrackingDataSource {
     int? localShiftId,
     bool isPaused = false,
   }) async {
+    await LocationTrackingService.refreshIdleTimeIfNeeded(
+      localShiftId: localShiftId,
+      isPaused: isPaused,
+    );
+
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     final permission = await Geolocator.checkPermission();
     final accuracyStatus = await Geolocator.getLocationAccuracy();

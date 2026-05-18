@@ -1,0 +1,14 @@
+{
+  "apphosting": [
+    {
+      "backendId": "direcao-financeira-admin",
+      "rootDir": "./direcao_financeira_admin_web",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ]
+    }
+  ]
+}

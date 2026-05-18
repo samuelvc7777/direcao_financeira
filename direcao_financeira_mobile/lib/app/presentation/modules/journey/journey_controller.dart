@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../core/location/location_permission_settings.dart';
 import '../../../domain/entities/active_shift_entity.dart';
 import '../../../domain/entities/costs_gains_settings_entity.dart';
 import '../../../domain/entities/journey_statistics_entity.dart';
@@ -17,6 +18,7 @@ import '../../../domain/services/online_hourly_projection_calculator.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
 import '../../../domain/usecases/journey_use_cases.dart';
+import '../../../domain/usecases/ride_status_use_cases.dart';
 import 'journey_runtime_coordinator.dart';
 import 'journey_statistics_display_data.dart';
 import 'shift_lifecycle_coordinator.dart';
@@ -31,6 +33,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final CreateManualShiftUseCase createManualShift;
   final DeleteShiftUseCase deleteShiftUseCase;
   final GetRidesUseCase getRidesUseCase;
+  final DeleteRideUseCase deleteRideUseCase;
   final GetCostsGainsSettingsUseCase? getCostsGainsSettings;
   final ShiftLifecycleCoordinator shiftLifecycleCoordinator;
   final JourneyRuntimeCoordinator runtimeCoordinator;
@@ -42,6 +45,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required this.createManualShift,
     required this.deleteShiftUseCase,
     required this.getRidesUseCase,
+    required this.deleteRideUseCase,
     required this.getCostsGainsSettings,
     required this.shiftLifecycleCoordinator,
     required this.runtimeCoordinator,
@@ -51,6 +55,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final isStartingShift = false.obs;
   final isAddingManualShift = false.obs;
   final deletingShiftKey = RxnString();
+  final deletingRideId = RxnInt();
   final isPauseShiftLoading = false.obs;
   final isFinishingShift = false.obs;
   final isLoadingMoreShifts = false.obs;
@@ -114,6 +119,59 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
   void openRideDetails(RideEntity ride) {
     Get.toNamed('/journey/ride-details', arguments: ride);
+  }
+
+  Future<void> requestDeleteRide(RideEntity ride) async {
+    if (deletingRideId.value == ride.id) {
+      return;
+    }
+
+    final shouldDelete = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Excluir corrida'),
+        content: Text(
+          'Deseja excluir a corrida de ${ride.date} ${ride.time}? Esta acao nao pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Get.back(result: true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+
+    if (shouldDelete == true) {
+      await deleteRide(ride);
+    }
+  }
+
+  Future<bool> deleteRide(RideEntity ride) async {
+    deletingRideId.value = ride.id;
+    try {
+      final result = await deleteRideUseCase(rideId: ride.id);
+      return await result.fold(
+        (failure) async {
+          _showError('Nao foi possivel excluir', failure.message);
+          return false;
+        },
+        (_) async {
+          _showSuccess('Corrida excluida com sucesso.');
+          await refreshJourneyData(silent: true);
+          return true;
+        },
+      );
+    } finally {
+      if (deletingRideId.value == ride.id) {
+        deletingRideId.value = null;
+      }
+    }
   }
 
   final totalShifts = '0'.obs;
@@ -415,6 +473,31 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  void applyQuickFilter(String filter) {
+    final now = DateTime.now();
+    selectedDate.value = DateTime(now.year, now.month, now.day);
+    customStartDate.value = null;
+    customEndDate.value = null;
+    selectedFilter.value = filter;
+    refreshSelectedPeriodData(showErrors: false);
+  }
+
+  bool get isCurrentPeriodTodayFilter {
+    if (selectedFilter.value != 'day') {
+      return false;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selected = selectedDate.value;
+    final selectedDay = DateTime(selected.year, selected.month, selected.day);
+    return selectedDay == today;
+  }
+
+  void resetToTodayFilter() {
+    applyQuickFilter('day');
+  }
+
   void _syncSelectedDateWithTodayIfNeeded() {
     if (selectedFilter.value != 'day') {
       return;
@@ -670,6 +753,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     bool silent = false,
     bool includeRides = true,
     bool showErrors = false,
+    bool includeTrackingStatus = true,
   }) async {
     final generation = ++_periodRefreshGeneration;
     if (!silent) {
@@ -680,7 +764,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
     try {
       await Future.wait([
-        _loadActiveShift(showErrors: showErrors),
+        _loadActiveShift(
+          showErrors: showErrors,
+          includeTrackingStatus: includeTrackingStatus,
+        ),
         _loadCostsGainsSettings(showErrors: showErrors),
         _loadStatistics(
           startDateParam: params.startDateParam,
@@ -780,7 +867,16 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required DateTime startTime,
     required DateTime endTime,
   }) async {
+    debugPrint(
+      '[JourneyController] addManualShift solicitado: '
+      'canAdd=$canAddManualShift isLoading=${isLoading.value} '
+      'isAdding=${isAddingManualShift.value} hasActiveShift=$hasActiveShift '
+      'km=$drivenKm start=$startTime end=$endTime.',
+    );
     if (!canAddManualShift) {
+      debugPrint(
+        '[JourneyController] addManualShift bloqueado por canAddManualShift=false.',
+      );
       return false;
     }
 
@@ -796,10 +892,19 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
       return await result.fold(
         (failure) async {
+          debugPrint(
+            '[JourneyController] addManualShift falhou: '
+            '${failure.runtimeType} ${failure.message}',
+          );
           _showError('Nao foi possivel adicionar', failure.message);
           return false;
         },
         (finishResult) async {
+          debugPrint(
+            '[JourneyController] addManualShift sucesso: '
+            'synced=${finishResult.synced} '
+            'pending=${finishResult.pendingSyncCount}.',
+          );
           if (finishResult.pendingSyncCount > 0) {
             _showWarning(
               'Turno salvo no aparelho',
@@ -809,13 +914,24 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
             _showSuccess('Turno manual adicionado ao historico.');
           }
 
-          await refreshJourneyData(silent: true);
-          await _loadTrackingStatus();
+          await refreshJourneyData(silent: true, includeTrackingStatus: false);
+          debugPrint(
+            '[JourneyController] Historico atualizado apos turno manual.',
+          );
           return true;
         },
       );
+    } catch (error, stackTrace) {
+      debugPrint('[JourneyController] addManualShift erro inesperado: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _showError(
+        'Nao foi possivel adicionar',
+        'Erro inesperado ao salvar turno manual.',
+      );
+      return false;
     } finally {
       isAddingManualShift.value = false;
+      debugPrint('[JourneyController] addManualShift finalizado.');
     }
   }
 
@@ -937,7 +1053,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     await _openTrackingSettings(status: status);
   }
 
-  Future<void> _loadActiveShift({required bool showErrors}) async {
+  Future<void> _loadActiveShift({
+    required bool showErrors,
+    bool includeTrackingStatus = true,
+  }) async {
     final result = await getActiveShift();
     result.fold(
       (failure) => _handleLoadFailure(
@@ -952,7 +1071,9 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         _syncActiveShiftPresentation(shift);
       },
     );
-    await _loadTrackingStatus();
+    if (includeTrackingStatus) {
+      await _loadTrackingStatus();
+    }
   }
 
   Future<void> _loadStatistics({
@@ -1055,6 +1176,12 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required bool reset,
     int? generation,
   }) async {
+    debugPrint(
+      '[JourneyController] _loadHistory inicio: '
+      'filter=${selectedFilter.value} date=$startDateParam '
+      'endDate=$endDateParam reset=$reset offset=${reset ? 0 : shiftsList.length} '
+      'limit=$_historyPageSize generation=$generation.',
+    );
     final historyResult = await getShiftHistory(
       filter: selectedFilter.value,
       date: startDateParam,
@@ -1074,6 +1201,12 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         showErrors: showErrors,
       ),
       (shiftsPage) {
+        debugPrint(
+          '[JourneyController] _loadHistory sucesso: '
+          'items=${shiftsPage.items.length} total=${shiftsPage.totalCount} '
+          'hasMore=${shiftsPage.hasMore} ids=${shiftsPage.items.map((shift) => shift.remoteShiftId ?? shift.localId).toList()} '
+          'datas=${shiftsPage.items.map((shift) => '${shift.date} ${shift.startTime}-${shift.endTime}').toList()}.',
+        );
         historyError.value = null;
         if (reset) {
           shiftsList.assignAll(shiftsPage.items);
@@ -1402,41 +1535,38 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     if (shift.isPaused) {
       _timer?.cancel();
       final pausedReference = shift.pausedAt ?? DateTime.now();
-      elapsedSeconds.value = _computeEffectiveElapsedSeconds(
+      elapsedSeconds.value = _computeElapsedSeconds(
         startTime: shift.startTime,
-        idleTimeSeconds: shift.idleTimeSeconds,
         reference: pausedReference,
       );
       _syncDisplayedJourneyMetrics();
       return;
     }
 
-    _startElapsedTimer(shift.startTime, shift.idleTimeSeconds);
+    _startElapsedTimer(shift.startTime);
     _syncDisplayedJourneyMetrics();
   }
 
-  void _startElapsedTimer(DateTime startTime, int idleTimeSeconds) {
+  void _startElapsedTimer(DateTime startTime) {
     _timer?.cancel();
-    _updateElapsed(startTime, idleTimeSeconds);
+    _updateElapsed(startTime);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateElapsed(startTime, idleTimeSeconds);
+      _updateElapsed(startTime);
     });
   }
 
-  void _updateElapsed(DateTime startTime, int idleTimeSeconds) {
-    elapsedSeconds.value = _computeEffectiveElapsedSeconds(
+  void _updateElapsed(DateTime startTime) {
+    elapsedSeconds.value = _computeElapsedSeconds(
       startTime: startTime,
-      idleTimeSeconds: idleTimeSeconds,
       reference: DateTime.now(),
     );
   }
 
-  int _computeEffectiveElapsedSeconds({
+  int _computeElapsedSeconds({
     required DateTime startTime,
-    required int idleTimeSeconds,
     required DateTime reference,
   }) {
-    final total = reference.difference(startTime).inSeconds - idleTimeSeconds;
+    final total = reference.difference(startTime).inSeconds;
     return total < 0 ? 0 : total;
   }
 
@@ -1543,14 +1673,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
     final shift = activeShift.value;
     if (shift != null && (shouldRefreshDistanceUi || shouldRefreshStatusUi)) {
-      final didIdleTimeChange = shift.idleTimeSeconds != status.idleTimeSeconds;
       activeShift.value = shift.copyWith(
         currentDrivenKm: trackedKm,
         idleTimeSeconds: status.idleTimeSeconds,
       );
-      if (didIdleTimeChange && !shift.isPaused) {
-        _startElapsedTimer(shift.startTime, status.idleTimeSeconds);
-      }
       _syncDisplayedJourneyMetrics();
     }
   }
@@ -1561,7 +1687,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       baseIdleTimeSeconds: _statisticsIdleTimeBaseSeconds,
       baseDrivenKm: totalShiftDrivenKm.value,
       shiftsCount: int.tryParse(totalShifts.value) ?? 0,
-      activeIdleSeconds: _selectedRangeIncludesNow && hasActiveShift
+      activeIdleSeconds: _selectedRangeIncludesActiveShift
           ? activeShift.value?.idleTimeSeconds ?? 0
           : 0,
       liveElapsedSeconds: _statisticsLiveElapsedSeconds,
@@ -1687,19 +1813,40 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     return range.endExclusive.difference(range.start).inDays;
   }
 
-  bool get _selectedRangeIncludesNow {
+  bool get _selectedRangeIncludesActiveShift {
+    final shift = activeShift.value;
+    if (shift == null) {
+      return false;
+    }
+
     final now = DateTime.now();
     final range = _selectedRange;
-    return !now.isBefore(range.start) && now.isBefore(range.endExclusive);
+    final shiftStart = shift.startTime;
+    final includesNow =
+        !now.isBefore(range.start) && now.isBefore(range.endExclusive);
+    final includesShiftStart =
+        !shiftStart.isBefore(range.start) &&
+        shiftStart.isBefore(range.endExclusive);
+
+    return includesNow || includesShiftStart;
   }
 
   bool get _shouldUseLiveJourneyKm =>
-      hasActiveShift && _selectedRangeIncludesNow;
+      hasActiveShift && _selectedRangeIncludesActiveShift;
 
   bool get _shouldUseLiveJourneyTime =>
-      hasActiveShift && _selectedRangeIncludesNow;
+      hasActiveShift && _selectedRangeIncludesActiveShift;
 
-  int get _statisticsLiveElapsedSeconds => (elapsedSeconds.value ~/ 30) * 30;
+  int get _statisticsLiveElapsedSeconds {
+    final activeIdleSeconds = _selectedRangeIncludesActiveShift
+        ? activeShift.value?.idleTimeSeconds ?? 0
+        : 0;
+    final effectiveSeconds = elapsedSeconds.value - activeIdleSeconds;
+    if (effectiveSeconds <= 0) {
+      return 0;
+    }
+    return effectiveSeconds;
+  }
 
   ({DateTime start, DateTime endExclusive}) get _selectedRange {
     DateTime startOfDay(DateTime value) =>
@@ -1813,9 +1960,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required LocationTrackingStatusEntity status,
     bool showFollowUpWarning = true,
   }) async {
-    final opened = !status.isLocationServiceEnabled
-        ? await Geolocator.openLocationSettings()
-        : await Geolocator.openAppSettings();
+    final opened = await _openRequiredLocationSettings(status);
 
     if (!opened) {
       _showWarning(
@@ -1835,6 +1980,21 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
           ? 'Ative o GPS do aparelho e volte para continuar o turno.'
           : 'Marque "Permitir o tempo todo" e mantenha a localizacao precisa ativada.',
     );
+  }
+
+  Future<bool> _openRequiredLocationSettings(
+    LocationTrackingStatusEntity status,
+  ) {
+    if (!status.isLocationServiceEnabled) {
+      return Geolocator.openLocationSettings();
+    }
+
+    if (status.hasForegroundPermission && !status.hasBackgroundPermission) {
+      return const LocationPermissionSettings()
+          .openBackgroundLocationPermissionSettings();
+    }
+
+    return Geolocator.openAppSettings();
   }
 
   void _showSuccess(String message) {

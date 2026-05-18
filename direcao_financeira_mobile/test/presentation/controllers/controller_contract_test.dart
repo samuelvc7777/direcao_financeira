@@ -7,6 +7,7 @@ import 'package:direcao_financeira_mobile/app/core/dashboard/dashboard_refresh_n
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/network/journey_realtime_bridge.dart';
 import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart';
+import 'package:direcao_financeira_mobile/app/core/subscription/play_store_subscription_contract.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/finish_shift_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
@@ -43,6 +44,7 @@ import 'package:direcao_financeira_mobile/app/domain/usecases/category_use_cases
 import 'package:direcao_financeira_mobile/app/domain/usecases/credit_card_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/get_rides_usecase.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/journey_use_cases.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/ride_status_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/subscription_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/transaction_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/bank_accounts/bank_accounts_controller.dart';
@@ -151,7 +153,15 @@ class _FakeCategoryRepository implements ICategoryRepository {
     required CategoryType type,
     required String color,
     required String icon,
-  }) async => Right(buildCategory(name: name, type: type));
+  }) async {
+    final created = buildCategory(
+      id: categories.length + 1,
+      name: name,
+      type: type,
+    );
+    categories.add(created);
+    return Right(created);
+  }
 
   @override
   Future<Either<Failure, void>> deactivateCategory(int id) async =>
@@ -223,6 +233,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, TransactionEntity>> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -232,7 +243,12 @@ class _FakeTransactionRepository implements ITransactionRepository {
     int? creditCardId,
     int? installmentCount,
   }) async {
-    final created = buildTransaction(id: 99, type: type, date: transactionDate);
+    final created = buildTransaction(
+      id: 99,
+      type: type,
+      status: status,
+      date: transactionDate,
+    );
     transactions = [created, ...transactions];
     return Right(created);
   }
@@ -287,12 +303,19 @@ class _FakeTransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, TransactionEntity>> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,
     DateTime? transactionDate,
     TransactionMutationScope? scope,
-  }) async => Right(buildTransaction(id: id, date: transactionDate));
+  }) async => Right(
+    buildTransaction(
+      id: id,
+      status: status ?? TransactionStatus.cleared,
+      date: transactionDate,
+    ),
+  );
 }
 
 class _FakeSubscriptionRepository implements ISubscriptionRepository {
@@ -483,6 +506,12 @@ class _FakeRideRepository implements IRideRepository {
   ) async => const Right(unit);
 
   @override
+  Future<Either<Failure, Unit>> updateFinishedRide({
+    required int rideId,
+    required DetectedRideDraftEntity ride,
+  }) async => const Right(unit);
+
+  @override
   Future<Either<Failure, PagedResultEntity<RideEntity>>> getRides({
     String period = 'day',
     String? date,
@@ -547,6 +576,10 @@ class _FakeRideRepository implements IRideRepository {
     required int rideId,
     required String cancelReason,
   }) async => const Right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> deleteRide({required int rideId}) async =>
+      const Right(unit);
 }
 
 class _FakeHomeTabNavigation implements HomeTabNavigation {
@@ -660,6 +693,7 @@ JourneyController _buildJourneyController({
     createManualShift: CreateManualShiftUseCase(journeyRepository),
     deleteShiftUseCase: DeleteShiftUseCase(journeyRepository),
     getRidesUseCase: GetRidesUseCase(rideRepository),
+    deleteRideUseCase: DeleteRideUseCase(rideRepository),
     getCostsGainsSettings: null,
     shiftLifecycleCoordinator: ShiftLifecycleCoordinator(
       startShiftUseCase: StartShiftUseCase(journeyRepository),
@@ -799,6 +833,54 @@ void main() {
     expect(controller.incomeCategories.single.name, 'Receitas');
     expect(controller.expenseCategories.single.name, 'Combustivel');
   });
+
+  test(
+    'EnsureDefaultCategoriesUseCase cria categorias padrao sem duplicar',
+    () async {
+      final repository = _FakeCategoryRepository()
+        ..categories = [
+          buildCategory(type: CategoryType.income, name: 'Uber'),
+          buildCategory(id: 2, type: CategoryType.expense, name: 'Combustivel'),
+        ];
+      final useCase = EnsureDefaultCategoriesUseCase(repository);
+
+      final result = await useCase();
+
+      expect(result.isRight(), isTrue);
+
+      final incomeCategories = repository.categories
+          .cast<CategoryEntity>()
+          .where((category) => category.type == CategoryType.income)
+          .toList();
+      final expenseCategories = repository.categories
+          .cast<CategoryEntity>()
+          .where((category) => category.type == CategoryType.expense)
+          .toList();
+
+      expect(incomeCategories.map((category) => category.name), [
+        'Uber',
+        '99',
+        'MoveSJ',
+        'inDrive',
+        'iFood',
+        'Rappi',
+      ]);
+      expect(expenseCategories.length, 8);
+      expect(
+        expenseCategories.map((category) => category.name),
+        containsAll([
+          'Combustivel',
+          'Manutencao',
+          'Lavagem',
+          'Alimentacao',
+          'Internet e telefone',
+          'Seguro',
+          'Financiamento ou aluguel',
+          'Pedagios e estacionamento',
+        ]),
+      );
+    },
+  );
 
   test('CreditCardsController carrega cartoes e separa ativos', () async {
     final repository = _FakeCreditCardRepository()
@@ -981,6 +1063,49 @@ void main() {
         controller.storeProductsById.containsKey('premium_monthly'),
         isTrue,
       );
+      expect(controller.canPurchaseSelectedPlan, isTrue);
+    },
+  );
+
+  test(
+    'SubscriptionController bloqueia compra Android quando plan.code diverge do produto oficial',
+    () async {
+      final repository = _FakeSubscriptionRepository()
+        ..activeSubscription = buildSubscription()
+        ..history = [buildSubscription()]
+        ..plans = [buildPlan(code: 'premium_legacy')]
+        ..products = [buildStoreProduct()];
+      final controller = SubscriptionController(
+        getMySubscriptionUseCase: GetMySubscriptionUseCase(repository),
+        getSubscriptionHistoryUseCase: GetSubscriptionHistoryUseCase(
+          repository,
+        ),
+        getAvailablePlansUseCase: GetAvailablePlansUseCase(repository),
+        changePlanUseCase: ChangePlanUseCase(repository),
+        cancelSubscriptionUseCase: CancelSubscriptionUseCase(repository),
+        renewSubscriptionUseCase: RenewSubscriptionUseCase(repository),
+        syncStoredUserSubscriptionUseCase: SyncStoredUserSubscriptionUseCase(
+          repository,
+        ),
+        isStoreAvailableUseCase: IsStoreAvailableUseCase(repository),
+        getStoreProductsUseCase: GetStoreProductsUseCase(repository),
+        buyStoreProductUseCase: BuyStoreProductUseCase(repository),
+        restorePurchasesUseCase: RestorePurchasesUseCase(repository),
+        completePurchaseUseCase: CompletePurchaseUseCase(repository),
+        watchStorePurchaseUpdatesUseCase: WatchStorePurchaseUpdatesUseCase(
+          repository,
+        ),
+      );
+
+      await controller.loadData();
+
+      expect(controller.isStoreAvailable.value, isTrue);
+      expect(controller.canPurchaseSelectedPlan, isFalse);
+      expect(controller.storeProductsById, isEmpty);
+      expect(
+        controller.storeErrorMessage.value,
+        contains(playStoreMonthlySubscriptionProductId),
+      );
     },
   );
 
@@ -1161,7 +1286,7 @@ void main() {
   );
 
   test(
-    'JourneyController atualiza Tempo Total e Tempo Medio em blocos de 30s nas estatisticas',
+    'JourneyController atualiza Tempo Total e Tempo Medio em tempo real nas estatisticas',
     () async {
       final now = DateTime.now();
       final journeyRepository = _FakeJourneyRepository()
@@ -1169,14 +1294,14 @@ void main() {
           startTime: now.subtract(const Duration(hours: 2)),
           createdAt: now.subtract(const Duration(hours: 2)),
           currentDrivenKm: 0,
-          idleTimeSeconds: 3600,
+          idleTimeSeconds: 0,
           pausedAt: now,
         )
         ..trackingStatus = buildTrackingStatus(
           isTrackingActive: false,
           isPaused: true,
           totalDistanceMeters: 0,
-          idleTimeSeconds: 3600,
+          idleTimeSeconds: 0,
         );
       final rideRepository = _FakeRideRepository();
       final accessibilityService = _FakeAccessibilityService();
@@ -1198,14 +1323,14 @@ void main() {
       controller.elapsedSeconds.value = 89;
       await Future<void>.delayed(Duration.zero);
 
-      expect(controller.totalTime.value, '01:01:00');
-      expect(controller.averageTime.value, '00:30:30');
+      expect(controller.totalTime.value, '01:01:29');
+      expect(controller.averageTime.value, '00:30:45');
 
       controller.elapsedSeconds.value = 119;
       await Future<void>.delayed(Duration.zero);
 
-      expect(controller.totalTime.value, '01:01:30');
-      expect(controller.averageTime.value, '00:30:45');
+      expect(controller.totalTime.value, '01:01:59');
+      expect(controller.averageTime.value, '00:31:00');
 
       controller.onClose();
       await journeyRepository.dispose();
@@ -1466,6 +1591,7 @@ void main() {
       final journeyRepository = _FakeJourneyRepository()
         ..activeShift = activeShift
         ..activeShiftResult = Right(activeShift)
+        ..trackingStatus = buildTrackingStatus(idleTimeSeconds: 0)
         ..statisticsResult = const Right(
           JourneyStatisticsEntity(
             totalShifts: 1,
@@ -1533,6 +1659,96 @@ void main() {
         analysis.profitPerHour,
         closeTo(analysis.grossPerHour! - analysis.costsPerHour!, 0.01),
       );
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController calcula analise operacional com tempo vivo em tempo real',
+    () async {
+      final now = DateTime.now();
+      final activeShift = buildActiveShift().copyWith(
+        startTime: now.subtract(const Duration(minutes: 31)),
+        createdAt: now.subtract(const Duration(minutes: 31)),
+        currentDrivenKm: 2,
+        idleTimeSeconds: 0,
+      );
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = activeShift
+        ..activeShiftResult = Right(activeShift)
+        ..trackingStatus = buildTrackingStatus(idleTimeSeconds: 0)
+        ..statisticsResult = const Right(
+          JourneyStatisticsEntity(
+            totalShifts: 1,
+            totalTime: '01:00:00',
+            averageTime: '01:00:00',
+            idleTime: '00:00:00',
+            drivenKm: '10.0 km',
+            totalDrivenKmValue: 10,
+            averageKmh: '10.0 km/h',
+            rideStats: RideStatisticsEntity(
+              totalRides: 1,
+              grossEarningsCents: 6000,
+              netEarningsCents: 6000,
+              totalCostsCents: 0,
+              ridesTotalKm: 4,
+              ridesTotalTime: 9 * 60,
+            ),
+          ),
+        );
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      controller.currentKm.value = 2;
+      controller.costsGainsSettings.value = const CostsGainsSettingsEntity(
+        userId: 1,
+        desiredMonthlyProfitCents: 0,
+        workDaysPerWeek: 6,
+        workHoursPerDay: 8,
+        kmPerDay: 0,
+        financeOrRentMonthlyCents: 0,
+        insuranceMonthlyCents: 0,
+        maintenanceMonthlyCents: 0,
+        annualTaxesCents: 0,
+        fuelPricePerLiterCents: 580,
+        kmPerLiter: 10,
+        platformFeeType: PlatformFeeType.percentage,
+        platformFeeValue: 10,
+      );
+
+      controller.elapsedSeconds.value = 31 * 60 - 1;
+      await Future<void>.delayed(Duration.zero);
+
+      var analysis = controller.rideAnalysisData;
+      expect(controller.totalTime.value, '01:30:59');
+      expect(analysis.totalTimeSeconds, 91 * 60 - 1);
+      expect(analysis.grossPerHour, closeTo(39.57, 0.01));
+      expect(analysis.costsPerHour, closeTo(8.55, 0.01));
+      expect(analysis.profitPerHour, closeTo(31.03, 0.01));
+
+      controller.elapsedSeconds.value = 31 * 60;
+      await Future<void>.delayed(Duration.zero);
+
+      analysis = controller.rideAnalysisData;
+      expect(controller.totalTime.value, '01:31:00');
+      expect(analysis.totalTimeSeconds, 91 * 60);
+      expect(analysis.grossPerHour, closeTo(39.56, 0.01));
+      expect(analysis.costsPerHour, closeTo(8.55, 0.01));
+      expect(analysis.profitPerHour, closeTo(31.02, 0.01));
 
       controller.onClose();
       await journeyRepository.dispose();

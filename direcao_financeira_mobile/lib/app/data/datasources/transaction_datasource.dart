@@ -9,6 +9,7 @@ abstract class ITransactionDataSource {
   Future<TransactionModel> getTransaction(int id);
   Future<TransactionModel> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -35,6 +36,7 @@ abstract class ITransactionDataSource {
 
   Future<TransactionModel> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,

@@ -6,13 +6,11 @@ import 'costs_gains_wizard_controller.dart';
 class CostsGainsWizardBinding extends Bindings {
   @override
   void dependencies() {
-    if (!Get.isRegistered<CostsGainsWizardController>()) {
-      Get.lazyPut<CostsGainsWizardController>(
-        () => CostsGainsWizardController(
-          saveCostsGainsSettingsUseCase:
-              Get.find<SaveCostsGainsSettingsUseCase>(),
-        ),
-      );
-    }
+    Get.lazyPut<CostsGainsWizardController>(
+      () => CostsGainsWizardController(
+        saveCostsGainsSettingsUseCase:
+            Get.find<SaveCostsGainsSettingsUseCase>(),
+      ),
+    );
   }
 }

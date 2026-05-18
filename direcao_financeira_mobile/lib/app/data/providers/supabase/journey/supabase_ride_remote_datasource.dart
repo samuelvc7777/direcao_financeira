@@ -97,6 +97,47 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
   }
 
   @override
+  Future<void> updateFinishedRide({
+    required int rideId,
+    required DetectedRideDraftEntity ride,
+  }) async {
+    final userId = await userScope.getCurrentUserId();
+    final createdAt = _formatLocalTimestamp(ride.detectedAt ?? DateTime.now());
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    final payload = {
+      'status': 'FINISHED',
+      'platformName': ride.platformName,
+      'paymentMethod': ride.paymentMethod,
+      'grossValueCents': ride.grossValueCents,
+      'netProfitCents': ride.netProfitCents,
+      'totalKm': ride.totalKm,
+      'totalTime': ride.totalTimeSeconds,
+      'gainPerKmCents': ride.gainPerKmCents,
+      'gainPerHourCents': ride.gainPerHourCents,
+      'passengerName': ride.passengerName,
+      'originAddress': ride.originAddress,
+      'destinationAddress': ride.destinationAddress,
+      'createdAt': createdAt,
+      'updatedAt': now,
+    };
+
+    try {
+      await client
+          .from(SupabaseTableNames.rides)
+          .update(payload)
+          .eq('id', rideId)
+          .eq('userId', userId);
+    } on PostgrestException catch (error) {
+      debugPrint(
+        '[SupabaseRideRemoteDataSource] Erro ao atualizar corrida: '
+        'code=${error.code} message=${error.message} details=${error.details} hint=${error.hint} payload=$payload',
+      );
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> finishRide({
     required int rideId,
     required String paymentMethod,
@@ -130,6 +171,17 @@ class SupabaseRideRemoteDataSource implements IRideDataSource {
           'cancelReason': cancelReason,
           'updatedAt': now,
         })
+        .eq('id', rideId)
+        .eq('userId', userId);
+  }
+
+  @override
+  Future<void> deleteRide({required int rideId}) async {
+    final userId = await userScope.getCurrentUserId();
+
+    await client
+        .from(SupabaseTableNames.rides)
+        .delete()
         .eq('id', rideId)
         .eq('userId', userId);
   }

@@ -284,12 +284,20 @@ class ProviderBinding extends Bindings {
       CreateFinishedRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
+    Get.put<UpdateFinishedRideUseCase>(
+      UpdateFinishedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
     Get.put<FinishRideUseCase>(
       FinishRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
     Get.put<CancelRideUseCase>(
       CancelRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
+    Get.put<DeleteRideUseCase>(
+      DeleteRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
     Get.put<ITrafficLightRepository>(
@@ -464,12 +472,20 @@ class ProviderBinding extends Bindings {
       CreateFinishedRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
+    Get.put<UpdateFinishedRideUseCase>(
+      UpdateFinishedRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
     Get.put<FinishRideUseCase>(
       FinishRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
     Get.put<CancelRideUseCase>(
       CancelRideUseCase(Get.find<IRideRepository>()),
+      permanent: true,
+    );
+    Get.put<DeleteRideUseCase>(
+      DeleteRideUseCase(Get.find<IRideRepository>()),
       permanent: true,
     );
     Get.put<ITrafficLightRepository>(

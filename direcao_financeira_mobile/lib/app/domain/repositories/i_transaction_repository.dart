@@ -10,6 +10,7 @@ abstract class ITransactionRepository {
   Future<Either<Failure, TransactionEntity>> getTransaction(int id);
   Future<Either<Failure, TransactionEntity>> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -36,6 +37,7 @@ abstract class ITransactionRepository {
 
   Future<Either<Failure, TransactionEntity>> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,

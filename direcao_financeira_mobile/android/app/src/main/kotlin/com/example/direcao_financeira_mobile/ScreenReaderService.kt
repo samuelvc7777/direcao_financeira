@@ -30,9 +30,12 @@ class ScreenReaderService : AccessibilityService() {
     private val minimumProcessingIntervalMs = 350L
     private val minimumOcrIntervalMs = 3000L
     private val minimumMoveSjOcrIntervalMs = 1000L
-    private val ninetyNineReadDelayMs = 450L
+    private val ninetyNineReadDelayMs = 300L
     private val moveSjReadDelayMs = 450L
-    private val overlayDisplayDelayMs = 1000L
+    private val moveSjRetryDelayMs = 650L
+    private val maxMoveSjOcrAttempts = 3
+    private val ocrWatchdogTimeoutMs = 8000L
+    private val overlayDisplayDelayMs = 200L
     private val repeatedOfferQuietWindowMs = 2500L
     private val duplicateOfferWindowMs = 20000L
 
@@ -51,6 +54,8 @@ class ScreenReaderService : AccessibilityService() {
     private var lastAcceptedAppKey: String? = null
     private var lastAcceptedScreenFingerprint = ""
     private var ocrInFlight = false
+    private var activeOcrToken = 0
+    private var ocrWatchdogRunnable: Runnable? = null
     private var pendingNinetyNineRunnable: Runnable? = null
     private var pendingMoveSjRunnable: Runnable? = null
     private var pendingOverlayRunnable: Runnable? = null
@@ -76,8 +81,13 @@ class ScreenReaderService : AccessibilityService() {
         if (!SettingsManager.shouldKeepRuntimeActive()) {
             pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
             pendingMoveSjRunnable?.let(mainHandler::removeCallbacks)
+            pendingNinetyNineRunnable?.let(mainHandler::removeCallbacks)
+            ocrWatchdogRunnable?.let(mainHandler::removeCallbacks)
             pendingOverlayRunnable = null
             pendingMoveSjRunnable = null
+            pendingNinetyNineRunnable = null
+            ocrWatchdogRunnable = null
+            ocrInFlight = false
             floatingOverlay?.hide()
             lastOfferData = null
             logLockscreenMessage("runtime_inactive_skip")
@@ -130,18 +140,30 @@ class ScreenReaderService : AccessibilityService() {
         scheduleMoveSjOcrProcessing(event.displayId)
     }
 
-    private fun scheduleMoveSjOcrProcessing(displayId: Int) {
+    private fun scheduleMoveSjOcrProcessing(
+        displayId: Int,
+        attempt: Int = 1,
+    ) {
         pendingMoveSjRunnable?.let(mainHandler::removeCallbacks)
 
+        val safeAttempt = attempt.coerceIn(1, maxMoveSjOcrAttempts)
+        val delayMs = if (safeAttempt == 1) moveSjReadDelayMs else moveSjRetryDelayMs
         val runnable =
             Runnable {
                 pendingMoveSjRunnable = null
-                logLockscreenMessage("movesj_ocr_delayed_processing", extra = mapOf("displayId" to displayId))
-                requestMoveSjOcr(displayId)
+                logLockscreenMessage(
+                    "movesj_ocr_delayed_processing",
+                    extra =
+                        mapOf(
+                            "displayId" to displayId,
+                            "attempt" to safeAttempt,
+                        ),
+                )
+                requestMoveSjOcr(displayId, safeAttempt)
             }
 
         pendingMoveSjRunnable = runnable
-        mainHandler.postDelayed(runnable, moveSjReadDelayMs)
+        mainHandler.postDelayed(runnable, delayMs)
     }
 
     private fun scheduleNinetyNineProcessing(
@@ -208,7 +230,14 @@ class ScreenReaderService : AccessibilityService() {
         pendingOverlayRunnable =
             Runnable {
                 logLockscreenMessage("overlay_show_attempt", extra = offerData)
-                floatingOverlay?.show(offerData)
+                runCatching {
+                    floatingOverlay?.show(offerData)
+                }.onFailure { error ->
+                    logLockscreenMessage(
+                        "overlay_show_failure",
+                        extra = mapOf("message" to (error.message ?: error::class.java.simpleName)),
+                    )
+                }
                 pendingOverlayRunnable = null
             }.also { runnable ->
                 mainHandler.postDelayed(runnable, overlayDisplayDelayMs)
@@ -399,14 +428,23 @@ class ScreenReaderService : AccessibilityService() {
         return normalized.lowercase().replace(" ", "")
     }
 
-    private fun requestMoveSjOcr(displayId: Int) {
+    private fun requestMoveSjOcr(
+        displayId: Int,
+        attempt: Int = 1,
+    ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             logLockscreenMessage("ocr_skip_sdk_too_old")
             return
         }
 
         if (ocrInFlight) {
-            logLockscreenMessage("ocr_skip_in_flight")
+            logLockscreenMessage(
+                "ocr_skip_in_flight",
+                extra = mapOf("attempt" to attempt),
+            )
+            if (attempt < maxMoveSjOcrAttempts) {
+                scheduleMoveSjOcrProcessing(displayId, attempt)
+            }
             return
         }
 
@@ -420,33 +458,90 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         lastOcrAtElapsed = now
-        ocrInFlight = true
-        logLockscreenMessage("ocr_request_start", extra = mapOf("displayId" to displayId))
+        val ocrToken =
+            beginOcrRequest(
+                extra =
+                    mapOf(
+                        "source" to "MoveSj",
+                        "displayId" to displayId,
+                        "attempt" to attempt,
+                    ),
+            )
 
         val screenshotDisplayId = if (displayId >= 0) displayId else Display.DEFAULT_DISPLAY
 
-        takeScreenshot(
-            screenshotDisplayId,
-            mainExecutor,
-            object : TakeScreenshotCallback {
-                override fun onSuccess(screenshot: ScreenshotResult) {
-                    logLockscreenMessage("ocr_screenshot_success")
-                    val bitmap = screenshotToBitmap(screenshot)
-                    if (bitmap == null) {
-                        logLockscreenMessage("ocr_bitmap_null")
-                        ocrInFlight = false
-                        return
+        try {
+            takeScreenshot(
+                screenshotDisplayId,
+                mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: ScreenshotResult) {
+                        logLockscreenMessage(
+                            "ocr_screenshot_success",
+                            extra = mapOf("ocrToken" to ocrToken, "source" to "MoveSj"),
+                        )
+                        val bitmap = screenshotToBitmap(screenshot)
+                        if (bitmap == null) {
+                            logLockscreenMessage(
+                                "ocr_bitmap_null",
+                                extra = mapOf("ocrToken" to ocrToken, "source" to "MoveSj"),
+                            )
+                            finishOcrRequest(ocrToken, "ocr_request_finished_bitmap_null")
+                            scheduleMoveSjRetry(displayId, attempt, "bitmap_null")
+                            return
+                        }
+
+                        runCatching {
+                            runMoveSjOcr(
+                                bitmap = bitmap,
+                                displayId = displayId,
+                                attempt = attempt,
+                                ocrToken = ocrToken,
+                            )
+                        }.onFailure { error ->
+                            runCatching { bitmap.recycle() }
+                            logLockscreenMessage(
+                                "ocr_start_failure",
+                                extra =
+                                    mapOf(
+                                        "ocrToken" to ocrToken,
+                                        "source" to "MoveSj",
+                                        "message" to (error.message ?: error::class.java.simpleName),
+                                    ),
+                            )
+                            finishOcrRequest(ocrToken, "ocr_request_finished_start_failure")
+                            scheduleMoveSjRetry(displayId, attempt, "start_failure")
+                        }
                     }
 
-                    runMoveSjOcr(bitmap)
-                }
-
-                override fun onFailure(errorCode: Int) {
-                    logLockscreenMessage("ocr_screenshot_failure", extra = mapOf("errorCode" to errorCode))
-                    ocrInFlight = false
-                }
-            },
-        )
+                    override fun onFailure(errorCode: Int) {
+                        logLockscreenMessage(
+                            "ocr_screenshot_failure",
+                            extra =
+                                mapOf(
+                                    "ocrToken" to ocrToken,
+                                    "source" to "MoveSj",
+                                    "errorCode" to errorCode,
+                                ),
+                        )
+                        finishOcrRequest(ocrToken, "ocr_request_finished_screenshot_failure")
+                        scheduleMoveSjRetry(displayId, attempt, "screenshot_failure")
+                    }
+                },
+            )
+        } catch (error: Throwable) {
+            logLockscreenMessage(
+                "ocr_screenshot_request_throw",
+                extra =
+                    mapOf(
+                        "ocrToken" to ocrToken,
+                        "source" to "MoveSj",
+                        "message" to (error.message ?: error::class.java.simpleName),
+                    ),
+            )
+            finishOcrRequest(ocrToken, "ocr_request_finished_request_throw")
+            scheduleMoveSjRetry(displayId, attempt, "request_throw")
+        }
     }
 
     private fun requestNinetyNineOcr(displayId: Int) {
@@ -456,7 +551,7 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         if (ocrInFlight) {
-            logLockscreenMessage("ocr_skip_in_flight")
+            logLockscreenMessage("ocr_skip_in_flight", extra = mapOf("source" to "99"))
             return
         }
 
@@ -470,94 +565,283 @@ class ScreenReaderService : AccessibilityService() {
         }
 
         lastOcrAtElapsed = now
-        ocrInFlight = true
-        logLockscreenMessage("ocr_request_start", extra = mapOf("displayId" to displayId))
+        val ocrToken =
+            beginOcrRequest(
+                extra =
+                    mapOf(
+                        "source" to "99",
+                        "displayId" to displayId,
+                    ),
+            )
 
         val screenshotDisplayId = if (displayId >= 0) displayId else Display.DEFAULT_DISPLAY
 
-        takeScreenshot(
-            screenshotDisplayId,
-            mainExecutor,
-            object : TakeScreenshotCallback {
-                override fun onSuccess(screenshot: ScreenshotResult) {
-                    logLockscreenMessage("ocr_screenshot_success")
-                    val bitmap = screenshotToBitmap(screenshot)
-                    if (bitmap == null) {
-                        logLockscreenMessage("ocr_bitmap_null")
-                        ocrInFlight = false
-                        return
+        try {
+            takeScreenshot(
+                screenshotDisplayId,
+                mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: ScreenshotResult) {
+                        logLockscreenMessage(
+                            "ocr_screenshot_success",
+                            extra = mapOf("ocrToken" to ocrToken, "source" to "99"),
+                        )
+                        val bitmap = screenshotToBitmap(screenshot)
+                        if (bitmap == null) {
+                            logLockscreenMessage(
+                                "ocr_bitmap_null",
+                                extra = mapOf("ocrToken" to ocrToken, "source" to "99"),
+                            )
+                            finishOcrRequest(ocrToken, "ocr_request_finished_bitmap_null")
+                            return
+                        }
+
+                        runCatching {
+                            runNinetyNineOcr(bitmap, ocrToken)
+                        }.onFailure { error ->
+                            runCatching { bitmap.recycle() }
+                            logLockscreenMessage(
+                                "ocr_start_failure",
+                                extra =
+                                    mapOf(
+                                        "ocrToken" to ocrToken,
+                                        "source" to "99",
+                                        "message" to (error.message ?: error::class.java.simpleName),
+                                    ),
+                            )
+                            finishOcrRequest(ocrToken, "ocr_request_finished_start_failure")
+                        }
                     }
 
-                    runNinetyNineOcr(bitmap)
-                }
-
-                override fun onFailure(errorCode: Int) {
-                    logLockscreenMessage("ocr_screenshot_failure", extra = mapOf("errorCode" to errorCode))
-                    ocrInFlight = false
-                }
-            },
-        )
+                    override fun onFailure(errorCode: Int) {
+                        logLockscreenMessage(
+                            "ocr_screenshot_failure",
+                            extra =
+                                mapOf(
+                                    "ocrToken" to ocrToken,
+                                    "source" to "99",
+                                    "errorCode" to errorCode,
+                                ),
+                        )
+                        finishOcrRequest(ocrToken, "ocr_request_finished_screenshot_failure")
+                    }
+                },
+            )
+        } catch (error: Throwable) {
+            logLockscreenMessage(
+                "ocr_screenshot_request_throw",
+                extra =
+                    mapOf(
+                        "ocrToken" to ocrToken,
+                        "source" to "99",
+                        "message" to (error.message ?: error::class.java.simpleName),
+                    ),
+            )
+            finishOcrRequest(ocrToken, "ocr_request_finished_request_throw")
+        }
     }
 
-    private fun runMoveSjOcr(bitmap: Bitmap) {
+    private fun beginOcrRequest(extra: Map<String, Any?>): Int {
+        activeOcrToken += 1
+        val ocrToken = activeOcrToken
+        ocrInFlight = true
+
+        ocrWatchdogRunnable?.let(mainHandler::removeCallbacks)
+        ocrWatchdogRunnable =
+            Runnable {
+                if (ocrInFlight && activeOcrToken == ocrToken) {
+                    logLockscreenMessage(
+                        "ocr_watchdog_timeout",
+                        extra = extra + mapOf("ocrToken" to ocrToken),
+                    )
+                    ocrInFlight = false
+                    ocrWatchdogRunnable = null
+                }
+            }.also { runnable ->
+                mainHandler.postDelayed(runnable, ocrWatchdogTimeoutMs)
+            }
+
+        logLockscreenMessage(
+            "ocr_request_start",
+            extra = extra + mapOf("ocrToken" to ocrToken),
+        )
+        return ocrToken
+    }
+
+    private fun finishOcrRequest(
+        ocrToken: Int,
+        stage: String,
+        extra: Map<String, Any?> = emptyMap(),
+    ) {
+        if (ocrToken != activeOcrToken) {
+            logLockscreenMessage(
+                "ocr_request_stale_finish",
+                extra = extra + mapOf("ocrToken" to ocrToken, "activeOcrToken" to activeOcrToken),
+            )
+            return
+        }
+
+        ocrWatchdogRunnable?.let(mainHandler::removeCallbacks)
+        ocrWatchdogRunnable = null
+        ocrInFlight = false
+        logLockscreenMessage(stage, extra = extra + mapOf("ocrToken" to ocrToken))
+    }
+
+    private fun scheduleMoveSjRetry(
+        displayId: Int,
+        attempt: Int,
+        reason: String,
+        extra: Map<String, Any?> = emptyMap(),
+    ) {
+        if (attempt >= maxMoveSjOcrAttempts) {
+            logLockscreenMessage(
+                "movesj_ocr_retry_exhausted",
+                extra = extra + mapOf("attempt" to attempt, "reason" to reason),
+            )
+            return
+        }
+        if (!SettingsManager.shouldKeepRuntimeActive() || !SettingsManager.shouldShowTrafficLight()) {
+            logLockscreenMessage(
+                "movesj_ocr_retry_runtime_inactive",
+                extra = extra + mapOf("attempt" to attempt, "reason" to reason),
+            )
+            return
+        }
+
+        logLockscreenMessage(
+            "movesj_ocr_retry_scheduled",
+            extra =
+                extra +
+                    mapOf(
+                        "attempt" to attempt,
+                        "nextAttempt" to (attempt + 1),
+                        "reason" to reason,
+                    ),
+        )
+        scheduleMoveSjOcrProcessing(displayId, attempt + 1)
+    }
+
+    private fun shouldRetryMoveSjParse(
+        lines: List<String>,
+        attempt: Int,
+    ): Boolean {
+        if (attempt >= maxMoveSjOcrAttempts) {
+            return false
+        }
+
+        val normalized = lines.joinToString(" ").lowercase()
+        return normalized.contains("r$") ||
+            normalized.contains("aceitar") ||
+            normalized.contains("recusar") ||
+            normalized.contains("km") ||
+            normalized.contains("min")
+    }
+
+    private fun runMoveSjOcr(
+        bitmap: Bitmap,
+        displayId: Int,
+        attempt: Int,
+        ocrToken: Int,
+    ) {
         val image = InputImage.fromBitmap(bitmap, 0)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
         recognizer
             .process(image)
             .addOnSuccessListener { visionText ->
-                val ocrLines =
-                    visionText.textBlocks
-                        .flatMap { block -> block.lines }
-                        .sortedWith(
-                            compareBy(
-                                { line -> line.boundingBox?.top ?: Int.MAX_VALUE },
-                                { line -> line.boundingBox?.left ?: Int.MAX_VALUE },
-                            ),
-                        )
-                        .mapNotNull { line ->
-                            val text = line.text.trim()
-                            val box = line.boundingBox
-                            if (text.isEmpty() || box == null) {
-                                null
-                            } else {
-                                MoveSjParser.OcrLine(
-                                    text = text,
-                                    left = box.left,
-                                    top = box.top,
-                                    right = box.right,
-                                    bottom = box.bottom,
-                                )
+                runCatching {
+                    val ocrLines =
+                        visionText.textBlocks
+                            .flatMap { block -> block.lines }
+                            .sortedWith(
+                                compareBy(
+                                    { line -> line.boundingBox?.top ?: Int.MAX_VALUE },
+                                    { line -> line.boundingBox?.left ?: Int.MAX_VALUE },
+                                ),
+                            )
+                            .mapNotNull { line ->
+                                val text = line.text.trim()
+                                val box = line.boundingBox
+                                if (text.isEmpty() || box == null) {
+                                    null
+                                } else {
+                                    MoveSjParser.OcrLine(
+                                        text = text,
+                                        left = box.left,
+                                        top = box.top,
+                                        right = box.right,
+                                        bottom = box.bottom,
+                                    )
+                                }
                             }
-                        }
-                val lines = ocrLines.map { it.text }
+                    val lines = ocrLines.map { it.text }
 
-                val offerData = moveSjParser.parsePositionedOcrOffer(visionText.text, ocrLines)
-                logLockscreenMessage(
-                    "ocr_result",
-                    extra =
-                        mapOf(
-                            "lineCount" to lines.size,
-                            "parsedOffer" to (offerData != null),
-                            "sampleLines" to lines.take(8).joinToString(" | "),
-                        ),
-                )
-                if (offerData != null) {
-                    logLockscreenMessage("ocr_offer_parsed", extra = offerData)
-                    processOffer(offerData)
+                    val offerData = moveSjParser.parsePositionedOcrOffer(visionText.text, ocrLines)
+                    logLockscreenMessage(
+                        "ocr_result",
+                        extra =
+                            mapOf(
+                                "ocrToken" to ocrToken,
+                                "source" to "MoveSj",
+                                "attempt" to attempt,
+                                "lineCount" to lines.size,
+                                "parsedOffer" to (offerData != null),
+                                "sampleLines" to lines.take(8).joinToString(" | "),
+                            ),
+                    )
+                    if (offerData != null) {
+                        logLockscreenMessage("ocr_offer_parsed", extra = offerData)
+                        processOffer(offerData)
+                    } else if (shouldRetryMoveSjParse(lines, attempt)) {
+                        scheduleMoveSjRetry(
+                            displayId = displayId,
+                            attempt = attempt,
+                            reason = "parse_incomplete",
+                            extra = mapOf("lineCount" to lines.size),
+                        )
+                    }
+                }.onFailure { error ->
+                    logLockscreenMessage(
+                        "ocr_parse_failure",
+                        extra =
+                            mapOf(
+                                "ocrToken" to ocrToken,
+                                "source" to "MoveSj",
+                                "attempt" to attempt,
+                                "message" to (error.message ?: error::class.java.simpleName),
+                            ),
+                    )
+                    scheduleMoveSjRetry(displayId, attempt, "parse_failure")
                 }
             }
             .addOnFailureListener { error ->
-                logLockscreenMessage("ocr_failure", extra = mapOf("message" to (error.message ?: "")))
+                logLockscreenMessage(
+                    "ocr_failure",
+                    extra =
+                        mapOf(
+                            "ocrToken" to ocrToken,
+                            "source" to "MoveSj",
+                            "attempt" to attempt,
+                            "message" to (error.message ?: ""),
+                        ),
+                )
+                scheduleMoveSjRetry(displayId, attempt, "ocr_failure")
             }
             .addOnCompleteListener {
-                bitmap.recycle()
-                ocrInFlight = false
-                recognizer.close()
+                runCatching { bitmap.recycle() }
+                runCatching { recognizer.close() }
+                finishOcrRequest(
+                    ocrToken,
+                    "ocr_request_complete",
+                    mapOf("source" to "MoveSj", "attempt" to attempt),
+                )
             }
     }
 
-    private fun runNinetyNineOcr(bitmap: Bitmap) {
+    private fun runNinetyNineOcr(
+        bitmap: Bitmap,
+        ocrToken: Int,
+    ) {
         val croppedBitmap = cropOfferRegion(bitmap)
         bitmap.recycle()
 
@@ -567,34 +851,60 @@ class ScreenReaderService : AccessibilityService() {
         recognizer
             .process(image)
             .addOnSuccessListener { visionText ->
-                val lines =
-                    visionText.textBlocks
-                        .flatMap { block -> block.lines }
-                        .map { line -> line.text.trim() }
-                        .filter { it.isNotEmpty() }
+                runCatching {
+                    val lines =
+                        visionText.textBlocks
+                            .flatMap { block -> block.lines }
+                            .map { line -> line.text.trim() }
+                            .filter { it.isNotEmpty() }
 
-                val offerData = ninetyNineOcrParser.parseOffer(visionText.text, lines)
-                logLockscreenMessage(
-                    "ocr_result",
-                    extra =
-                        mapOf(
-                            "lineCount" to lines.size,
-                            "parsedOffer" to (offerData != null),
-                            "sampleLines" to lines.take(8).joinToString(" | "),
-                        ),
-                )
-                if (offerData != null) {
-                    logLockscreenMessage("ocr_offer_parsed", extra = offerData)
-                    processOffer(offerData)
+                    val offerData = ninetyNineOcrParser.parseOffer(visionText.text, lines)
+                    logLockscreenMessage(
+                        "ocr_result",
+                        extra =
+                            mapOf(
+                                "ocrToken" to ocrToken,
+                                "source" to "99",
+                                "lineCount" to lines.size,
+                                "parsedOffer" to (offerData != null),
+                                "sampleLines" to lines.take(8).joinToString(" | "),
+                            ),
+                    )
+                    if (offerData != null) {
+                        logLockscreenMessage("ocr_offer_parsed", extra = offerData)
+                        processOffer(offerData)
+                    }
+                }.onFailure { error ->
+                    logLockscreenMessage(
+                        "ocr_parse_failure",
+                        extra =
+                            mapOf(
+                                "ocrToken" to ocrToken,
+                                "source" to "99",
+                                "message" to (error.message ?: error::class.java.simpleName),
+                            ),
+                    )
                 }
             }
             .addOnFailureListener { error ->
-                logLockscreenMessage("ocr_failure", extra = mapOf("message" to (error.message ?: "")))
+                logLockscreenMessage(
+                    "ocr_failure",
+                    extra =
+                        mapOf(
+                            "ocrToken" to ocrToken,
+                            "source" to "99",
+                            "message" to (error.message ?: ""),
+                        ),
+                )
             }
             .addOnCompleteListener {
-                croppedBitmap.recycle()
-                ocrInFlight = false
-                recognizer.close()
+                runCatching { croppedBitmap.recycle() }
+                runCatching { recognizer.close() }
+                finishOcrRequest(
+                    ocrToken,
+                    "ocr_request_complete",
+                    mapOf("source" to "99"),
+                )
             }
     }
 
@@ -619,17 +929,35 @@ class ScreenReaderService : AccessibilityService() {
     }
 
     private fun notifyFlutter(data: Map<String, Any>) {
-        Handler(Looper.getMainLooper()).post {
-        channel?.invokeMethod("onRaceDetected", data)
-        Log.d(logTag, "MoveSj invokeMethod onRaceDetected payload=$data")
-    }
+        mainHandler.post {
+            runCatching {
+                val currentChannel = channel
+                if (currentChannel == null) {
+                    logLockscreenMessage("flutter_notify_channel_null", extra = data)
+                    return@runCatching
+                }
+
+                currentChannel.invokeMethod("onRaceDetected", data)
+                Log.d(logTag, "MoveSj invokeMethod onRaceDetected payload=$data")
+            }.onFailure { error ->
+                logLockscreenMessage(
+                    "flutter_notify_failure",
+                    extra = mapOf("message" to (error.message ?: error::class.java.simpleName)),
+                )
+            }
+        }
     }
 
     override fun onInterrupt() {
         pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
         pendingMoveSjRunnable?.let(mainHandler::removeCallbacks)
+        pendingNinetyNineRunnable?.let(mainHandler::removeCallbacks)
+        ocrWatchdogRunnable?.let(mainHandler::removeCallbacks)
         pendingOverlayRunnable = null
         pendingMoveSjRunnable = null
+        pendingNinetyNineRunnable = null
+        ocrWatchdogRunnable = null
+        ocrInFlight = false
         floatingOverlay?.hide()
         logLockscreenMessage("service_interrupt")
     }

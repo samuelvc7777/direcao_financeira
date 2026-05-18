@@ -1,9 +1,15 @@
 package com.example.direcao_financeira_mobile
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.text.TextUtils
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -12,6 +18,8 @@ class MainActivity : FlutterActivity() {
     private val accessibilityChannelName = "com.direcao_financeira/accessibility"
     private val appBubbleChannelName = "com.direcao_financeira/app_bubble"
     private val appBubbleActionsChannelName = "com.direcao_financeira/app_bubble_actions"
+    private val locationPermissionsChannelName = "com.direcao_financeira/location_permissions"
+    private var backgroundLocationPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -92,13 +100,36 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, locationPermissionsChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "openBackgroundLocationPermissionSettings" -> {
+                        openBackgroundLocationPermissionSettings(result)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         AppBubbleActionBridge.attach(
             MethodChannel(
                 flutterEngine.dartExecutor.binaryMessenger,
                 appBubbleActionsChannelName,
             ),
         )
+        AppBubbleService.startIfEnabled(this)
         handleAppBubbleIntent(intent, deliverImmediately = false)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_BACKGROUND_LOCATION_PERMISSION) {
+            backgroundLocationPermissionResult?.success(true)
+            backgroundLocationPermissionResult = null
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -149,6 +180,67 @@ class MainActivity : FlutterActivity() {
             }
         }
         return false
+    }
+
+    private fun openBackgroundLocationPermissionSettings(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            result.success(openAppDetailsSettings())
+            return
+        }
+
+        if (!hasForegroundLocationPermission()) {
+            result.success(openAppDetailsSettings())
+            return
+        }
+
+        if (backgroundLocationPermissionResult != null) {
+            result.error(
+                "REQUEST_IN_PROGRESS",
+                "Ja existe uma solicitacao de localizacao em andamento.",
+                null,
+            )
+            return
+        }
+
+        backgroundLocationPermissionResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+            REQUEST_BACKGROUND_LOCATION_PERMISSION,
+        )
+    }
+
+    private fun hasForegroundLocationPermission(): Boolean {
+        val fineGranted =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
+        return fineGranted || coarseGranted
+    }
+
+    private fun openAppDetailsSettings(): Boolean {
+        val intent =
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$packageName"),
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+        return runCatching {
+            startActivity(intent)
+            true
+        }.getOrDefault(false)
+    }
+
+    companion object {
+        private const val REQUEST_BACKGROUND_LOCATION_PERMISSION = 7301
     }
 }
 

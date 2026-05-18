@@ -1,4 +1,5 @@
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/active_shift_model.dart';
 import '../models/pending_finished_shift_model.dart';
@@ -170,7 +171,12 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
     required DateTime startTime,
     required DateTime endTime,
   }) async {
+    debugPrint(
+      '[JourneyLocalDataSource] addManualFinishedShift inicio: '
+      'km=$totalDrivenKm start=$startTime end=$endTime.',
+    );
     if (totalDrivenKm <= 0) {
+      debugPrint('[JourneyLocalDataSource] Falha: totalDrivenKm <= 0.');
       throw ArgumentError.value(
         totalDrivenKm,
         'totalDrivenKm',
@@ -178,6 +184,7 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       );
     }
     if (!endTime.isAfter(startTime)) {
+      debugPrint('[JourneyLocalDataSource] Falha: endTime <= startTime.');
       throw ArgumentError.value(
         endTime,
         'endTime',
@@ -196,10 +203,18 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
     );
 
     final pendingShifts = await getPendingFinishedShifts();
+    debugPrint(
+      '[JourneyLocalDataSource] Pendencias antes de salvar: ${pendingShifts.length}.',
+    );
     pendingShifts.add(pendingShift);
     await storage.write(
       _pendingShiftsKey,
       pendingShifts.map((item) => item.toJson()).toList(),
+    );
+    final savedCount = (storage.read(_pendingShiftsKey) as List?)?.length ?? 0;
+    debugPrint(
+      '[JourneyLocalDataSource] Turno manual salvo: '
+      'localId=${pendingShift.localId} pendenciasDepois=$savedCount.',
     );
     return pendingShift;
   }

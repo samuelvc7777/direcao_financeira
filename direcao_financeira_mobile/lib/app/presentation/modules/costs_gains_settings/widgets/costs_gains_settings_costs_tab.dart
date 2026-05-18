@@ -633,7 +633,7 @@ class _SecondaryAction extends StatelessWidget {
     final colorScheme = context.theme.colorScheme;
 
     return OutlinedButton.icon(
-      onPressed: controller.openAdjustCosts,
+      onPressed: () => controller.openAdjustCosts(),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 42),
         side: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.1)),

@@ -189,6 +189,28 @@ class RideRepositoryImpl implements IRideRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> updateFinishedRide({
+    required int rideId,
+    required DetectedRideDraftEntity ride,
+  }) async {
+    try {
+      await remoteDataSource.updateFinishedRide(rideId: rideId, ride: ride);
+      return const Right(unit);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'RideRepositoryImpl.updateFinishedRide',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao atualizar corrida finalizada.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> finishRide({
     required int rideId,
     required String paymentMethod,
@@ -258,6 +280,26 @@ class RideRepositoryImpl implements IRideRepository {
       );
       return Left(
         apiErrorMapper.mapToFailure(e, fallback: 'Erro ao cancelar corrida.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> deleteRide({required int rideId}) async {
+    try {
+      if (_isLocalRideId(rideId)) {
+        await localDataSource.removePendingRide(rideId);
+      } else {
+        await remoteDataSource.deleteRide(rideId: rideId);
+      }
+      return const Right(unit);
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'RideRepositoryImpl.deleteRide',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(e, fallback: 'Erro ao excluir corrida.'),
       );
     }
   }

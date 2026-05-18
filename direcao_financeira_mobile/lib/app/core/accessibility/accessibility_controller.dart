@@ -287,6 +287,7 @@ class AccessibilityController extends GetxController
       passengerName: _resolvePassengerName(data, platformName: platformName),
       originAddress: _resolveTextField(data['origin_address']),
       destinationAddress: _resolveTextField(data['destination_address']),
+      rideType: _resolveTextField(data['tipo_corrida']),
     );
   }
 

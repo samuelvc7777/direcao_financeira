@@ -320,6 +320,7 @@ class TransactionsController extends GetxController {
 
   Future<bool> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -333,6 +334,7 @@ class TransactionsController extends GetxController {
 
     final result = await createTransactionUseCase(
       type: type,
+      status: status,
       assetType: assetType,
       amountCents: amountCents,
       categoryId: categoryId,
@@ -394,6 +396,7 @@ class TransactionsController extends GetxController {
 
   Future<void> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,
@@ -404,6 +407,7 @@ class TransactionsController extends GetxController {
 
     final result = await updateTransactionUseCase(
       id,
+      status: status,
       categoryId: categoryId,
       description: description,
       amountCents: amountCents,

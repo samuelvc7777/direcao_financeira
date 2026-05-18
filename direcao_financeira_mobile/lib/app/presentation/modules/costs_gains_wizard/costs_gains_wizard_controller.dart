@@ -17,6 +17,7 @@ class CostsGainsWizardController extends GetxController {
   final currentStep = 0.obs;
   final selectedPlatformFeeType = PlatformFeeType.fixed.obs;
   final isSubmitting = false.obs;
+  var _returnResultOnSave = false;
 
   late final TextEditingController desiredProfitController;
   late final TextEditingController workDaysController;
@@ -57,9 +58,14 @@ class CostsGainsWizardController extends GetxController {
     ];
     currencyFormatters = [currencyFormatter];
 
-    final draft = Get.arguments is CostsGainsDraft
-        ? Get.arguments as CostsGainsDraft
+    final argument = Get.arguments;
+    final draft = argument is CostsGainsWizardArguments
+        ? argument.draft ?? CostsGainsDraft.empty()
+        : argument is CostsGainsDraft
+        ? argument
         : CostsGainsDraft.empty();
+    _returnResultOnSave =
+        argument is CostsGainsWizardArguments && argument.returnResult;
 
     desiredProfitController = TextEditingController(
       text: _formatCurrencyFromCents(draft.desiredNetProfitCents),
@@ -157,9 +163,15 @@ class CostsGainsWizardController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         margin: const EdgeInsets.all(16),
       ),
-      (entity) => CostsGainsFlowCoordinator.openResult(
-        CostsGainsDraft.fromEntity(entity),
-      ),
+      (entity) {
+        final savedDraft = CostsGainsDraft.fromEntity(entity);
+        if (_returnResultOnSave) {
+          Get.back(result: savedDraft);
+          return;
+        }
+
+        CostsGainsFlowCoordinator.openResult(savedDraft);
+      },
     );
   }
 
@@ -238,21 +250,7 @@ class CostsGainsWizardController extends GetxController {
           ),
         ]);
       case CostsGainsWizardStep.platform:
-        if (selectedPlatformFeeType.value == PlatformFeeType.fixed) {
-          return _validateRules([
-            _ValidationRule(
-              _parseCurrencyToCents(platformFeeController.text) > 0,
-              'Informe o valor fixo da plataforma.',
-            ),
-          ]);
-        }
-
-        return _validateRules([
-          _ValidationRule(
-            _parseDouble(platformFeeController.text) > 0,
-            'Informe a taxa percentual da plataforma.',
-          ),
-        ]);
+        return true;
     }
   }
 

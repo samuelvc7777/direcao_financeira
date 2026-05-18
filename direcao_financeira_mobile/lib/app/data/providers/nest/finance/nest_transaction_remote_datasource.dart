@@ -60,6 +60,7 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
   @override
   Future<TransactionModel> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -71,6 +72,7 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
   }) async {
     final payload = <String, dynamic>{
       'type': TransactionTypeCodec.encode(type),
+      'status': TransactionStatusCodec.encode(status),
       'assetType': AssetTypeCodec.encode(assetType),
       'amountCents': amountCents,
       'categoryId': categoryId,
@@ -101,6 +103,7 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
       created.add(
         await createTransaction(
           type: draft.type,
+          status: TransactionStatus.cleared,
           assetType: draft.assetType,
           amountCents: draft.amountCents,
           categoryId: draft.categoryId,
@@ -148,6 +151,7 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
   @override
   Future<TransactionModel> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,
@@ -157,6 +161,9 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
     final payload = <String, dynamic>{};
     if (categoryId != null) {
       payload['categoryId'] = categoryId;
+    }
+    if (status != null) {
+      payload['status'] = TransactionStatusCodec.encode(status);
     }
     if (description != null) {
       payload['description'] = description;

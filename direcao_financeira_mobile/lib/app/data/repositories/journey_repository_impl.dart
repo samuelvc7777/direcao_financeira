@@ -117,9 +117,19 @@ class JourneyRepositoryImpl implements IJourneyRepository {
     int limit = 20,
   }) async {
     try {
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.getShiftHistory',
+        message:
+            'inicio filter=$filter date=$date endDate=$endDate offset=$offset limit=$limit',
+      );
       await syncService.syncPendingShiftsIfOnline();
       final pendingShifts = await syncService.getPendingShiftHistoryEntities();
       final pendingCount = pendingShifts.length;
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.getShiftHistory',
+        message:
+            'pendencias apos sync=$pendingCount ids=${pendingShifts.map((shift) => shift.localId).toList()}',
+      );
 
       final pendingStart = offset.clamp(0, pendingCount);
       final pendingEnd = (offset + limit).clamp(0, pendingCount);
@@ -136,6 +146,11 @@ class JourneyRepositoryImpl implements IJourneyRepository {
         endDate: endDate,
         offset: remoteOffset,
         limit: remainingLimit <= 0 ? 0 : remainingLimit,
+      );
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.getShiftHistory',
+        message:
+            'remoto items=${remotePage.items.length} total=${remotePage.totalCount} ids=${remotePage.items.map((shift) => shift.remoteShiftId).toList()}',
       );
 
       final mergedItems = <ShiftEntity>[...pendingSlice, ...remotePage.items]
@@ -169,6 +184,10 @@ class JourneyRepositoryImpl implements IJourneyRepository {
         ),
       );
     } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'JourneyRepositoryImpl.getShiftHistory',
+        error: e,
+      );
       final pendingShifts = await localDataSource.getPendingFinishedShifts();
       if (pendingShifts.isNotEmpty) {
         final pendingEntities = await syncService
@@ -301,12 +320,25 @@ class JourneyRepositoryImpl implements IJourneyRepository {
   Future<Either<Failure, FinishShiftResultEntity>> addManualShift(
     ManualShiftDraftEntity shift,
   ) async {
+    apiRequestLogger.logInfo(
+      source: 'JourneyRepositoryImpl.addManualShift',
+      message:
+          'inicio km=${shift.totalDrivenKm} start=${shift.startTime} end=${shift.endTime}',
+    );
     if (shift.totalDrivenKm <= 0) {
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.addManualShift',
+        message: 'validacao falhou: km <= 0',
+      );
       return Left(
         ValidationFailure('Informe uma quilometragem maior que zero.'),
       );
     }
     if (!shift.endTime.isAfter(shift.startTime)) {
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.addManualShift',
+        message: 'validacao falhou: endTime nao e depois de startTime',
+      );
       return Left(
         ValidationFailure('O horario final precisa ser depois do inicial.'),
       );
@@ -315,6 +347,10 @@ class JourneyRepositoryImpl implements IJourneyRepository {
     try {
       final activeShift = await localDataSource.getActiveShift();
       if (activeShift != null) {
+        apiRequestLogger.logInfo(
+          source: 'JourneyRepositoryImpl.addManualShift',
+          message: 'bloqueado: existe turno ativo localId=${activeShift.id}',
+        );
         return Left(
           ValidationFailure(
             'Finalize o turno em andamento antes de adicionar um turno manual.',
@@ -327,12 +363,42 @@ class JourneyRepositoryImpl implements IJourneyRepository {
         startTime: shift.startTime,
         endTime: shift.endTime,
       );
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.addManualShift',
+        message: 'turno salvo localmente',
+      );
 
-      final syncedCount = realtimeClient.isOnline.value
-          ? await syncService.syncPendingShifts()
-          : 0;
+      var syncedCount = 0;
+      if (realtimeClient.isOnline.value) {
+        apiRequestLogger.logInfo(
+          source: 'JourneyRepositoryImpl.addManualShift',
+          message: 'online=true, tentando sincronizar pendencias',
+        );
+        try {
+          syncedCount = await syncService.syncPendingShifts();
+          apiRequestLogger.logInfo(
+            source: 'JourneyRepositoryImpl.addManualShift',
+            message: 'sincronizacao concluida syncedCount=$syncedCount',
+          );
+        } catch (e) {
+          apiRequestLogger.logRepositoryFailure(
+            source: 'JourneyRepositoryImpl.addManualShift.syncPendingShifts',
+            error: e,
+          );
+        }
+      } else {
+        apiRequestLogger.logInfo(
+          source: 'JourneyRepositoryImpl.addManualShift',
+          message: 'online=false, mantendo pendente local',
+        );
+      }
       final pendingCount =
           (await localDataSource.getPendingFinishedShifts()).length;
+      apiRequestLogger.logInfo(
+        source: 'JourneyRepositoryImpl.addManualShift',
+        message:
+            'resultado syncedCount=$syncedCount pendingCount=$pendingCount',
+      );
 
       return Right(
         FinishShiftResultEntity(

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
+import '../../../core/subscription/play_store_subscription_contract.dart';
 import '../../datasources/subscription_store_datasource.dart';
 import '../../../domain/entities/store_product_entity.dart';
 import '../../../domain/entities/store_purchase_event_entity.dart';
@@ -74,7 +75,9 @@ class PlayStoreSubscriptionStoreDataSource
     final product = _productsById[productId];
     if (product == null) {
       throw StateError(
-        'Produto $productId nao encontrado na Play Store. Verifique se o plan.code bate com o productId do console.',
+        'Produto $productId nao encontrado na Play Store. '
+        'No Android, o plano mensal precisa usar o ID '
+        '$playStoreMonthlySubscriptionProductId e bater exatamente com o plan.code.',
       );
     }
 

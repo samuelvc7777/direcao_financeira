@@ -84,6 +84,7 @@ class TransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, TransactionEntity>> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -96,6 +97,7 @@ class TransactionRepository implements ITransactionRepository {
     try {
       final transaction = await dataSource.createTransaction(
         type: type,
+        status: status,
         assetType: assetType,
         amountCents: amountCents,
         categoryId: categoryId,
@@ -213,6 +215,7 @@ class TransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, TransactionEntity>> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,
@@ -222,6 +225,7 @@ class TransactionRepository implements ITransactionRepository {
     try {
       final transaction = await dataSource.updateTransaction(
         id,
+        status: status,
         categoryId: categoryId,
         description: description,
         amountCents: amountCents,

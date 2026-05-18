@@ -8,11 +8,15 @@ class ShiftHistoryHeader extends StatelessWidget {
   const ShiftHistoryHeader({
     super.key,
     required this.onOpenMetrics,
-    required this.onPickRange,
+    required this.onOpenFilter,
+    required this.filterLabel,
+    required this.filterIcon,
   });
 
   final VoidCallback onOpenMetrics;
-  final Future<void> Function(BuildContext context) onPickRange;
+  final VoidCallback onOpenFilter;
+  final String filterLabel;
+  final IconData filterIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -43,9 +47,7 @@ class ShiftHistoryHeader extends StatelessWidget {
                     size: Responsive.sp(context, 24).clamp(20.0, 28.0),
                   ),
                 ),
-                SizedBox(
-                  width: Responsive.hp(context, 4.0).clamp(12.0, 20.0),
-                ),
+                SizedBox(width: Responsive.hp(context, 4.0).clamp(12.0, 20.0)),
                 Flexible(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,7 +57,10 @@ class ShiftHistoryHeader extends StatelessWidget {
                         style: context.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
-                          fontSize: Responsive.sp(context, 20).clamp(18.0, 22.0),
+                          fontSize: Responsive.sp(
+                            context,
+                            20,
+                          ).clamp(18.0, 22.0),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -64,7 +69,10 @@ class ShiftHistoryHeader extends StatelessWidget {
                         'Gestao de jornada',
                         style: context.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurface.withValues(alpha: 0.62),
-                          fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                          fontSize: Responsive.sp(
+                            context,
+                            14,
+                          ).clamp(12.0, 16.0),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -86,7 +94,7 @@ class ShiftHistoryHeader extends StatelessWidget {
                 onPressed: onOpenMetrics,
               ),
               InkWell(
-                onTap: () => onPickRange(context),
+                onTap: onOpenFilter,
                 borderRadius: BorderRadius.circular(
                   Responsive.sp(context, 12).clamp(8.0, 16.0),
                 ),
@@ -106,7 +114,7 @@ class ShiftHistoryHeader extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.calendar_today,
+                        filterIcon,
                         size: Responsive.sp(context, 16).clamp(14.0, 18.0),
                         color: colorScheme.onSurface.withValues(alpha: 0.54),
                       ),
@@ -114,10 +122,13 @@ class ShiftHistoryHeader extends StatelessWidget {
                         width: Responsive.hp(context, 2.0).clamp(6.0, 10.0),
                       ),
                       Text(
-                        'Filtrar',
+                        filterLabel,
                         style: TextStyle(
                           color: colorScheme.onSurface,
-                          fontSize: Responsive.sp(context, 14).clamp(12.0, 16.0),
+                          fontSize: Responsive.sp(
+                            context,
+                            14,
+                          ).clamp(12.0, 16.0),
                         ),
                       ),
                     ],

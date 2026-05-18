@@ -432,6 +432,9 @@ class TransactionFormView extends GetView<TransactionsController> {
           0;
       await controller.updateTransaction(
         editingTransaction!.id,
+        status: isPaid.value
+            ? TransactionStatus.cleared
+            : TransactionStatus.pending,
         categoryId: selectedCategory.value!.id,
         description: descriptionController.text.trim().isEmpty
             ? selectedCategory.value!.name
@@ -448,6 +451,9 @@ class TransactionFormView extends GetView<TransactionsController> {
           0;
       await controller.createTransaction(
         type: selectedType.value,
+        status: isPaid.value
+            ? TransactionStatus.cleared
+            : TransactionStatus.pending,
         assetType: AssetType.bankAccount,
         amountCents: amountCents,
         categoryId: selectedCategory.value!.id,

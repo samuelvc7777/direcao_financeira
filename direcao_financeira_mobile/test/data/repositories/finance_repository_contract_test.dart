@@ -151,6 +151,7 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
   @override
   Future<TransactionModel> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -159,7 +160,12 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
-  }) async => buildTransaction(id: 10, type: type, date: transactionDate);
+  }) async => buildTransaction(
+    id: 10,
+    type: type,
+    status: status,
+    date: transactionDate,
+  );
 
   @override
   Future<List<TransactionModel>> createImportedTransactions({
@@ -214,12 +220,17 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
   @override
   Future<TransactionModel> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,
     DateTime? transactionDate,
     TransactionMutationScope? scope,
-  }) async => buildTransaction(id: id, date: transactionDate);
+  }) async => buildTransaction(
+    id: id,
+    status: status ?? TransactionStatus.cleared,
+    date: transactionDate,
+  );
 }
 
 void main() {

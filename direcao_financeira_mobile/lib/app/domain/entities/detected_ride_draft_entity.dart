@@ -12,6 +12,7 @@ class DetectedRideDraftEntity {
     this.passengerName,
     this.originAddress,
     this.destinationAddress,
+    this.rideType,
   });
 
   final String? platformName;
@@ -26,4 +27,5 @@ class DetectedRideDraftEntity {
   final String? passengerName;
   final String? originAddress;
   final String? destinationAddress;
+  final String? rideType;
 }

@@ -60,7 +60,7 @@ class CostsGainsDraft {
       fuelPricePerLiterCents: 600,
       kmPerLiter: 10.5,
       platformFeeType: PlatformFeeType.fixed,
-      platformFeeValue: 800,
+      platformFeeValue: 0,
     );
   }
 

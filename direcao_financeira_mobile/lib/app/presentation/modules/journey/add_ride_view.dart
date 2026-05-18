@@ -8,6 +8,7 @@ import '../../../core/utils/responsive.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'add_ride_controller.dart';
+import 'widgets/address_autocomplete_field.dart';
 
 class AddRideView extends GetView<AddRideController> {
   const AddRideView({super.key});
@@ -165,11 +166,13 @@ class AddRideView extends GetView<AddRideController> {
                           subtitle: 'Origem, paradas e destino',
                         ),
                         const SizedBox(height: 20),
-                        _RideInputField(
+                        AddressAutocompleteField(
                           controller: controller.originController,
                           label: 'Endereco de origem',
                           hint: 'Digite o ponto de partida',
                           icon: Icons.my_location_rounded,
+                          searchSuggestions:
+                              controller.searchAddressSuggestions,
                           textInputAction: TextInputAction.next,
                         ),
                         Obx(
@@ -185,12 +188,14 @@ class AddRideView extends GetView<AddRideController> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
-                                      child: _RideInputField(
+                                      child: AddressAutocompleteField(
                                         controller:
                                             controller.stopControllers[i],
                                         label: 'Parada ${i + 1}',
                                         hint: 'Digite uma parada intermediaria',
                                         icon: Icons.flag_outlined,
+                                        searchSuggestions:
+                                            controller.searchAddressSuggestions,
                                         textInputAction: TextInputAction.next,
                                       ),
                                     ),
@@ -223,11 +228,13 @@ class AddRideView extends GetView<AddRideController> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _RideInputField(
+                        AddressAutocompleteField(
                           controller: controller.destinationController,
                           label: 'Endereco de destino',
                           hint: 'Digite o ponto final',
                           icon: Icons.location_on_outlined,
+                          searchSuggestions:
+                              controller.searchAddressSuggestions,
                           textInputAction: TextInputAction.next,
                         ),
                       ],
@@ -337,7 +344,7 @@ class _EstimateCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Preencha distancia e duracao manualmente por enquanto',
+                      'Calcule pela rota ou ajuste manualmente',
                       style: TextStyle(
                         color: colorScheme.onSurfaceVariant,
                         fontSize: Responsive.sp(context, 12).clamp(11.0, 13.0),
@@ -349,6 +356,42 @@ class _EstimateCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
+          Obx(() {
+            final isEstimating = controller.isEstimatingRoute.value;
+            final providerLabel = controller.routeProviderLabel.value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: isEstimating ? null : controller.estimateRoute,
+                  icon: isEstimating
+                      ? const AppLoadingIndicator(
+                          size: AppLoadingSize.compact,
+                          accentColor: AppColors.royalBlue,
+                          onDark: false,
+                        )
+                      : const Icon(Icons.route_rounded),
+                  label: Text(
+                    isEstimating ? 'Calculando rota...' : 'Calcular km e tempo',
+                  ),
+                ),
+                if (providerLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      providerLabel,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -401,15 +444,6 @@ class _EstimateCard extends StatelessWidget {
                 },
               );
             },
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Depois a gente pode trocar esse preenchimento manual por calculo automatico de rota.',
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: Responsive.sp(context, 12).clamp(11.0, 13.0),
-              fontStyle: FontStyle.italic,
-            ),
           ),
         ],
       ),

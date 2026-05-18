@@ -43,15 +43,18 @@ class AppBubbleService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                setBubbleEnabled(this, false)
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_START, null -> {
                 if (!Settings.canDrawOverlays(this)) {
+                    setBubbleEnabled(this, false)
                     stopSelf()
                     return START_NOT_STICKY
                 }
 
+                setBubbleEnabled(this, true)
                 startForeground(NOTIFICATION_ID, createNotification())
                 ensureBubbleVisible()
                 isRunning = true
@@ -76,7 +79,7 @@ class AppBubbleService : Service() {
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        val bubbleSize = 72.dp
+        val bubbleSize = 55.dp
 
         val iconView =
             ImageView(this).apply {
@@ -88,7 +91,8 @@ class AppBubbleService : Service() {
                 }.onFailure {
                     setImageResource(R.mipmap.ic_launcher)
                 }
-                scaleType = ImageView.ScaleType.CENTER_CROP
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setPadding(4.dp, 4.dp, 4.dp, 4.dp)
                 layoutParams = WindowManager.LayoutParams(bubbleSize, bubbleSize)
             }
 
@@ -215,15 +219,7 @@ class AppBubbleService : Service() {
                 iconGlyph = "\uD83D\uDEA6",
                 accentColor = resolveTrafficLightAccentColor(),
                 topMargin = 8.dp,
-                dismissOnClick = false,
-                onClick = {
-                    val nextValue = !SettingsManager.trafficLightActive
-                    SettingsManager.updateRuntimeState(
-                        this,
-                        trafficLightActive = nextValue,
-                    )
-                    updateTrafficLightVisualState()
-                },
+                onClick = { dispatchBubbleAction(ACTION_TOGGLE_TRAFFIC_LIGHT) },
             )
         trafficLightActionView = trafficLightAction.second
         trafficLightIconView = trafficLightAction.third
@@ -351,7 +347,7 @@ class AppBubbleService : Service() {
         val view = bubbleView ?: return
         val params = bubbleLayoutParams ?: return
         val screenHeight = resources.displayMetrics.heightPixels
-        val bubbleSize = params.height.takeIf { it > 0 } ?: 72.dp
+        val bubbleSize = params.height.takeIf { it > 0 } ?: 55.dp
 
         params.x = 12.dp
         params.y = params.y.coerceIn(48.dp, screenHeight - bubbleSize - 48.dp)
@@ -368,7 +364,7 @@ class AppBubbleService : Service() {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
         )
 
-        params.x = bubbleParams.x + (bubbleView?.width ?: 72.dp) + 16.dp
+        params.x = bubbleParams.x + (bubbleView?.width ?: 55.dp) + 16.dp
         params.y = bubbleParams.y
         windowManager?.updateViewLayout(view, params)
     }
@@ -506,6 +502,8 @@ class AppBubbleService : Service() {
             "com.direcao_financeira.app_bubble.TOGGLE_TRAFFIC_LIGHT"
         private const val NOTIFICATION_CHANNEL_ID = "direcao_financeira_app_bubble"
         private const val NOTIFICATION_ID = 4021
+        private const val PREFERENCES_NAME = "direcao_financeira_app_bubble"
+        private const val KEY_BUBBLE_ENABLED = "bubble_enabled"
         const val EXTRA_BUBBLE_ACTION = "extra_bubble_action"
 
         @Volatile
@@ -525,10 +523,17 @@ class AppBubbleService : Service() {
         }
 
         fun stop(context: Context) {
+            setBubbleEnabled(context, false)
             context.stopService(Intent(context, AppBubbleService::class.java))
         }
 
         fun isRunning(): Boolean = isRunning
+
+        fun startIfEnabled(context: Context) {
+            if (isBubbleEnabled(context) && Settings.canDrawOverlays(context)) {
+                start(context)
+            }
+        }
 
         fun createOverlayPermissionIntent(context: Context): Intent {
             return Intent(
@@ -537,6 +542,20 @@ class AppBubbleService : Service() {
             ).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+        }
+
+        private fun isBubbleEnabled(context: Context): Boolean {
+            return context
+                .getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_BUBBLE_ENABLED, false)
+        }
+
+        private fun setBubbleEnabled(context: Context, enabled: Boolean) {
+            context
+                .getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_BUBBLE_ENABLED, enabled)
+                .apply()
         }
     }
 }

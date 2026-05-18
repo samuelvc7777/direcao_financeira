@@ -33,6 +33,11 @@ abstract class IRideRepository {
     DetectedRideDraftEntity ride,
   );
 
+  Future<Either<Failure, Unit>> updateFinishedRide({
+    required int rideId,
+    required DetectedRideDraftEntity ride,
+  });
+
   Future<Either<Failure, Unit>> finishRide({
     required int rideId,
     required String paymentMethod,
@@ -42,4 +47,6 @@ abstract class IRideRepository {
     required int rideId,
     required String cancelReason,
   });
+
+  Future<Either<Failure, Unit>> deleteRide({required int rideId});
 }

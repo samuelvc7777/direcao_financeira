@@ -71,7 +71,7 @@ class _RideAnalysisSectionState extends State<_RideAnalysisSection>
   String _fmtOptional(double? value) => value == null ? '--' : _fmt(value);
 
   String _fmtHours(double hours) {
-    final totalMin = (hours * 60).round().clamp(0, 999999);
+    final totalMin = (hours * 60).floor().clamp(0, 999999);
     final h = totalMin ~/ 60;
     final m = totalMin % 60;
     return '$h:${m.toString().padLeft(2, '0')}';

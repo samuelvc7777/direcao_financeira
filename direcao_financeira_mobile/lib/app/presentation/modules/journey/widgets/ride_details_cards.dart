@@ -371,6 +371,16 @@ class RideRouteCard extends StatelessWidget {
             value: ride.origin,
             isDark: isDark,
           ),
+          if (ride.rideType?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 12),
+            _RouteStop(
+              icon: Icons.alt_route_rounded,
+              iconColor: AppColors.royalBlue,
+              label: 'Rota',
+              value: ride.rideType!.trim(),
+              isDark: isDark,
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.only(left: 20),
             child: Row(

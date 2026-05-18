@@ -54,6 +54,7 @@ class CreateTransactionUseCase {
 
   Future<Either<Failure, TransactionEntity>> call({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -65,6 +66,7 @@ class CreateTransactionUseCase {
   }) async {
     return await repository.createTransaction(
       type: type,
+      status: status,
       assetType: assetType,
       amountCents: amountCents,
       categoryId: categoryId,
@@ -124,6 +126,7 @@ class UpdateTransactionUseCase {
   Future<Either<Failure, TransactionEntity>> call(
     int id, {
     int? categoryId,
+    TransactionStatus? status,
     String? description,
     int? amountCents,
     DateTime? transactionDate,
@@ -131,6 +134,7 @@ class UpdateTransactionUseCase {
   }) async {
     return await repository.updateTransaction(
       id,
+      status: status,
       categoryId: categoryId,
       description: description,
       amountCents: amountCents,

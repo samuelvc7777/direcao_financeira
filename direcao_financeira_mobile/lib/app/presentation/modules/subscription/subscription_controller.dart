@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../core/subscription/play_store_subscription_contract.dart';
 import '../../../domain/entities/plan_entity.dart';
 import '../../../domain/entities/store_product_entity.dart';
 import '../../../domain/entities/store_purchase_event_entity.dart';
@@ -247,6 +248,23 @@ class SubscriptionController extends GetxController {
     return storeProductForPlan(plan) != null;
   }
 
+  bool get canPurchaseSelectedPlan {
+    final plan = selectedPlan;
+    if (plan == null) {
+      return false;
+    }
+
+    if (!usesPlayStoreBilling) {
+      return true;
+    }
+
+    if (isStoreCatalogLoading.value || storeErrorMessage.value != null) {
+      return false;
+    }
+
+    return hasStoreProductForPlan(plan);
+  }
+
   String ctaLabelForSelectedPlan() {
     final plan = selectedPlan;
     if (plan == null) {
@@ -316,6 +334,17 @@ class SubscriptionController extends GetxController {
       return;
     }
 
+    final invalidCodes = plans
+        .map((plan) => plan.code.trim())
+        .where((code) => !isSupportedAndroidSubscriptionCode(code))
+        .toSet();
+    if (invalidCodes.isNotEmpty) {
+      storeErrorMessage.value =
+          'O app Android desta versao aceita somente o produto '
+          '$playStoreMonthlySubscriptionProductId. Ajuste o code do plano no backend antes de testar a compra.';
+      return;
+    }
+
     final productIds = plans
         .map((plan) => plan.code)
         .where((code) => code.trim().isNotEmpty)
@@ -337,7 +366,17 @@ class SubscriptionController extends GetxController {
 
         if (products.isEmpty) {
           storeErrorMessage.value =
-              'Nenhum produto retornou da Play Store para os codes atuais.';
+              'A Google Play nao retornou o produto '
+              '$playStoreMonthlySubscriptionProductId para os planos atuais.';
+          return;
+        }
+
+        if (!storeProductsById.containsKey(
+          playStoreMonthlySubscriptionProductId,
+        )) {
+          storeErrorMessage.value =
+              'O plano mensal Android precisa existir na Google Play com o ID '
+              '$playStoreMonthlySubscriptionProductId.';
         }
       },
     );

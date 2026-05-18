@@ -73,9 +73,9 @@ CostsGainsWizardStepPresentation wizardStepPresentation(
     case CostsGainsWizardStep.platform:
       return const CostsGainsWizardStepPresentation(
         title: 'Plataforma',
-        subtitle: 'Taxa dos apps de corrida',
+        subtitle: 'Taxa opcional dos apps de corrida',
         cardTitle: 'Taxa da plataforma',
-        cardSubtitle: 'Como os apps cobram de voce?',
+        cardSubtitle: 'Preencha apenas se voce souber esse custo',
         icon: Icons.percent_rounded,
         accent: AppColors.secondary,
       );

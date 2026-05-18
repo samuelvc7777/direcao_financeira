@@ -88,13 +88,14 @@ CreditCardModel buildCreditCard({
 TransactionModel buildTransaction({
   int id = 1,
   TransactionType type = TransactionType.expense,
+  TransactionStatus status = TransactionStatus.cleared,
   DateTime? date,
   String description = 'Posto Shell',
 }) {
   return TransactionModel(
     id: id,
     type: type,
-    status: TransactionStatus.cleared,
+    status: status,
     assetType: AssetType.bankAccount,
     amountCents: 2500,
     categoryId: 1,

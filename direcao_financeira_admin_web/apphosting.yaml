@@ -1,0 +1,16 @@
+env:
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    value: https://canucibuhdqdctxaanjh.supabase.co
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhbnVjaWJ1aGRxZGN0eGFhbmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODMzMTYsImV4cCI6MjA4OTc1OTMxNn0.UCANhliXHklhNQvhBBywBUGr3PpxKKT9BaNtkG7bD6E
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+    availability:
+      - BUILD
+      - RUNTIME

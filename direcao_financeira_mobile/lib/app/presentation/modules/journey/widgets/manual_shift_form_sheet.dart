@@ -243,17 +243,27 @@ class _ManualShiftFormSheetState extends State<ManualShiftFormSheet> {
   }
 
   Future<void> _submit() async {
+    debugPrint('[ManualShiftFormSheet] Submit iniciado.');
     if (!(_formKey.currentState?.validate() ?? false)) {
+      debugPrint(
+        '[ManualShiftFormSheet] Submit bloqueado: formulario invalido.',
+      );
       return;
     }
 
     if (_startTime == null || _endTime == null) {
+      debugPrint(
+        '[ManualShiftFormSheet] Submit bloqueado: horario inicial/final ausente.',
+      );
       _showFormError('Selecione o horario de inicio e fim do turno.');
       return;
     }
 
     if (_startTime!.hour == _endTime!.hour &&
         _startTime!.minute == _endTime!.minute) {
+      debugPrint(
+        '[ManualShiftFormSheet] Submit bloqueado: horarios iguais ${_startTime!.format(context)}.',
+      );
       _showFormError('O horario final precisa ser diferente do inicial.');
       return;
     }
@@ -262,12 +272,18 @@ class _ManualShiftFormSheetState extends State<ManualShiftFormSheet> {
       start: _startTime!,
       end: _endTime!,
     );
+    final drivenKm = _parseDecimal(_kmController.text)!;
+    debugPrint(
+      '[ManualShiftFormSheet] Enviando turno manual: km=$drivenKm '
+      'start=$startTime end=$endTime.',
+    );
 
     final added = await widget.controller.addManualShift(
-      drivenKm: _parseDecimal(_kmController.text)!,
+      drivenKm: drivenKm,
       startTime: startTime,
       endTime: endTime,
     );
+    debugPrint('[ManualShiftFormSheet] Resultado addManualShift=$added.');
 
     if (!mounted || !added) {
       return;
@@ -294,10 +310,6 @@ class _ManualShiftFormSheetState extends State<ManualShiftFormSheet> {
     var endTime = atToday(end);
     if (!endTime.isAfter(startTime)) {
       endTime = endTime.add(const Duration(days: 1));
-    }
-    if (endTime.isAfter(now)) {
-      startTime = startTime.subtract(const Duration(days: 1));
-      endTime = endTime.subtract(const Duration(days: 1));
     }
 
     return (startTime: startTime, endTime: endTime);

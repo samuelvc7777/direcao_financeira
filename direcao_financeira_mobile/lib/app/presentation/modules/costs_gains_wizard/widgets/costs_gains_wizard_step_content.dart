@@ -288,8 +288,8 @@ class CostsGainsWizardStepContent extends StatelessWidget {
                       PlatformFeeType.fixed
                   ? CustomTextField(
                       controller: controller.platformFeeController,
-                      label: 'Valor fixo mensal',
-                      hint: 'R\$ 800,00',
+                      label: 'Valor fixo mensal (opcional)',
+                      hint: 'Deixe vazio se nao souber',
                       icon: Icons.account_balance_wallet_outlined,
                       compact: true,
                       keyboardType: TextInputType.number,
@@ -297,8 +297,8 @@ class CostsGainsWizardStepContent extends StatelessWidget {
                     )
                   : CustomTextField(
                       controller: controller.platformFeeController,
-                      label: 'Percentual medio',
-                      hint: '10,0',
+                      label: 'Percentual medio (opcional)',
+                      hint: 'Deixe vazio se nao souber',
                       icon: Icons.percent_rounded,
                       compact: true,
                       keyboardType: const TextInputType.numberWithOptions(
@@ -313,6 +313,11 @@ class CostsGainsWizardStepContent extends StatelessWidget {
                         ),
                       ),
                     ),
+            ),
+            const SizedBox(height: 6),
+            _SupportText(
+              text:
+                  'Uber e 99 geralmente ja mostram valores com a taxa descontada. Se voce nao souber a taxa, deixe em branco.',
             ),
           ],
         );

@@ -112,7 +112,9 @@ class _CurrentSubscriptionCard extends StatelessWidget {
                     controller.isStoreSyncingPurchase.value ||
                     controller.isActionLoading.value,
                 onPressed: controller.usesPlayStoreBilling
-                    ? controller.purchaseSelectedPlan
+                    ? (controller.canPurchaseSelectedPlan
+                          ? controller.purchaseSelectedPlan
+                          : null)
                     : () => controller.renewSubscription(autoRenew: true),
               ),
             ),
@@ -390,7 +392,11 @@ class _PlansSection extends StatelessWidget {
                   controller.isActionLoading.value ||
                   controller.isPurchaseLoading.value ||
                   controller.isStoreSyncingPurchase.value,
-              onPressed: controller.purchaseSelectedPlan,
+              onPressed:
+                  controller.usesPlayStoreBilling &&
+                      !controller.canPurchaseSelectedPlan
+                  ? null
+                  : controller.purchaseSelectedPlan,
             ),
           ),
           if (controller.usesPlayStoreBilling) ...[

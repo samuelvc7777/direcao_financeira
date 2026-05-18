@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/register_use_case.dart';
 import '../../../routes/app_pages.dart';
 
 class RegisterController extends GetxController {
-  RegisterController({required this.registerUseCase});
+  RegisterController({
+    required this.registerUseCase,
+    required this.ensureDefaultCategoriesUseCase,
+  });
 
   final RegisterUseCase registerUseCase;
+  final EnsureDefaultCategoriesUseCase ensureDefaultCategoriesUseCase;
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -66,19 +71,34 @@ class RegisterController extends GetxController {
 
     isLoading.value = true;
     final result = await registerUseCase.execute(name, email, password);
-    isLoading.value = false;
 
-    result.fold((failure) => _showError('Erro no Cadastro', failure.message), (
-      user,
-    ) {
-      Get.offAllNamed(AppRoutes.initial);
-      AppSnackbar.show(
-        'Bem-vindo(a)!',
-        'Cadastro realizado! Boas vindas, ${user.name}.',
-        backgroundColor: const Color(0xFF03A696).withValues(alpha: 0.12),
-        colorText: Colors.white,
-      );
-    });
+    await result.fold(
+      (failure) async {
+        _showError('Erro no Cadastro', failure.message);
+      },
+      (user) async {
+        final categoriesResult = await ensureDefaultCategoriesUseCase();
+        categoriesResult.fold(
+          (failure) {
+            Get.offAllNamed(AppRoutes.initial);
+            _showError(
+              'Cadastro realizado',
+              'Sua conta foi criada, mas nao foi possivel criar as categorias padrao: ${failure.message}',
+            );
+          },
+          (_) {
+            Get.offAllNamed(AppRoutes.initial);
+            AppSnackbar.show(
+              'Bem-vindo(a)!',
+              'Cadastro realizado! Boas vindas, ${user.name}.',
+              backgroundColor: const Color(0xFF03A696).withValues(alpha: 0.12),
+              colorText: Colors.white,
+            );
+          },
+        );
+      },
+    );
+    isLoading.value = false;
   }
 
   void _showError(String title, String message) {

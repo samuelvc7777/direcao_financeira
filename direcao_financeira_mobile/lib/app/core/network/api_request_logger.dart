@@ -64,4 +64,12 @@ class ApiRequestLogger {
       '[REPOSITORY][ERROR] $source ${details.method} ${details.path} status=${details.statusCode ?? 'null'} type=${details.type} data=${details.responseSummary}',
     );
   }
+
+  void logInfo({required String source, required String message}) {
+    if (!enabled) {
+      return;
+    }
+
+    debugPrint('[REPOSITORY][INFO] $source $message');
+  }
 }

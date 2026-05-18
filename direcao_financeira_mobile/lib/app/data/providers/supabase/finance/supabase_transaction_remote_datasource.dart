@@ -86,6 +86,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
   @override
   Future<TransactionModel> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -118,7 +119,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
       final entry = <String, dynamic>{
         'userId': userId,
         'type': TransactionTypeCodec.encode(type),
-        'status': TransactionStatusCodec.encode(TransactionStatus.cleared),
+        'status': TransactionStatusCodec.encode(status),
         'assetType': AssetTypeCodec.encode(assetType),
         'amountCents': amountCents,
         'categoryId': categoryId,
@@ -158,6 +159,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
       created.add(
         await createTransaction(
           type: draft.type,
+          status: TransactionStatus.cleared,
           assetType: draft.assetType,
           amountCents: draft.amountCents,
           categoryId: draft.categoryId,
@@ -217,6 +219,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
   @override
   Future<TransactionModel> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,
@@ -248,6 +251,9 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         if (categoryId != null) {
           recalculatedPayload['categoryId'] = categoryId;
         }
+        if (status != null) {
+          recalculatedPayload['status'] = TransactionStatusCodec.encode(status);
+        }
         if (description != null) {
           recalculatedPayload['description'] = description;
         }
@@ -265,6 +271,9 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         final payload = <String, dynamic>{};
         if (categoryId != null) {
           payload['categoryId'] = categoryId;
+        }
+        if (status != null) {
+          payload['status'] = TransactionStatusCodec.encode(status);
         }
         if (description != null) {
           payload['description'] = description;

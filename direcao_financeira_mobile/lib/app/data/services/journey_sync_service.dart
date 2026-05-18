@@ -1,4 +1,5 @@
 import '../../core/network/realtime_client.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/entities/active_shift_entity.dart';
 import '../../domain/entities/shift_entity.dart';
 import '../datasources/i_journey_datasource.dart';
@@ -23,6 +24,7 @@ class JourneySyncService {
 
   Future<int> syncPendingShiftsIfOnline() async {
     if (!realtimeClient.isOnline.value) {
+      debugPrint('[JourneySyncService] Offline: sincronizacao ignorada.');
       return 0;
     }
 
@@ -32,9 +34,13 @@ class JourneySyncService {
   Future<int> syncPendingShifts() async {
     final currentSync = _syncPendingShiftsFuture;
     if (currentSync != null) {
+      debugPrint(
+        '[JourneySyncService] Reutilizando sincronizacao em andamento.',
+      );
       return currentSync;
     }
 
+    debugPrint('[JourneySyncService] Iniciando sincronizacao de pendencias.');
     final syncFuture = _performPendingShiftSync();
     _syncPendingShiftsFuture = syncFuture;
 
@@ -106,22 +112,39 @@ class JourneySyncService {
 
   Future<int> _performPendingShiftSync() async {
     if (!realtimeClient.isOnline.value) {
+      debugPrint('[JourneySyncService] _perform: offline.');
       return 0;
     }
 
     final pendingShifts = await localDataSource.getPendingFinishedShifts();
+    debugPrint(
+      '[JourneySyncService] _perform: pendencias=${pendingShifts.length}.',
+    );
     var syncedCount = 0;
 
     final orderedShifts = [...pendingShifts]
       ..sort((a, b) => a.endTime.compareTo(b.endTime));
 
     for (final shift in orderedShifts) {
+      debugPrint(
+        '[JourneySyncService] Sincronizando turno localId=${shift.localId} '
+        'remoteShiftId=${shift.remoteShiftId} start=${shift.startTime} '
+        'end=${shift.endTime} km=${shift.totalDrivenKm}.',
+      );
       final route = await routeLocalDataSource.getRouteByLocalShiftId(
         shift.localId,
+      );
+      debugPrint(
+        '[JourneySyncService] Rota localId=${shift.localId}: '
+        'hasRoute=${route != null} points=${route?.pointCount ?? 0}.',
       );
       final remoteShiftId = await remoteDataSource.syncFinishedShift(
         shift,
         route,
+      );
+      debugPrint(
+        '[JourneySyncService] Turno localId=${shift.localId} sincronizado '
+        'remoteShiftId=$remoteShiftId.',
       );
       await routeLocalDataSource.assignRemoteShiftId(
         localShiftId: shift.localId,
@@ -131,6 +154,9 @@ class JourneySyncService {
       syncedCount++;
     }
 
+    debugPrint(
+      '[JourneySyncService] Sincronizacao finalizada syncedCount=$syncedCount.',
+    );
     return syncedCount;
   }
 }

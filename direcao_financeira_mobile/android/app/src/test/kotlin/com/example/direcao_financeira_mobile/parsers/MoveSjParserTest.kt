@@ -191,6 +191,47 @@ class MoveSjParserTest {
     }
 
     @Test
+    fun `corrida com parada da movesj usa ultimo pino verde como destino`() {
+        val offerData =
+            parser.parseOfferFromLines(
+                lines =
+                    listOf(
+                        "Move",
+                        "Deslize para recusar",
+                        "Samuel",
+                        "5,00★",
+                        "R$ 35,19",
+                        "(Motorista)",
+                        "R$ 35,19",
+                        "8,0 km (R$ 4,42/km)",
+                        "22 min (R$ 1,54/min)",
+                        "1 m (1 min)",
+                        "R. Getulio Vargas, 989 - A Definir, Santa Cruz de Minas - MG, 36302-142, Brasil",
+                        "4,0 km (12 min)",
+                        "Av. Josue de Queiros, 1119 - Matozinhos, Sao Joao del Rei - MG, 36305-144, Brasil",
+                        "4,0 km (10 min)",
+                        "Av. Min. Gabriel Passos, 1846 - Santa Cruz De Minas, Santa Cruz de Minas - MG, 36328-000, Brasil",
+                        "Deslize para aceitar (8)",
+                    ),
+                priceText = "R$ 35,19",
+            )
+
+        assertEquals(
+            "R. Getulio Vargas, 989 - A Definir, Santa Cruz de Minas - MG, 36302-142, Brasil",
+            offerData["origin_address"],
+        )
+        assertEquals(
+            "Av. Min. Gabriel Passos, 1846 - Santa Cruz De Minas, Santa Cruz de Minas - MG, 36328-000, Brasil",
+            offerData["destination_address"],
+        )
+        assertEquals("Corrida com parada", offerData["tipo_corrida"])
+        assertEquals(
+            listOf("Av. Josue de Queiros, 1119 - Matozinhos, Sao Joao del Rei - MG, 36305-144, Brasil"),
+            offerData["stop_addresses"],
+        )
+    }
+
+    @Test
     fun `reconhece tela da movesj com botoes de aceitar e recusar`() {
         val isOfferScreen =
             parser.isOfferScreenFromLines(

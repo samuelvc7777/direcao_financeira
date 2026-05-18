@@ -9,6 +9,7 @@ class RideEntity {
   final String time;
   final String origin;
   final String destination;
+  final String? rideType;
   final String passenger;
   final double totalKm;
   final int totalTimeSeconds;
@@ -27,6 +28,7 @@ class RideEntity {
     required this.time,
     required this.origin,
     required this.destination,
+    this.rideType,
     required this.passenger,
     required this.totalKm,
     required this.totalTimeSeconds,

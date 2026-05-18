@@ -7,23 +7,32 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/services/address_autocomplete_service.dart';
 import '../../../data/services/ride_route_estimator.dart';
 import '../../../domain/entities/detected_ride_draft_entity.dart';
+import '../../../domain/entities/ride_entity.dart';
 import '../../../domain/entities/ride_screenshot_import_entity.dart';
 import '../../../domain/services/movesj_history_screenshot_parser.dart';
 import '../../../domain/usecases/create_detected_ride_usecase.dart';
+import '../../../domain/usecases/get_rides_usecase.dart';
 import 'widgets/ride_details_models.dart';
 
 class ImportRidePhotoController extends GetxController {
   ImportRidePhotoController({
     required this.createFinishedRideUseCase,
+    required this.updateFinishedRideUseCase,
+    required this.getRidesUseCase,
     required this.parser,
+    required this.addressAutocompleteService,
     required this.routeEstimator,
     ImagePicker? imagePicker,
   }) : _imagePicker = imagePicker ?? ImagePicker();
 
   final CreateFinishedRideUseCase createFinishedRideUseCase;
+  final UpdateFinishedRideUseCase updateFinishedRideUseCase;
+  final GetRidesUseCase getRidesUseCase;
   final MoveSjHistoryScreenshotParser parser;
+  final AddressAutocompleteService addressAutocompleteService;
   final RideRouteEstimator routeEstimator;
   final ImagePicker _imagePicker;
 
@@ -42,9 +51,13 @@ class ImportRidePhotoController extends GetxController {
   final recognizedText = ''.obs;
   final parsedRide = Rxn<RideScreenshotImportEntity>();
   final parsedDateTime = Rxn<DateTime>();
+  final selectedRide = Rxn<RideEntity>();
+  final availableRides = <RideEntity>[].obs;
   final isReadingImage = false.obs;
   final isEstimatingRoute = false.obs;
+  final isLoadingRides = false.obs;
   final isSaving = false.obs;
+  final routeProviderLabel = ''.obs;
 
   File? get selectedImageFile {
     final path = selectedImagePath.value;
@@ -59,6 +72,22 @@ class ImportRidePhotoController extends GetxController {
 
     String two(int number) => number.toString().padLeft(2, '0');
     return '${two(value.day)}/${two(value.month)}/${value.year} ${two(value.hour)}:${two(value.minute)}';
+  }
+
+  String get selectedRideLabel {
+    final ride = selectedRide.value;
+    if (ride == null) {
+      return 'Nenhuma corrida selecionada';
+    }
+
+    return '${ride.date} ${ride.time} - ${_formatCents(ride.grossValueCents)}';
+  }
+
+  String get saveButtonLabel {
+    if (isSaving.value) {
+      return 'SALVANDO...';
+    }
+    return selectedRide.value == null ? 'SALVAR CORRIDA' : 'SALVAR ALTERACOES';
   }
 
   String get totalDistanceLabel =>
@@ -103,6 +132,56 @@ class ImportRidePhotoController extends GetxController {
     await readSelectedImage();
   }
 
+  Future<void> loadAvailableRides() async {
+    isLoadingRides.value = true;
+    try {
+      final now = DateTime.now();
+      final result = await getRidesUseCase(
+        period: 'custom',
+        date: '2020-01-01',
+        endDate:
+            '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+        offset: 0,
+        limit: 200,
+      );
+
+      result.fold(
+        (failure) {
+          AppSnackbar.show(
+            'Erro',
+            failure.message,
+            backgroundColor: AppColors.rose.withValues(alpha: 0.18),
+          );
+        },
+        (page) {
+          final rides = page.items.where((ride) => ride.id > 0).toList()
+            ..sort((a, b) {
+              final aDate = a.createdAt;
+              final bDate = b.createdAt;
+              if (aDate == null && bDate == null) {
+                return 0;
+              }
+              if (aDate == null) {
+                return 1;
+              }
+              if (bDate == null) {
+                return -1;
+              }
+              return bDate.compareTo(aDate);
+            });
+          availableRides.assignAll(rides);
+        },
+      );
+    } finally {
+      isLoadingRides.value = false;
+    }
+  }
+
+  void selectRide(RideEntity ride) {
+    selectedRide.value = ride;
+    _applyRide(ride);
+  }
+
   Future<void> readSelectedImage() async {
     final imagePath = selectedImagePath.value;
     if (imagePath == null) {
@@ -138,6 +217,7 @@ class ImportRidePhotoController extends GetxController {
     }
 
     isEstimatingRoute.value = true;
+    routeProviderLabel.value = 'Calculando rota...';
     try {
       final estimate = await routeEstimator.estimate(
         originAddress: origin,
@@ -154,13 +234,22 @@ class ImportRidePhotoController extends GetxController {
           .toStringAsFixed(1)
           .replaceAll('.', ',');
       durationMinutesController.text = estimate.durationMinutes.toString();
+      routeProviderLabel.value = 'Rota calculada por ${estimate.provider}';
     } catch (_) {
       _showWarning(
         'Nao consegui calcular a rota agora. Confira os enderecos e preencha km/min manualmente.',
       );
     } finally {
       isEstimatingRoute.value = false;
+      if (distanceKmController.text.trim().isEmpty ||
+          durationMinutesController.text.trim().isEmpty) {
+        routeProviderLabel.value = '';
+      }
     }
+  }
+
+  Future<List<AddressSuggestion>> searchAddressSuggestions(String input) {
+    return addressAutocompleteService.search(input);
   }
 
   Future<void> saveRide() async {
@@ -211,7 +300,10 @@ class ImportRidePhotoController extends GetxController {
         destinationAddress: destinationController.text.trim(),
       );
 
-      final result = await createFinishedRideUseCase(ride);
+      final selectedRideId = selectedRide.value?.id;
+      final result = selectedRideId == null
+          ? await createFinishedRideUseCase(ride)
+          : await updateFinishedRideUseCase(rideId: selectedRideId, ride: ride);
       final saved = result.fold((failure) {
         AppSnackbar.show(
           'Erro',
@@ -228,7 +320,9 @@ class ImportRidePhotoController extends GetxController {
           try {
             AppSnackbar.show(
               'Sucesso',
-              'Corrida importada do print e adicionada ao historico.',
+              selectedRideId == null
+                  ? 'Corrida importada do print e adicionada ao historico.'
+                  : 'Corrida atualizada com os dados do print.',
               backgroundColor: AppColors.emerald.withValues(alpha: 0.18),
             );
           } catch (_) {
@@ -259,6 +353,41 @@ class ImportRidePhotoController extends GetxController {
     amountController.text = parsed.grossValueCents == null
         ? ''
         : _formatCents(parsed.grossValueCents!);
+  }
+
+  void _applyRide(RideEntity ride) {
+    parsedDateTime.value = ride.createdAt;
+    passengerController.text = ride.passenger == 'Nao informado'
+        ? ''
+        : ride.passenger;
+    originController.text = ride.origin == 'Origem nao informada'
+        ? ''
+        : ride.origin;
+    destinationController.text = ride.destination == 'Destino nao informado'
+        ? ''
+        : ride.destination;
+    amountController.text = ride.grossValueCents <= 0
+        ? ''
+        : _formatCents(ride.grossValueCents);
+    distanceKmController.text = ride.totalKm <= 0
+        ? ''
+        : ride.totalKm.toStringAsFixed(1).replaceAll('.', ',');
+    durationMinutesController.text = ride.durationMinutes <= 0
+        ? ''
+        : ride.durationMinutes.toString();
+    pickupDistanceKmController.text = '0,0';
+    pickupDurationMinutesController.text = '0';
+    final paymentMethod = ride.paymentMethod;
+    selectedPaymentOption.value = null;
+    if (paymentMethod != null) {
+      for (final option in RidePaymentOption.all) {
+        if (option.code == paymentMethod) {
+          selectedPaymentOption.value = option;
+          break;
+        }
+      }
+    }
+    routeProviderLabel.value = '';
   }
 
   List<OcrTextLine> _extractOcrLines(RecognizedText result) {

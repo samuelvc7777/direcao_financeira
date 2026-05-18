@@ -44,8 +44,17 @@ class CostsGainsSettingsController extends GetxController {
     Get.toNamed(AppRoutes.trafficLightSettings);
   }
 
-  void openAdjustCosts() {
-    CostsGainsFlowCoordinator.openWizard(draft.value);
+  Future<void> openAdjustCosts() async {
+    final updatedDraft = await CostsGainsFlowCoordinator.openWizard(
+      draft.value,
+      returnResult: true,
+    );
+    if (updatedDraft != null) {
+      draft.value = updatedDraft;
+      return;
+    }
+
+    await _loadSettings();
   }
 
   Future<void> _loadSettings() async {

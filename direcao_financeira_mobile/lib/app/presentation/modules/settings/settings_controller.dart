@@ -132,6 +132,12 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
         .isOverlayPermissionGranted();
     final isBubbleRunning = await appBubbleService.isBubbleRunning();
 
+    if (isBubbleRunning) {
+      isAppBubbleEnabled.value = true;
+      await preferences.writeBool(_appBubbleEnabledKey, true);
+      return;
+    }
+
     if (isAppBubbleEnabled.value &&
         isAppBubblePermissionGranted.value &&
         !isBubbleRunning) {
@@ -141,11 +147,6 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
         isAppBubbleEnabled.value = false;
         await preferences.writeBool(_appBubbleEnabledKey, false);
       }
-      return;
-    }
-
-    if (!isAppBubbleEnabled.value && isBubbleRunning) {
-      await appBubbleService.stopBubble();
     }
   }
 

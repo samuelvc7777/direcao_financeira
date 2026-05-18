@@ -9,6 +9,7 @@ import '../shared/supabase_table_names.dart';
 import '../shared/supabase_time_filter.dart';
 import '../shared/supabase_user_scope.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
   SupabaseJourneyRemoteDataSource({required this.client})
@@ -143,6 +144,13 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
       date: date,
       endDate: endDate,
     );
+    debugPrint(
+      '[SupabaseJourneyRemoteDataSource] getShiftHistory: '
+      'filter=$filter date=$date endDate=$endDate '
+      'localRange=${range.start}..${range.endExclusive} '
+      'utcRange=${range.start.toUtc().toIso8601String()}..${range.endExclusive.toUtc().toIso8601String()} '
+      'offset=$offset limit=$limit.',
+    );
     final page = await _loadShiftPage(
       userId,
       range,
@@ -150,6 +158,12 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
       limit: limit,
     );
     final rows = page.rows;
+    debugPrint(
+      '[SupabaseJourneyRemoteDataSource] getShiftHistory retornou: '
+      'rows=${rows.length} total=${page.totalCount} '
+      'ids=${rows.map((row) => row['id']).toList()} '
+      'starts=${rows.map((row) => row['startTime']).toList()}.',
+    );
 
     final shiftIds = rows.map((row) => row['id'] as int).toList();
     final routesByShiftId = <int, Map<String, dynamic>>{};
@@ -217,24 +231,41 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         ? 0.0
         : shift.totalDrivenKm / (effectiveSeconds / 3600);
 
-    final inserted = await client
-        .from(SupabaseTableNames.shifts)
-        .insert({
-          'userId': userId,
-          'startTime': shift.startTime.toUtc().toIso8601String(),
-          'endTime': shift.endTime.toUtc().toIso8601String(),
-          'totalTime': effectiveSeconds < 0 ? 0 : effectiveSeconds,
-          'idleTime': shift.idleTimeSeconds,
-          'averageTime': effectiveSeconds < 0 ? 0 : effectiveSeconds,
-          'totalDrivenKm': shift.totalDrivenKm,
-          'averageKmh': averageKmh,
-          'createdAt': shift.createdAt.toUtc().toIso8601String(),
-          'updatedAt': updatedAt,
-        })
-        .select()
-        .single();
+    final payload = {
+      'userId': userId,
+      'startTime': shift.startTime.toUtc().toIso8601String(),
+      'endTime': shift.endTime.toUtc().toIso8601String(),
+      'totalTime': effectiveSeconds < 0 ? 0 : effectiveSeconds,
+      'idleTime': shift.idleTimeSeconds,
+      'averageTime': effectiveSeconds < 0 ? 0 : effectiveSeconds,
+      'totalDrivenKm': shift.totalDrivenKm,
+      'averageKmh': averageKmh,
+      'createdAt': shift.createdAt.toUtc().toIso8601String(),
+      'updatedAt': updatedAt,
+    };
+    debugPrint(
+      '[SupabaseJourneyRemoteDataSource] syncFinishedShift payload=$payload',
+    );
+
+    late final Map<String, dynamic> inserted;
+    try {
+      inserted = await client
+          .from(SupabaseTableNames.shifts)
+          .insert(payload)
+          .select()
+          .single();
+    } on PostgrestException catch (error) {
+      debugPrint(
+        '[SupabaseJourneyRemoteDataSource] Erro syncFinishedShift: '
+        'code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}',
+      );
+      rethrow;
+    }
 
     final remoteShiftId = inserted['id'] as int;
+    debugPrint(
+      '[SupabaseJourneyRemoteDataSource] syncFinishedShift inserido id=$remoteShiftId.',
+    );
 
     if (trackedRoute != null) {
       await client.from(SupabaseTableNames.shiftRoutes).insert({
@@ -293,6 +324,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         .from(SupabaseTableNames.shifts)
         .select()
         .eq('userId', userId)
+        .not('endTime', 'is', null)
         .gte('startTime', range.start.toUtc().toIso8601String())
         .lt('startTime', range.endExclusive.toUtc().toIso8601String())
         .order('startTime', ascending: false);
@@ -313,6 +345,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
           .from(SupabaseTableNames.shifts)
           .select()
           .eq('userId', userId)
+          .not('endTime', 'is', null)
           .gte('startTime', range.start.toUtc().toIso8601String())
           .lt('startTime', range.endExclusive.toUtc().toIso8601String())
           .count(CountOption.exact);
@@ -326,6 +359,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         .from(SupabaseTableNames.shifts)
         .select()
         .eq('userId', userId)
+        .not('endTime', 'is', null)
         .gte('startTime', range.start.toUtc().toIso8601String())
         .lt('startTime', range.endExclusive.toUtc().toIso8601String())
         .order('startTime', ascending: false)

@@ -45,11 +45,17 @@ class CostsGainsSettingsView extends GetView<CostsGainsSettingsController> {
                           );
                         }
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CostsGainsSettingsResultTab(controller: controller),
-                          ],
+                        final currentDraft = controller.draft.value;
+                        return KeyedSubtree(
+                          key: ValueKey(currentDraft),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CostsGainsSettingsResultTab(
+                                controller: controller,
+                              ),
+                            ],
+                          ),
                         );
                       }),
                     ],

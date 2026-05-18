@@ -6,6 +6,13 @@ import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../../routes/app_pages.dart';
 import 'costs_gains_draft.dart';
 
+class CostsGainsWizardArguments {
+  const CostsGainsWizardArguments({this.draft, this.returnResult = false});
+
+  final CostsGainsDraft? draft;
+  final bool returnResult;
+}
+
 abstract final class CostsGainsFlowCoordinator {
   static Future<bool> hasRegisteredCosts() async {
     final result = await Get.find<HasCostsGainsSettingsUseCase>()();
@@ -26,8 +33,18 @@ abstract final class CostsGainsFlowCoordinator {
     openWizard(draft);
   }
 
-  static void openWizard([CostsGainsDraft? draft]) {
-    Get.toNamed(AppRoutes.costsGainsWizard, arguments: draft);
+  static Future<CostsGainsDraft?> openWizard(
+    CostsGainsDraft? draft, {
+    bool returnResult = false,
+  }) async {
+    final result = await Get.toNamed(
+      AppRoutes.costsGainsWizard,
+      arguments: CostsGainsWizardArguments(
+        draft: draft,
+        returnResult: returnResult,
+      ),
+    );
+    return result is CostsGainsDraft ? result : null;
   }
 
   static void openResult(CostsGainsDraft draft) {

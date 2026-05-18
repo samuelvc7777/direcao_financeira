@@ -28,3 +28,13 @@ class CancelRideUseCase {
     return repository.cancelRide(rideId: rideId, cancelReason: cancelReason);
   }
 }
+
+class DeleteRideUseCase {
+  DeleteRideUseCase(this.repository);
+
+  final IRideRepository repository;
+
+  Future<Either<Failure, Unit>> call({required int rideId}) {
+    return repository.deleteRide(rideId: rideId);
+  }
+}

@@ -209,6 +209,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, TransactionEntity>> createTransaction({
     required TransactionType type,
+    TransactionStatus status = TransactionStatus.cleared,
     required AssetType assetType,
     required int amountCents,
     required int categoryId,
@@ -220,6 +221,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
   }) async {
     createdTransactions.add({
       'type': type,
+      'status': status,
       'assetType': assetType,
       'amountCents': amountCents,
       'categoryId': categoryId,
@@ -234,7 +236,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
       TransactionEntity(
         id: createdTransactions.length,
         type: type,
-        status: TransactionStatus.cleared,
+        status: status,
         assetType: assetType,
         amountCents: amountCents,
         categoryId: categoryId,
@@ -317,6 +319,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
   @override
   Future<Either<Failure, TransactionEntity>> updateTransaction(
     int id, {
+    TransactionStatus? status,
     int? categoryId,
     String? description,
     int? amountCents,

@@ -5,10 +5,12 @@ import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../domain/entities/ride_entity.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_text_field.dart';
 import 'import_ride_photo_controller.dart';
+import 'widgets/address_autocomplete_field.dart';
 import 'widgets/ride_details_models.dart';
 
 class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
@@ -124,6 +126,36 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
                             ),
                           );
                         }),
+                        const SizedBox(height: 10),
+                        Obx(() {
+                          final isLoading = controller.isLoadingRides.value;
+                          return OutlinedButton.icon(
+                            onPressed: isLoading
+                                ? null
+                                : () => _openRideSelector(context),
+                            icon: isLoading
+                                ? const AppLoadingIndicator(
+                                    size: AppLoadingSize.compact,
+                                    accentColor: AppColors.royalBlue,
+                                    onDark: false,
+                                  )
+                                : const Icon(
+                                    Icons.directions_car_filled_outlined,
+                                  ),
+                            label: Text(
+                              isLoading
+                                  ? 'CARREGANDO CORRIDAS...'
+                                  : 'SELECIONAR CORRIDA',
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 10),
+                        Obx(
+                          () => _SelectedRideSummary(
+                            label: controller.selectedRideLabel,
+                            hasSelection: controller.selectedRide.value != null,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -178,44 +210,65 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        CustomTextField(
+                        AddressAutocompleteField(
                           controller: controller.originController,
                           label: 'Endereco de origem',
                           hint: 'Origem lida do print',
                           icon: Icons.my_location_rounded,
+                          searchSuggestions:
+                              controller.searchAddressSuggestions,
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 14),
-                        CustomTextField(
+                        AddressAutocompleteField(
                           controller: controller.destinationController,
                           label: 'Endereco de destino',
                           hint: 'Destino lido do print',
                           icon: Icons.location_on_outlined,
+                          searchSuggestions:
+                              controller.searchAddressSuggestions,
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 16),
                         Obx(() {
                           final isEstimating =
                               controller.isEstimatingRoute.value;
-                          return Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: isEstimating
-                                  ? null
-                                  : controller.estimateRoute,
-                              icon: isEstimating
-                                  ? const AppLoadingIndicator(
-                                      size: AppLoadingSize.compact,
-                                      accentColor: AppColors.royalBlue,
-                                      onDark: false,
-                                    )
-                                  : const Icon(Icons.route_rounded),
-                              label: Text(
-                                isEstimating
-                                    ? 'Calculando rota...'
-                                    : 'Recalcular km e tempo',
+                          final providerLabel =
+                              controller.routeProviderLabel.value;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                onPressed: isEstimating
+                                    ? null
+                                    : controller.estimateRoute,
+                                icon: isEstimating
+                                    ? const AppLoadingIndicator(
+                                        size: AppLoadingSize.compact,
+                                        accentColor: AppColors.royalBlue,
+                                        onDark: false,
+                                      )
+                                    : const Icon(Icons.route_rounded),
+                                label: Text(
+                                  isEstimating
+                                      ? 'Calculando rota...'
+                                      : 'Recalcular km e tempo',
+                                ),
                               ),
-                            ),
+                              if (providerLabel.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Text(
+                                    providerLabel,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           );
                         }),
                         Row(
@@ -324,11 +377,7 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
                                 onDark: true,
                               )
                             : const Icon(Icons.save_outlined),
-                        label: Text(
-                          controller.isSaving.value
-                              ? 'SALVANDO...'
-                              : 'SALVAR CORRIDA',
-                        ),
+                        label: Text(controller.saveButtonLabel),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
                           foregroundColor: colorScheme.onPrimary,
@@ -350,6 +399,273 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
       ),
     );
   }
+
+  Future<void> _openRideSelector(BuildContext context) async {
+    await controller.loadAvailableRides();
+    if (!context.mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _RideSelectorSheet(
+        rides: controller.availableRides,
+        selectedRide: controller.selectedRide.value,
+        onSelected: (ride) {
+          controller.selectRide(ride);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+}
+
+class _SelectedRideSummary extends StatelessWidget {
+  const _SelectedRideSummary({required this.label, required this.hasSelection});
+
+  final String label;
+  final bool hasSelection;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: hasSelection
+            ? AppColors.emerald.withValues(alpha: 0.12)
+            : colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: hasSelection
+              ? AppColors.emerald.withValues(alpha: 0.35)
+              : colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasSelection
+                ? Icons.check_circle_outline_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: hasSelection
+                ? AppColors.emerald
+                : colorScheme.onSurfaceVariant,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: hasSelection
+                    ? AppColors.emerald
+                    : colorScheme.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideSelectorSheet extends StatelessWidget {
+  const _RideSelectorSheet({
+    required this.rides,
+    required this.selectedRide,
+    required this.onSelected,
+  });
+
+  final List<RideEntity> rides;
+  final RideEntity? selectedRide;
+  final ValueChanged<RideEntity> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.82;
+
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          constraints: BoxConstraints(maxHeight: maxHeight, maxWidth: 720),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                child: _SectionTitle(
+                  icon: Icons.directions_car_filled_outlined,
+                  title: 'Selecionar corrida',
+                  subtitle: 'Mais recentes primeiro',
+                ),
+              ),
+              Flexible(
+                child: rides.isEmpty
+                    ? const _RideSelectorEmptyState()
+                    : ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
+                        itemBuilder: (context, index) {
+                          final ride = rides[index];
+                          return _RideSelectorTile(
+                            ride: ride,
+                            isSelected: selectedRide?.id == ride.id,
+                            onTap: () => onSelected(ride),
+                          );
+                        },
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
+                        itemCount: rides.length,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RideSelectorEmptyState extends StatelessWidget {
+  const _RideSelectorEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+      child: Text(
+        'Nenhuma corrida encontrada.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _RideSelectorTile extends StatelessWidget {
+  const _RideSelectorTile({
+    required this.ride,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final RideEntity ride;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.royalBlue.withValues(alpha: 0.12)
+                : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.royalBlue
+                  : colorScheme.outlineVariant,
+              width: isSelected ? 1.6 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isSelected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: isSelected
+                    ? AppColors.royalBlue
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${ride.date} ${ride.time} - ${_formatRideCents(ride.grossValueCents)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${ride.passenger} | ${ride.origin} -> ${ride.destination}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatRideCents(int cents) {
+  final value = cents / 100;
+  return 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
 }
 
 class _ImagePlaceholder extends StatelessWidget {

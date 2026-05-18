@@ -296,16 +296,8 @@ class _TransactionFinanceCard extends StatelessWidget {
                       runSpacing: 5,
                       children: [
                         _InfoChip(
-                          label: isTransfer
-                              ? 'Saida'
-                              : isExpense
-                              ? 'Pendente'
-                              : 'Recebido',
-                          icon: isExpense
-                              ? isTransfer
-                                    ? Icons.outbox_rounded
-                                    : Icons.more_horiz_rounded
-                              : Icons.check_circle_rounded,
+                          label: _resolveStatusChipLabel(isTransfer),
+                          icon: _resolveStatusChipIcon(isTransfer),
                           backgroundColor:
                               (isTransfer
                                       ? AppColors.rose
@@ -478,6 +470,30 @@ class _TransactionFinanceCard extends StatelessWidget {
         (transaction.assetType == AssetType.creditCard
             ? Icons.credit_card_rounded
             : Icons.account_balance_wallet_rounded);
+  }
+
+  String _resolveStatusChipLabel(bool isTransfer) {
+    if (isTransfer) {
+      return 'Saida';
+    }
+
+    if (transaction.status == TransactionStatus.pending) {
+      return 'Pendente';
+    }
+
+    return transaction.type == TransactionType.expense ? 'Pago' : 'Recebido';
+  }
+
+  IconData _resolveStatusChipIcon(bool isTransfer) {
+    if (isTransfer) {
+      return Icons.outbox_rounded;
+    }
+
+    if (transaction.status == TransactionStatus.pending) {
+      return Icons.more_horiz_rounded;
+    }
+
+    return Icons.check_circle_rounded;
   }
 
   Color _resolveAccentColor() {

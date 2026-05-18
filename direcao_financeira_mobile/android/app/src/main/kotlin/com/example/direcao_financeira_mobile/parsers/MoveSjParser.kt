@@ -32,9 +32,6 @@ class MoveSjParser {
             "recusar",
             "aceitar",
         )
-    private val routeKeywordRegex =
-        Regex("\\b(?:km|min|hora|horas)\\b", RegexOption.IGNORE_CASE)
-
     data class OcrLine(
         val text: String,
         val left: Int,
@@ -164,7 +161,7 @@ class MoveSjParser {
             "passenger_name" to (parsedOffer.passengerName ?: ""),
             "origin_address" to (parsedOffer.originAddress ?: ""),
             "destination_address" to (parsedOffer.destinationAddress ?: ""),
-        )
+        ).also { addStopRideMetadata(it, parsedOffer) }
     }
 
     internal fun parseOfferFromOcrLines(
@@ -185,6 +182,7 @@ class MoveSjParser {
             "origin_address" to (parsedOffer.originAddress ?: ""),
             "destination_address" to (parsedOffer.destinationAddress ?: ""),
         ).also {
+            addStopRideMetadata(it, parsedOffer)
             if (it["km_total"] == 0.0 || it["minutos_total"] == 0) {
                 val fallback = extractOfferDetails(textLines)
                 it["km_total"] = fallback.metrics.totalKm
@@ -216,8 +214,9 @@ class MoveSjParser {
 
         return MoveSjParsedOffer(
             passengerName = passengerName,
-            originAddress = addresses.first,
-            destinationAddress = addresses.second,
+            originAddress = addresses.originAddress,
+            destinationAddress = addresses.destinationAddress,
+            stopAddresses = addresses.stopAddresses,
             metrics = offerMetrics,
         )
     }
@@ -302,8 +301,9 @@ class MoveSjParser {
 
         return MoveSjParsedOffer(
             passengerName = passengerName,
-            originAddress = addresses.first,
-            destinationAddress = addresses.second,
+            originAddress = addresses.originAddress,
+            destinationAddress = addresses.destinationAddress,
+            stopAddresses = addresses.stopAddresses,
             metrics = offerMetrics,
         )
     }
@@ -436,7 +436,7 @@ class MoveSjParser {
             !line.contains(",") &&
             !line.any { it.isDigit() } &&
             !normalized.contains("deslize") &&
-            !routeKeywordRegex.containsMatchIn(normalized) &&
+            !isRouteMetricLine(line) &&
             !normalized.contains("r$") &&
             !normalized.contains("aceitar") &&
             !normalized.contains("recusar") &&
@@ -457,7 +457,7 @@ class MoveSjParser {
     private fun extractAddresses(
         lines: List<String>,
         passengerName: String?,
-    ): Pair<String?, String?> {
+    ): MoveSjRouteAddresses {
         val routeAddresses = mutableListOf<String>()
 
         lines.forEachIndexed { index, line ->
@@ -479,13 +479,13 @@ class MoveSjParser {
         val fallbackAddresses = buildFallbackAddressBlocks(lines, passengerName)
         val distinctAddresses = distinctAddressBlocks(routeAddresses + fallbackAddresses)
 
-        return distinctAddresses.getOrNull(0) to distinctAddresses.getOrNull(1)
+        return toRouteAddresses(distinctAddresses)
     }
 
     private fun extractAddressesFromOcrLines(
         lines: List<OcrLine>,
         passengerName: String?,
-    ): Pair<String?, String?> {
+    ): MoveSjRouteAddresses {
         val routeLines =
             lines
                 .filter { line ->
@@ -511,10 +511,43 @@ class MoveSjParser {
 
         val distinctAddresses = distinctAddressBlocks(addressBlocks)
         if (distinctAddresses.size >= 2) {
-            return distinctAddresses[0] to distinctAddresses[1]
+            return toRouteAddresses(distinctAddresses)
         }
 
         return extractAddresses(lines.map { it.text }, passengerName)
+    }
+
+    private fun toRouteAddresses(addresses: List<String>): MoveSjRouteAddresses {
+        val originAddress = addresses.firstOrNull()
+        val destinationAddress =
+            when {
+                addresses.size >= 3 -> addresses.lastOrNull()
+                else -> addresses.getOrNull(1)
+            }
+        val stopAddresses =
+            if (addresses.size >= 3) {
+                addresses.subList(1, addresses.lastIndex)
+            } else {
+                emptyList()
+            }
+
+        return MoveSjRouteAddresses(
+            originAddress = originAddress,
+            destinationAddress = destinationAddress,
+            stopAddresses = stopAddresses,
+        )
+    }
+
+    private fun addStopRideMetadata(
+        data: MutableMap<String, Any>,
+        parsedOffer: MoveSjParsedOffer,
+    ) {
+        if (parsedOffer.stopAddresses.isEmpty()) {
+            return
+        }
+
+        data["tipo_corrida"] = "Corrida com parada"
+        data["stop_addresses"] = parsedOffer.stopAddresses
     }
 
     private fun extractAddressBlockBelowRouteLine(
@@ -667,7 +700,7 @@ class MoveSjParser {
             !normalized.contains("deslize") &&
             !normalized.contains("aceitar") &&
             !normalized.contains("recusar") &&
-            !routeKeywordRegex.containsMatchIn(normalized) &&
+            !isRouteMetricLine(line) &&
             !normalized.contains("r$") &&
             !normalized.contains("pix") &&
             !normalized.contains("cartao") &&
@@ -675,6 +708,12 @@ class MoveSjParser {
             !normalized.contains("motorista") &&
             !ratingRegex.containsMatchIn(line) &&
             !ratingValueRegex.matches(line.trim())
+    }
+
+    private fun isRouteMetricLine(line: String): Boolean {
+        return routeStepRegex.containsMatchIn(line) ||
+            offerDistanceRegex.containsMatchIn(line) ||
+            offerMinutesRegex.containsMatchIn(line)
     }
 
     private fun inferPageWidth(lines: List<OcrLine>): Int {
@@ -815,6 +854,13 @@ class MoveSjParser {
         val passengerName: String?,
         val originAddress: String?,
         val destinationAddress: String?,
+        val stopAddresses: List<String>,
         val metrics: MoveSjOfferMetrics,
+    )
+
+    private data class MoveSjRouteAddresses(
+        val originAddress: String?,
+        val destinationAddress: String?,
+        val stopAddresses: List<String>,
     )
 }

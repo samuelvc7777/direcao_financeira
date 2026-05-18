@@ -3,13 +3,21 @@ import 'package:get/get.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/services/address_autocomplete_service.dart';
+import '../../../data/services/ride_route_estimator.dart';
 import '../../../domain/entities/detected_ride_draft_entity.dart';
 import '../../../domain/usecases/create_detected_ride_usecase.dart';
 
 class AddRideController extends GetxController {
-  AddRideController({required this.createDetectedRideUseCase});
+  AddRideController({
+    required this.createDetectedRideUseCase,
+    required this.addressAutocompleteService,
+    required this.routeEstimator,
+  });
 
   final CreateDetectedRideUseCase createDetectedRideUseCase;
+  final AddressAutocompleteService addressAutocompleteService;
+  final RideRouteEstimator routeEstimator;
 
   final passengerController = TextEditingController();
   final ratingController = TextEditingController();
@@ -23,6 +31,8 @@ class AddRideController extends GetxController {
   final selectedPlatform = 'Uber'.obs;
   final selectedPaymentMethod = 'Dinheiro'.obs;
   final isSubmitting = false.obs;
+  final isEstimatingRoute = false.obs;
+  final routeProviderLabel = ''.obs;
 
   void addStop() {
     stopControllers.add(TextEditingController());
@@ -95,6 +105,50 @@ class AddRideController extends GetxController {
     );
 
     isSubmitting.value = false;
+  }
+
+  Future<void> estimateRoute() async {
+    final origin = originController.text.trim();
+    final destination = destinationController.text.trim();
+    if (origin.isEmpty || destination.isEmpty) {
+      _showWarning('Informe origem e destino para calcular a rota.');
+      return;
+    }
+
+    isEstimatingRoute.value = true;
+    routeProviderLabel.value = 'Calculando rota...';
+    try {
+      final estimate = await routeEstimator.estimate(
+        originAddress: origin,
+        destinationAddress: destination,
+      );
+      if (estimate == null) {
+        _showWarning(
+          'Nao consegui calcular a rota. Confira os enderecos ou preencha manualmente.',
+        );
+        return;
+      }
+
+      distanceKmController.text = estimate.distanceKm
+          .toStringAsFixed(1)
+          .replaceAll('.', ',');
+      durationMinutesController.text = estimate.durationMinutes.toString();
+      routeProviderLabel.value = 'Rota calculada por ${estimate.provider}';
+    } catch (_) {
+      _showWarning(
+        'Nao consegui calcular a rota agora. Confira os enderecos ou preencha manualmente.',
+      );
+    } finally {
+      isEstimatingRoute.value = false;
+      if (distanceKmController.text.trim().isEmpty ||
+          durationMinutesController.text.trim().isEmpty) {
+        routeProviderLabel.value = '';
+      }
+    }
+  }
+
+  Future<List<AddressSuggestion>> searchAddressSuggestions(String input) {
+    return addressAutocompleteService.search(input);
   }
 
   String get estimatedDistanceLabel {

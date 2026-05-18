@@ -15,7 +15,7 @@ import {
   LogOut
 } from "lucide-react"
 
-import { fetchApi } from "@/lib/api/client"
+import { fetchApi, signOut } from "@/lib/api/client"
 
 interface AuthUser {
   name: string
@@ -32,7 +32,8 @@ export default function DashboardLayout({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await signOut().catch(() => undefined);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/login');

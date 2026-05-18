@@ -23,3 +23,16 @@ class CreateFinishedRideUseCase {
     return repository.createFinishedRide(ride);
   }
 }
+
+class UpdateFinishedRideUseCase {
+  UpdateFinishedRideUseCase(this.repository);
+
+  final IRideRepository repository;
+
+  Future<Either<Failure, Unit>> call({
+    required int rideId,
+    required DetectedRideDraftEntity ride,
+  }) {
+    return repository.updateFinishedRide(rideId: rideId, ride: ride);
+  }
+}

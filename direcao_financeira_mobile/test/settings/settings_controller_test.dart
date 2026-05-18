@@ -149,5 +149,25 @@ void main() {
 
       Get.delete<SettingsController>();
     });
+
+    test('estado do balao rodando prevalece sobre preferencia local antiga', () async {
+      final repository = _FakeAuthRepository();
+      final preferences = _FakePreferences(initialValue: false);
+      final appBubbleService = _FakeAppBubbleService()..isRunning = true;
+      final controller = SettingsController(
+        appBubbleService: appBubbleService,
+        preferences: preferences,
+        getStoredUserUseCase: GetStoredUserUseCase(repository),
+        logoutUseCase: LogoutUseCase(repository),
+      );
+      Get.put(controller);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.isAppBubbleEnabled.value, isTrue);
+      expect(preferences.lastWrittenValue, isTrue);
+      expect(appBubbleService.isRunning, isTrue);
+
+      Get.delete<SettingsController>();
+    });
   });
 }

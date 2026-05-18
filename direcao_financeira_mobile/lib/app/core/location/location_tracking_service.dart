@@ -15,6 +15,7 @@ import '../../data/models/tracked_route_point_model.dart';
 const _journeyActiveShiftKey = 'journey_local_active_shift';
 const _notificationChannelId = 'journey_location_tracking';
 const _notificationId = 4812;
+const _journeyTrackingDistanceFilterMeters = 10;
 const _minimumTrackedSpeedKmH = 10.0;
 const _minimumTrackedSpeedMetersPerSecond = _minimumTrackedSpeedKmH / 3.6;
 const _idleGracePeriod = Duration(minutes: 4);
@@ -135,6 +136,83 @@ class LocationTrackingService {
       if (endedAt != null) 'ended_at': endedAt.toUtc().toIso8601String(),
     });
   }
+
+  static Future<void> refreshIdleTimeIfNeeded({
+    required int? localShiftId,
+    required bool isPaused,
+    DateTime? reference,
+  }) async {
+    if (localShiftId == null || isPaused) {
+      return;
+    }
+
+    final storage = GetStorage();
+    final rawShift = storage.read(_journeyActiveShiftKey);
+    if (rawShift is! Map) {
+      return;
+    }
+
+    final shift = ActiveShiftModel.fromJson(
+      Map<String, dynamic>.from(rawShift),
+    );
+    if (shift.id != localShiftId ||
+        shift.isPaused ||
+        shift.lowSpeedSince == null) {
+      return;
+    }
+
+    final updatedShift = _accumulateStoppedIdle(
+      shift: shift,
+      reference: reference ?? DateTime.now(),
+      includePartialTick: false,
+    );
+
+    if (updatedShift.idleTimeSeconds == shift.idleTimeSeconds &&
+        updatedShift.lastMotionIdleCheckpointAt ==
+            shift.lastMotionIdleCheckpointAt) {
+      return;
+    }
+
+    await storage.write(_journeyActiveShiftKey, updatedShift.toJson());
+  }
+
+  static ActiveShiftModel _accumulateStoppedIdle({
+    required ActiveShiftModel shift,
+    required DateTime reference,
+    required bool includePartialTick,
+  }) {
+    final stoppedSince = shift.lowSpeedSince;
+    if (stoppedSince == null) {
+      return shift;
+    }
+
+    final confirmedAt = stoppedSince.add(_idleGracePeriod);
+    if (reference.isBefore(confirmedAt)) {
+      return shift;
+    }
+
+    final countedUntil = shift.lastMotionIdleCheckpointAt ?? stoppedSince;
+    if (!reference.isAfter(countedUntil)) {
+      return shift;
+    }
+
+    final elapsedSeconds = reference.difference(countedUntil).inSeconds;
+    final secondsToAdd = includePartialTick
+        ? elapsedSeconds
+        : (elapsedSeconds ~/ _idleTickInterval.inSeconds) *
+              _idleTickInterval.inSeconds;
+
+    if (secondsToAdd <= 0) {
+      return shift;
+    }
+
+    return shift.copyWith(
+      idleTimeSeconds: shift.idleTimeSeconds + secondsToAdd,
+      lastMotionIdleCheckpointAt: countedUntil.add(
+        Duration(seconds: secondsToAdd),
+      ),
+    );
+  }
 }
 
 Future<void> _createTrackingNotificationChannel() async {
@@ -162,6 +240,7 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
   final storage = GetStorage();
   final routeDataSource = JourneyRouteLocalDataSourceImpl();
   StreamSubscription<Position>? positionSubscription;
+  Timer? idleRefreshTimer;
   int? currentLocalShiftId;
   DateTime? currentStartedAt;
   bool isPaused = false;
@@ -184,7 +263,10 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     await storage.write(_journeyActiveShiftKey, shift.toJson());
   }
 
-  Future<bool> clearMotionIdleState({double? currentDrivenKm}) async {
+  Future<bool> finishStoppedPeriod({
+    required DateTime observedAt,
+    double? currentDrivenKm,
+  }) async {
     final shift = readActiveShift();
     if (shift == null ||
         shift.id != currentLocalShiftId ||
@@ -194,9 +276,15 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       return false;
     }
 
+    final updatedShift = LocationTrackingService._accumulateStoppedIdle(
+      shift: shift,
+      reference: observedAt,
+      includePartialTick: true,
+    );
+
     await saveActiveShift(
-      shift.copyWith(
-        currentDrivenKm: currentDrivenKm ?? shift.currentDrivenKm,
+      updatedShift.copyWith(
+        currentDrivenKm: currentDrivenKm ?? updatedShift.currentDrivenKm,
         clearLowSpeedSince: true,
         clearLastMotionIdleCheckpointAt: true,
       ),
@@ -213,37 +301,41 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       return false;
     }
 
-    final lowSpeedSince = shift.lowSpeedSince ?? observedAt;
-    var checkpointAt = shift.lastMotionIdleCheckpointAt;
-    var idleTimeSeconds = shift.idleTimeSeconds;
-    var hasIdleTick = false;
+    final stoppedShift = shift.lowSpeedSince == null
+        ? shift.copyWith(
+            lowSpeedSince: observedAt,
+            clearLastMotionIdleCheckpointAt: true,
+          )
+        : LocationTrackingService._accumulateStoppedIdle(
+            shift: shift,
+            reference: observedAt,
+            includePartialTick: false,
+          );
 
-    if (!observedAt.isBefore(lowSpeedSince.add(_idleGracePeriod))) {
-      final baseCheckpointAt = checkpointAt ?? lowSpeedSince;
-      final elapsedSinceCheckpoint = observedAt.difference(baseCheckpointAt);
-      final tickCount =
-          elapsedSinceCheckpoint.inSeconds ~/ _idleTickInterval.inSeconds;
+    await saveActiveShift(
+      stoppedShift.copyWith(
+        currentDrivenKm: currentDrivenKm ?? stoppedShift.currentDrivenKm,
+      ),
+    );
 
-      if (tickCount > 0) {
-        final addedIdleSeconds = tickCount * _idleTickInterval.inSeconds;
-        idleTimeSeconds += addedIdleSeconds;
-        checkpointAt = baseCheckpointAt.add(
-          Duration(seconds: addedIdleSeconds),
-        );
-        hasIdleTick = true;
-      }
+    return stoppedShift.idleTimeSeconds != shift.idleTimeSeconds;
+  }
+
+  Future<void> markPotentialIdleStart() async {
+    final shift = readActiveShift();
+    if (shift == null ||
+        shift.id != currentLocalShiftId ||
+        shift.isPaused ||
+        shift.lowSpeedSince != null) {
+      return;
     }
 
     await saveActiveShift(
       shift.copyWith(
-        currentDrivenKm: currentDrivenKm ?? shift.currentDrivenKm,
-        idleTimeSeconds: idleTimeSeconds,
-        lowSpeedSince: lowSpeedSince,
-        lastMotionIdleCheckpointAt: checkpointAt,
+        lowSpeedSince: DateTime.now(),
+        clearLastMotionIdleCheckpointAt: true,
       ),
     );
-
-    return hasIdleTick;
   }
 
   Future<void> emitStatus({
@@ -303,9 +395,22 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     }
   }
 
+  Future<void> startIdleRefreshTimer() async {
+    idleRefreshTimer?.cancel();
+    idleRefreshTimer = Timer.periodic(_idleTickInterval, (_) async {
+      await LocationTrackingService.refreshIdleTimeIfNeeded(
+        localShiftId: currentLocalShiftId,
+        isPaused: isPaused,
+      );
+      await emitStatus(force: true);
+    });
+  }
+
   Future<void> cancelTrackingStream() async {
     await positionSubscription?.cancel();
     positionSubscription = null;
+    idleRefreshTimer?.cancel();
+    idleRefreshTimer = null;
   }
 
   Future<void> startTrackingStream() async {
@@ -339,6 +444,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
       localShiftId: currentLocalShiftId!,
       startedAt: currentStartedAt!,
     );
+    await markPotentialIdleStart();
+    await startIdleRefreshTimer();
 
     final locationSettings = _buildLocationSettings();
     positionSubscription =
@@ -372,7 +479,8 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
                 recordedAt: position.timestamp.toLocal(),
               ),
             );
-            final resumedMovement = await clearMotionIdleState(
+            final resumedMovement = await finishStoppedPeriod(
+              observedAt: position.timestamp.toLocal(),
               currentDrivenKm: (updatedRoute?.totalDistanceMeters ?? 0) / 1000,
             );
 
@@ -569,14 +677,13 @@ LocationSettings _buildLocationSettings() {
   if (Platform.isAndroid) {
     return AndroidSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 25,
-      intervalDuration: const Duration(seconds: 5),
+      distanceFilter: _journeyTrackingDistanceFilterMeters,
       forceLocationManager: false,
     );
   }
 
   return const LocationSettings(
     accuracy: LocationAccuracy.high,
-    distanceFilter: 25,
+    distanceFilter: _journeyTrackingDistanceFilterMeters,
   );
 }

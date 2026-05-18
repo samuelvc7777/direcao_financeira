@@ -84,6 +84,16 @@ class NestRideRemoteDataSource implements IRideDataSource {
   }
 
   @override
+  Future<void> updateFinishedRide({
+    required int rideId,
+    required DetectedRideDraftEntity ride,
+  }) {
+    throw UnsupportedError(
+      'Atualizacao de corrida finalizada esta disponivel apenas no provider Supabase.',
+    );
+  }
+
+  @override
   Future<void> finishRide({
     required int rideId,
     required String paymentMethod,
@@ -97,6 +107,13 @@ class NestRideRemoteDataSource implements IRideDataSource {
   Future<void> cancelRide({required int rideId, required String cancelReason}) {
     throw UnsupportedError(
       'Cancelamento de corrida via detalhes esta disponivel apenas no provider Supabase.',
+    );
+  }
+
+  @override
+  Future<void> deleteRide({required int rideId}) {
+    throw UnsupportedError(
+      'Exclusao de corrida esta disponivel apenas no provider Supabase.',
     );
   }
 }

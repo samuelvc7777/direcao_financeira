@@ -13,6 +13,7 @@ class RideModel extends RideEntity {
     required super.time,
     required super.origin,
     required super.destination,
+    super.rideType,
     required super.passenger,
     required super.totalKm,
     required super.totalTimeSeconds,
@@ -40,6 +41,7 @@ class RideModel extends RideEntity {
     final platformName = (json['platformName'] as String?)?.trim();
     final originAddress = (json['originAddress'] as String?)?.trim();
     final destinationAddress = (json['destinationAddress'] as String?)?.trim();
+    final rideType = (json['rideType'] as String?)?.trim();
     final passengerName = (json['passengerName'] as String?)?.trim();
 
     return RideModel(
@@ -59,6 +61,7 @@ class RideModel extends RideEntity {
       destination: destinationAddress?.isNotEmpty == true
           ? destinationAddress!
           : 'Destino nao informado',
+      rideType: rideType?.isNotEmpty == true ? rideType : null,
       passenger: passengerName?.isNotEmpty == true
           ? passengerName!
           : 'Nao informado',
@@ -92,6 +95,7 @@ class RideModel extends RideEntity {
           '${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}',
       origin: draft.originAddress ?? 'Origem nao informada',
       destination: draft.destinationAddress ?? 'Destino nao informado',
+      rideType: draft.rideType,
       passenger: draft.passengerName ?? 'Nao informado',
       totalKm: draft.totalKm,
       totalTimeSeconds: draft.totalTimeSeconds,
@@ -113,6 +117,7 @@ class RideModel extends RideEntity {
       'createdAt': effectiveCreatedAt.toUtc().toIso8601String(),
       'originAddress': origin,
       'destinationAddress': destination,
+      'rideType': rideType,
       'passengerName': passenger,
       'totalKm': totalKm,
       'totalTime': totalTimeSeconds,
@@ -135,6 +140,7 @@ class RideModel extends RideEntity {
       passengerName: passenger,
       originAddress: origin,
       destinationAddress: destination,
+      rideType: rideType,
     );
   }
 }
