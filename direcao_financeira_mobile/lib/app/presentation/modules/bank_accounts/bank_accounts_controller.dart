@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/dashboard/dashboard_refresh_notifier.dart';
 import '../../../core/feedback/app_snackbar.dart';
 import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
@@ -12,6 +13,7 @@ class BankAccountsController extends GetxController {
     required this.updateBankAccountUseCase,
     required this.deactivateBankAccountUseCase,
     required this.reactivateBankAccountUseCase,
+    required this.dashboardRefreshNotifier,
   });
 
   final LoadBankAccountsUseCase loadBankAccountsUseCase;
@@ -19,6 +21,7 @@ class BankAccountsController extends GetxController {
   final UpdateBankAccountUseCase updateBankAccountUseCase;
   final DeactivateBankAccountUseCase deactivateBankAccountUseCase;
   final ReactivateBankAccountUseCase reactivateBankAccountUseCase;
+  final DashboardRefreshNotifier dashboardRefreshNotifier;
 
   final isLoading = true.obs;
   final isSubmitting = false.obs;
@@ -149,10 +152,11 @@ class BankAccountsController extends GetxController {
         ? await deactivateBankAccountUseCase(account.id)
         : await reactivateBankAccountUseCase(account.id);
 
-    result.fold(
-      (failure) => _showFeedback('Erro', failure.message, isError: true),
+    await result.fold(
+      (failure) async => _showFeedback('Erro', failure.message, isError: true),
       (_) async {
         await loadBankAccounts();
+        dashboardRefreshNotifier.requestRefresh();
         if (Get.isBottomSheetOpen ?? false) {
           Get.back();
         }
@@ -170,10 +174,11 @@ class BankAccountsController extends GetxController {
     isSubmitting.value = true;
     final result = await action();
 
-    result.fold(
-      (failure) => _showFeedback('Erro', failure.message, isError: true),
+    await result.fold(
+      (failure) async => _showFeedback('Erro', failure.message, isError: true),
       (_) async {
         await loadBankAccounts();
+        dashboardRefreshNotifier.requestRefresh();
         if (Get.isBottomSheetOpen ?? false) {
           Get.back();
         }
@@ -185,6 +190,13 @@ class BankAccountsController extends GetxController {
   }
 
   void _showFeedback(String title, String message, {bool isError = false}) {
+    if (Get.testMode || Get.overlayContext == null) {
+      debugPrint(
+        '[BankAccountsController] Feedback suprimido: $title - $message',
+      );
+      return;
+    }
+
     AppSnackbar.show(
       title,
       message,

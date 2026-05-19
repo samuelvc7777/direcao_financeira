@@ -86,6 +86,7 @@ model User {
   email           String              @unique
   password        String
   name            String
+  profilePhotoBase64 String?
   role            Role                @default(USER)
   isActive        Boolean             @default(true)
   subscriptions   Subscription[]
@@ -218,6 +219,9 @@ model Transaction {
   installmentGroupId String?
   installmentNumber  Int?
   installmentCount   Int?
+  recurrenceGroupId String?
+  recurrenceNumber   Int?
+  recurrenceCount    Int?
   description    String
   amountCents    Int
   transactionDate DateTime
@@ -238,6 +242,7 @@ model Transaction {
   @@index([categoryId])
   @@index([invoiceId])
   @@index([installmentGroupId])
+  @@index([recurrenceGroupId])
 }
 
 model Shift {

@@ -1,4 +1,5 @@
 import '../../domain/entities/shift_route_entity.dart';
+import '../shared/journey_datetime_parser.dart';
 import 'tracked_route_point_model.dart';
 
 class ShiftRouteModel extends ShiftRouteEntity {
@@ -17,20 +18,20 @@ class ShiftRouteModel extends ShiftRouteEntity {
     final rawPoints = json['points'];
     final points = rawPoints is List
         ? rawPoints
-            .whereType<Map>()
-            .map(
-              (item) => TrackedRoutePointModel.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .toList()
+              .whereType<Map>()
+              .map(
+                (item) => TrackedRoutePointModel.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList()
         : <TrackedRoutePointModel>[];
 
     return ShiftRouteModel(
       localShiftId: json['localShiftId'] as int?,
       remoteShiftId: json['shiftId'] as int? ?? json['remoteShiftId'] as int?,
-      startedAt: DateTime.parse(json['startedAt'] as String).toLocal(),
-      endedAt: DateTime.parse(json['endedAt'] as String).toLocal(),
+      startedAt: parseJourneyDateTimeToLocal(json['startedAt'] as String),
+      endedAt: parseJourneyDateTimeToLocal(json['endedAt'] as String),
       totalDistanceMeters:
           (json['totalDistanceMeters'] as num?)?.toDouble() ?? 0,
       pointCount: json['pointCount'] as int? ?? points.length,
@@ -46,8 +47,8 @@ class ShiftRouteModel extends ShiftRouteEntity {
     return ShiftRouteModel(
       localShiftId: routeRow['local_shift_id'] as int?,
       remoteShiftId: routeRow['remote_shift_id'] as int?,
-      startedAt: DateTime.parse(routeRow['started_at'] as String).toLocal(),
-      endedAt: DateTime.parse(routeRow['ended_at'] as String).toLocal(),
+      startedAt: parseJourneyDateTimeToLocal(routeRow['started_at'] as String),
+      endedAt: parseJourneyDateTimeToLocal(routeRow['ended_at'] as String),
       totalDistanceMeters:
           (routeRow['total_distance_meters'] as num?)?.toDouble() ?? 0,
       pointCount: routeRow['point_count'] as int? ?? points.length,

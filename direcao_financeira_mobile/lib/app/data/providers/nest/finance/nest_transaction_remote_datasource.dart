@@ -69,6 +69,7 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     final payload = <String, dynamic>{
       'type': TransactionTypeCodec.encode(type),
@@ -112,6 +113,7 @@ class NestTransactionRemoteDataSource implements ITransactionDataSource {
           bankAccountId: draft.bankAccountId,
           creditCardId: draft.creditCardId,
           installmentCount: draft.installmentCount,
+          recurrenceCount: draft.recurrenceCount,
         ),
       );
     }

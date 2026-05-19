@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -907,8 +908,8 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         ),
       ]);
     } catch (error, stackTrace) {
-      debugPrint('[JourneyController] Erro inesperado ao carregar: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      _debugLog('[JourneyController] Erro inesperado ao carregar: $error');
+      _debugStack(stackTrace);
     } finally {
       if (generation == _periodRefreshGeneration &&
           (!silent || isLoading.value)) {
@@ -983,14 +984,14 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required DateTime startTime,
     required DateTime endTime,
   }) async {
-    debugPrint(
+    _debugLog(
       '[JourneyController] addManualShift solicitado: '
       'canAdd=$canAddManualShift isLoading=${isLoading.value} '
       'isAdding=${isAddingManualShift.value} hasActiveShift=$hasActiveShift '
       'km=$drivenKm start=$startTime end=$endTime.',
     );
     if (!canAddManualShift) {
-      debugPrint(
+      _debugLog(
         '[JourneyController] addManualShift bloqueado por canAddManualShift=false.',
       );
       return false;
@@ -1008,7 +1009,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
       return await result.fold(
         (failure) async {
-          debugPrint(
+          _debugLog(
             '[JourneyController] addManualShift falhou: '
             '${failure.runtimeType} ${failure.message}',
           );
@@ -1016,7 +1017,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
           return false;
         },
         (finishResult) async {
-          debugPrint(
+          _debugLog(
             '[JourneyController] addManualShift sucesso: '
             'synced=${finishResult.synced} '
             'pending=${finishResult.pendingSyncCount}.',
@@ -1031,15 +1032,15 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
           }
 
           await refreshJourneyData(silent: true, includeTrackingStatus: false);
-          debugPrint(
+          _debugLog(
             '[JourneyController] Historico atualizado apos turno manual.',
           );
           return true;
         },
       );
     } catch (error, stackTrace) {
-      debugPrint('[JourneyController] addManualShift erro inesperado: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      _debugLog('[JourneyController] addManualShift erro inesperado: $error');
+      _debugStack(stackTrace);
       _showError(
         'Nao foi possivel adicionar',
         'Erro inesperado ao salvar turno manual.',
@@ -1047,7 +1048,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       return false;
     } finally {
       isAddingManualShift.value = false;
-      debugPrint('[JourneyController] addManualShift finalizado.');
+      _debugLog('[JourneyController] addManualShift finalizado.');
     }
   }
 
@@ -1287,7 +1288,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     final result = await useCase();
     result.fold((failure) {
       costsGainsSettings.value = null;
-      debugPrint(
+      _debugLog(
         '[JourneyController] Erro ao carregar configuracoes de custos: ${failure.message}',
       );
     }, (settings) => costsGainsSettings.value = settings);
@@ -1300,7 +1301,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     required bool reset,
     int? generation,
   }) async {
-    debugPrint(
+    _debugLog(
       '[JourneyController] _loadHistory inicio: '
       'filter=${selectedFilter.value} date=$startDateParam '
       'endDate=$endDateParam reset=$reset offset=${reset ? 0 : shiftsList.length} '
@@ -1325,7 +1326,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         showErrors: showErrors,
       ),
       (shiftsPage) {
-        debugPrint(
+        _debugLog(
           '[JourneyController] _loadHistory sucesso: '
           'items=${shiftsPage.items.length} total=${shiftsPage.totalCount} '
           'hasMore=${shiftsPage.hasMore} ids=${shiftsPage.items.map((shift) => shift.remoteShiftId ?? shift.localId).toList()} '
@@ -1835,7 +1836,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
-    debugPrint(
+    _debugLog(
       '[JourneyController] Erro ao carregar $context: $normalizedMessage',
     );
   }
@@ -2372,6 +2373,18 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
         backgroundColor: Colors.redAccent,
       ),
     );
+  }
+
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      debugPrint(message);
+    }
+  }
+
+  void _debugStack(StackTrace stackTrace) {
+    if (kDebugMode) {
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 }
 

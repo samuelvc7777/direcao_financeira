@@ -9,6 +9,7 @@ import '../../../models/journey_statistics_model.dart';
 import '../../../models/pending_finished_shift_model.dart';
 import '../../../models/shift_model.dart';
 import '../../../models/shift_route_model.dart';
+import '../../../shared/journey_datetime_parser.dart';
 
 class NestJourneyRemoteDataSource implements IJourneyDataSource {
   NestJourneyRemoteDataSource({required this.dio});
@@ -28,7 +29,7 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
 
   String _formatTimeOnly(String dateString) {
     try {
-      final date = DateTime.parse(dateString).toLocal();
+      final date = parseJourneyDateTimeToLocal(dateString);
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } catch (_) {
       return '--:--';
@@ -37,7 +38,7 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
 
   String _formatDateOnly(String dateString) {
     try {
-      final date = DateTime.parse(dateString).toLocal();
+      final date = parseJourneyDateTimeToLocal(dateString);
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     } catch (_) {
       return '--/--/----';

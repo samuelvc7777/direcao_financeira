@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../core/dashboard/dashboard_refresh_notifier.dart';
 import '../../../domain/repositories/i_bank_account_repository.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import 'bank_accounts_controller.dart';
@@ -44,8 +45,11 @@ class BankAccountsBinding extends Bindings {
           loadBankAccountsUseCase: Get.find<LoadBankAccountsUseCase>(),
           createBankAccountUseCase: Get.find<CreateBankAccountUseCase>(),
           updateBankAccountUseCase: Get.find<UpdateBankAccountUseCase>(),
-          deactivateBankAccountUseCase: Get.find<DeactivateBankAccountUseCase>(),
-          reactivateBankAccountUseCase: Get.find<ReactivateBankAccountUseCase>(),
+          deactivateBankAccountUseCase:
+              Get.find<DeactivateBankAccountUseCase>(),
+          reactivateBankAccountUseCase:
+              Get.find<ReactivateBankAccountUseCase>(),
+          dashboardRefreshNotifier: Get.find<DashboardRefreshNotifier>(),
         ),
       );
     }

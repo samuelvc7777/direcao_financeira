@@ -1,12 +1,15 @@
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../../domain/entities/detected_ride_draft_entity.dart';
+import '../../domain/entities/costs_gains_settings_entity.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
+import '../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../presentation/modules/journey/journey_controller.dart';
 import 'accessibility_service.dart';
 
@@ -60,7 +63,7 @@ class AccessibilityController extends GetxController
           _handleRaceDetected(call.arguments);
           break;
         default:
-          developer.log('Metodo nao implementado: ${call.method}');
+          _debugLog('Metodo nao implementado: ${call.method}');
       }
     });
   }
@@ -72,6 +75,7 @@ class AccessibilityController extends GetxController
       final settingsMap = storedSettings is Map
           ? Map<String, dynamic>.from(storedSettings)
           : <String, dynamic>{};
+      final costsSettings = await _loadCostsGainsSettings();
 
       final settings = {
         'position': settingsMap['position'] ?? storage.read('tl_position') ?? 0,
@@ -102,11 +106,23 @@ class AccessibilityController extends GetxController
             .toDouble(),
         'passenger_rating_customized':
             settingsMap['passengerRatingCustomized'] ?? false,
+        'fuel_price_per_liter_cents':
+            costsSettings?.fuelPricePerLiterCents ?? 0,
+        'km_per_liter': costsSettings?.kmPerLiter ?? 0.0,
       };
       await _platform.invokeMethod('updateSettings', settings);
     } catch (e) {
       developer.log('Erro ao sincronizar configuracoes com o nativo: $e');
     }
+  }
+
+  Future<CostsGainsSettingsEntity?> _loadCostsGainsSettings() async {
+    if (!Get.isRegistered<GetCostsGainsSettingsUseCase>()) {
+      return null;
+    }
+
+    final result = await Get.find<GetCostsGainsSettingsUseCase>()();
+    return result.fold((_) => null, (entity) => entity);
   }
 
   @override
@@ -195,7 +211,9 @@ class AccessibilityController extends GetxController
       final data = Map<String, dynamic>.from(arguments);
       lastRaceData.value = data;
 
-      developer.log('Corrida detectada pelo Accessibility Service: $data');
+      _debugLog(
+        'Corrida detectada pelo Accessibility Service: ${_rideLogSummary(data)}',
+      );
       await _persistDetectedRide(data);
     }
   }
@@ -205,10 +223,12 @@ class AccessibilityController extends GetxController
       return;
     }
 
-    developer.log('Payload bruto recebido para persistencia da corrida: $data');
+    _debugLog(
+      'Payload bruto recebido para persistencia da corrida: ${_rideLogSummary(data)}',
+    );
     final ride = _mapDetectedRide(data);
     if (ride == null) {
-      developer.log(
+      _debugLog(
         'Corrida detectada descartada no mapeamento. '
         'valor=${data['valor_bruto']} km=${data['km_total']} '
         'min=${data['minutos_total']} origem=${data['origin_address']} '
@@ -217,7 +237,7 @@ class AccessibilityController extends GetxController
       return;
     }
 
-    developer.log(
+    _debugLog(
       'Draft mapeado para persistencia: '
       'platform=${ride.platformName} '
       'passenger=${ride.passengerName} '
@@ -228,7 +248,7 @@ class AccessibilityController extends GetxController
     );
 
     if (_isDuplicateRide(ride)) {
-      developer.log('Corrida detectada ignorada por dedupe local.');
+      _debugLog('Corrida detectada ignorada por dedupe local.');
       return;
     }
 
@@ -239,7 +259,7 @@ class AccessibilityController extends GetxController
       ),
       (_) {
         _rememberPersistedRide(ride);
-        developer.log('Corrida detectada salva localmente como PENDING.');
+        _debugLog('Corrida detectada salva localmente como PENDING.');
         _refreshJourneyRides();
       },
     );
@@ -247,7 +267,7 @@ class AccessibilityController extends GetxController
 
   void _refreshJourneyRides() {
     if (!Get.isRegistered<JourneyController>()) {
-      developer.log(
+      _debugLog(
         'JourneyController nao registrado no momento da persistencia da corrida.',
       );
       return;
@@ -255,7 +275,22 @@ class AccessibilityController extends GetxController
 
     final controller = Get.find<JourneyController>();
     controller.refreshJourneyData(silent: true, showErrors: false);
-    developer.log('Refresh local da jornada disparado apos salvar corrida.');
+    _debugLog('Refresh local da jornada disparado apos salvar corrida.');
+  }
+
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      developer.log(message);
+    }
+  }
+
+  Map<String, dynamic> _rideLogSummary(Map<String, dynamic> data) {
+    return {
+      'app': data['platform_name'] ?? data['app'],
+      'valor': data['valor_bruto'],
+      'km': data['km_total'],
+      'min': data['minutos_total'],
+    };
   }
 
   DetectedRideDraftEntity? _mapDetectedRide(Map<String, dynamic> data) {

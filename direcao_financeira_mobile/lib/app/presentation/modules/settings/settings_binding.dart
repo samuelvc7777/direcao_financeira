@@ -21,6 +21,12 @@ class SettingsBinding extends Bindings {
         fenix: true,
       );
     }
+    if (!Get.isRegistered<UpdateProfilePhotoUseCase>()) {
+      Get.lazyPut(
+        () => UpdateProfilePhotoUseCase(Get.find<IAuthRepository>()),
+        fenix: true,
+      );
+    }
 
     if (!Get.isRegistered<SettingsController>()) {
       Get.lazyPut<SettingsController>(
@@ -29,7 +35,9 @@ class SettingsBinding extends Bindings {
           preferences: Get.find<AppPreferences>(),
           getStoredUserUseCase: Get.find<GetStoredUserUseCase>(),
           logoutUseCase: Get.find<LogoutUseCase>(),
+          updateProfilePhotoUseCase: Get.find<UpdateProfilePhotoUseCase>(),
         ),
+        fenix: true,
       );
     }
   }

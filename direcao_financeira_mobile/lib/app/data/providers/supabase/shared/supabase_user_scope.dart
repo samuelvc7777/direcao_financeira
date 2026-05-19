@@ -62,12 +62,33 @@ class SupabaseUserScope {
           'password': 'SUPABASE_AUTH',
           'role': 'USER',
           'isActive': true,
+          'profilePhotoBase64': null,
           'updatedAt': DateTime.now().toUtc().toIso8601String(),
         })
         .select()
         .single();
 
     return _buildUserModel(Map<String, dynamic>.from(inserted));
+  }
+
+  Future<UserModel> updateCurrentUserProfilePhotoBase64({
+    required String? profilePhotoBase64,
+  }) async {
+    final normalizedPhoto = profilePhotoBase64?.trim().isEmpty == true
+        ? null
+        : profilePhotoBase64;
+
+    final row = await client
+        .from(SupabaseTableNames.users)
+        .update({
+          'profilePhotoBase64': normalizedPhoto,
+          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('email', currentAuthUser.email!)
+        .select()
+        .single();
+
+    return _buildUserModel(Map<String, dynamic>.from(row));
   }
 
   Future<UserModel> getCurrentUserModel() async {

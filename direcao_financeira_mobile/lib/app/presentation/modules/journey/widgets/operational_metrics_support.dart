@@ -181,7 +181,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Lucro Líquido',
+                                'Ganhos Brutos',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -229,7 +229,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                           alignment: Alignment.centerLeft,
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            _formatCurrencyPtBr(lucro),
+                            _formatCurrencyPtBr(ganhos),
                             maxLines: 1,
                             style: TextStyle(
                               color: mainColor,
@@ -289,8 +289,8 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                       child: _TopSummaryMetric(
                         icon: Icons.trending_up_rounded,
                         iconColor: AppColors.emerald,
-                        title: 'Ganhos Brutos',
-                        value: _formatCurrencyPtBr(ganhos),
+                        title: 'Lucro Líquido',
+                        value: _formatCurrencyPtBr(lucro),
                       ),
                     ),
                     Container(

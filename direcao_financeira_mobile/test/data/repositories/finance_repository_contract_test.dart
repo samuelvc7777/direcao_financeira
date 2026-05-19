@@ -37,10 +37,40 @@ class _FakeBankAccountDataSource implements IBankAccountDataSource {
     required String color,
     required AccountType accountType,
     required int initialBalanceCents,
-  }) async => buildBankAccount(name: name);
+  }) async {
+    final created = BankAccountModel(
+      id: accounts.isEmpty ? 1 : accounts.last.id + 1,
+      name: name,
+      bankName: bankName,
+      color: color,
+      accountType: accountType,
+      initialBalanceCents: initialBalanceCents,
+      currentBalanceCents: initialBalanceCents,
+      isActive: true,
+    );
+    accounts = [...accounts, created];
+    return created;
+  }
 
   @override
-  Future<void> deactivateBankAccount(int id) async {}
+  Future<void> deactivateBankAccount(int id) async {
+    accounts = [
+      for (final account in accounts)
+        if (account.id == id)
+          BankAccountModel(
+            id: account.id,
+            name: account.name,
+            bankName: account.bankName,
+            color: account.color,
+            accountType: account.accountType,
+            initialBalanceCents: account.initialBalanceCents,
+            currentBalanceCents: account.currentBalanceCents,
+            isActive: false,
+          )
+        else
+          account,
+    ];
+  }
 
   @override
   Future<List<BankAccountModel>> getBankAccounts() async {
@@ -51,7 +81,24 @@ class _FakeBankAccountDataSource implements IBankAccountDataSource {
   }
 
   @override
-  Future<void> reactivateBankAccount(int id) async {}
+  Future<void> reactivateBankAccount(int id) async {
+    accounts = [
+      for (final account in accounts)
+        if (account.id == id)
+          BankAccountModel(
+            id: account.id,
+            name: account.name,
+            bankName: account.bankName,
+            color: account.color,
+            accountType: account.accountType,
+            initialBalanceCents: account.initialBalanceCents,
+            currentBalanceCents: account.currentBalanceCents,
+            isActive: true,
+          )
+        else
+          account,
+    ];
+  }
 
   @override
   Future<BankAccountModel> updateBankAccount({
@@ -62,7 +109,23 @@ class _FakeBankAccountDataSource implements IBankAccountDataSource {
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,
-  }) async => buildBankAccount(id: id, name: name, isActive: isActive ?? true);
+  }) async {
+    final updated = BankAccountModel(
+      id: id,
+      name: name,
+      bankName: bankName,
+      color: color,
+      accountType: accountType,
+      initialBalanceCents: initialBalanceCents,
+      currentBalanceCents: initialBalanceCents,
+      isActive: isActive ?? true,
+    );
+    accounts = [
+      for (final account in accounts)
+        if (account.id == id) updated else account,
+    ];
+    return updated;
+  }
 }
 
 class _FakeCategoryDataSource implements ICategoryDataSource {
@@ -160,6 +223,7 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async => buildTransaction(
     id: 10,
     type: type,
@@ -170,17 +234,16 @@ class _FakeTransactionDataSource implements ITransactionDataSource {
   @override
   Future<List<TransactionModel>> createImportedTransactions({
     required List<TransactionDraftEntity> transactions,
-  }) async =>
-      transactions
-          .map(
-            (draft) => buildTransaction(
-              id: draft.amountCents,
-              type: draft.type,
-              date: draft.transactionDate,
-              description: draft.description,
-            ),
-          )
-          .toList();
+  }) async => transactions
+      .map(
+        (draft) => buildTransaction(
+          id: draft.amountCents,
+          type: draft.type,
+          date: draft.transactionDate,
+          description: draft.description,
+        ),
+      )
+      .toList();
 
   @override
   Future<void> deleteTransaction(
@@ -292,6 +355,48 @@ void main() {
         result.swap().getOrElse(() => ServerFailure('x')).message,
         'Erro inesperado ao carregar contas bancarias.',
       );
+    });
+
+    test('migra usuarios antigos criando a conta Dinheiro padrao', () async {
+      dataSource.accounts = [buildBankAccount(id: 1, isActive: true)];
+      dataSource.accounts = dataSource.accounts
+          .where((account) => account.accountType != AccountType.wallet)
+          .toList();
+
+      final result = await repository.getBankAccounts();
+      final accounts = result.getOrElse(() => const []);
+
+      expect(
+        accounts.any((account) => account.accountType == AccountType.wallet),
+        isTrue,
+      );
+      expect(
+        accounts
+            .firstWhere((account) => account.accountType == AccountType.wallet)
+            .name,
+        'Dinheiro',
+      );
+    });
+
+    test('reativa conta Dinheiro legada quando esta inativa', () async {
+      dataSource.accounts = [
+        BankAccountModel(
+          id: 10,
+          name: 'Dinheiro',
+          bankName: 'Dinheiro',
+          color: '#06B6D4',
+          accountType: AccountType.wallet,
+          initialBalanceCents: 0,
+          currentBalanceCents: 0,
+          isActive: false,
+        ),
+      ];
+
+      final result = await repository.getBankAccounts();
+      final accounts = result.getOrElse(() => const []);
+
+      expect(accounts.single.isActive, isTrue);
+      expect(accounts.single.accountType, AccountType.wallet);
     });
   });
 

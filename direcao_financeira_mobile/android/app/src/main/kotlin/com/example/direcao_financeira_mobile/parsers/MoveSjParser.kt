@@ -2,6 +2,7 @@ package com.example.direcao_financeira_mobile.parsers
 
 import android.view.accessibility.AccessibilityNodeInfo
 import java.text.Normalizer
+import kotlin.math.abs
 
 class MoveSjParser {
 
@@ -49,7 +50,7 @@ class MoveSjParser {
 
     fun buildScreenFingerprint(rootNode: AccessibilityNodeInfo): String {
         val lines = collectVisibleTexts(rootNode)
-        val priceText = findNodeByRegex(rootNode, priceRegex)?.text?.toString() ?: ""
+        val priceText = resolveBestPriceText(lines) ?: ""
         val parsedOffer = extractOfferDetails(lines)
 
         return listOf(
@@ -65,11 +66,10 @@ class MoveSjParser {
 
     fun parseOffer(rootNode: AccessibilityNodeInfo): Map<String, Any> {
         val lines = collectVisibleTexts(rootNode)
-        val priceNode = findNodeByRegex(rootNode, priceRegex)
         val ratingNode = findNodeByRegex(rootNode, ratingRegex)
         return parseOfferFromLines(
             lines = lines,
-            priceText = priceNode?.text?.toString() ?: "R$ 0,00",
+            priceText = resolveBestPriceText(lines) ?: "R$ 0,00",
             ratingText = ratingNode?.text?.toString(),
         )
     }
@@ -104,7 +104,7 @@ class MoveSjParser {
 
         return parseOfferFromLines(
             lines = lines,
-            priceText = priceRegex.find(rawText)?.value ?: "R$ 0,00",
+            priceText = resolveBestPriceText(lines, rawText) ?: "R$ 0,00",
             ratingText = ratingRegex.find(rawText)?.value,
         )
     }
@@ -325,23 +325,104 @@ class MoveSjParser {
         return normalizedLines
     }
 
+    internal fun resolveBestPriceText(
+        lines: List<String>,
+        rawText: String? = null,
+    ): String? {
+        val firstMetricIndex = lines.indexOfFirst(::isOfferMetricContextLine)
+        val linesBeforeMetrics =
+            if (firstMetricIndex > 0) {
+                lines.subList(0, firstMetricIndex)
+            } else {
+                lines
+            }
+
+        linesBeforeMetrics
+            .firstNotNullOfOrNull(::extractPriceFromCandidateLine)
+            ?.let { return it }
+
+        lines
+            .firstNotNullOfOrNull(::extractPriceFromCandidateLine)
+            ?.let { return it }
+
+        val fallbackLine =
+            linesBeforeMetrics.firstOrNull { line ->
+                priceRegex.containsMatchIn(line) && !isDerivedMetricPriceLine(line)
+            }
+                ?: lines.firstOrNull { line ->
+                priceRegex.containsMatchIn(line) && !isDerivedMetricPriceLine(line)
+            }
+        if (fallbackLine != null) {
+            return priceRegex.find(fallbackLine)?.value
+        }
+
+        return rawText?.let { priceRegex.find(it)?.value }
+    }
+
     private fun extractBestPrice(
         rawText: String,
         ocrLines: List<OcrLine>,
     ): String? {
-        val priceLines =
-            ocrLines
-                .filter { priceRegex.containsMatchIn(it.text) }
-                .sortedWith(
-                    compareByDescending<OcrLine> { (it.right - it.left) * (it.bottom - it.top) }
-                        .thenBy { it.top },
+        val normalizedLines = normalizeOcrLines(ocrLines)
+        val firstMetricTop =
+            normalizedLines
+                .filter { isOfferMetricContextLine(it.text) }
+                .minOfOrNull { it.top }
+                ?: Int.MAX_VALUE
+        val pageWidth = inferPageWidth(normalizedLines)
+
+        val priceCandidates =
+            normalizedLines
+                .mapNotNull { line ->
+                    val price = priceRegex.find(line.text)?.value ?: return@mapNotNull null
+                    PriceCandidate(
+                        price = price,
+                        line = line,
+                        area = (line.right - line.left) * (line.bottom - line.top),
+                        isDerived = isDerivedMetricPriceLine(line.text),
+                        isPriceOnly = priceRegex.matches(line.text.trim()),
+                        isBeforeMetrics = line.bottom <= firstMetricTop,
+                        distanceToCenter = abs(line.centerX - (pageWidth / 2)),
+                    )
+                }.sortedWith(
+                    compareByDescending<PriceCandidate> { if (it.isBeforeMetrics && !it.isDerived) 1 else 0 }
+                        .thenByDescending { if (it.isPriceOnly) 1 else 0 }
+                        .thenByDescending { it.area }
+                        .thenBy { it.distanceToCenter }
+                        .thenBy { it.line.top },
                 )
 
-        priceLines.firstOrNull()?.let { line ->
-            priceRegex.find(line.text)?.value?.let { return it }
+        priceCandidates.firstOrNull { it.isBeforeMetrics && !it.isDerived }?.let { candidate ->
+            return candidate.price
         }
 
-        return priceRegex.find(rawText)?.value
+        priceCandidates.firstOrNull { !it.isDerived }?.let { candidate ->
+            return candidate.price
+        }
+
+        return resolveBestPriceText(ocrLines.map { it.text }, rawText)
+    }
+
+    private fun extractPriceFromCandidateLine(line: String): String? {
+        if (isDerivedMetricPriceLine(line)) {
+            return null
+        }
+
+        return when {
+            priceRegex.matches(line.trim()) -> line.trim()
+            else -> null
+        }
+    }
+
+    private fun isDerivedMetricPriceLine(line: String): Boolean {
+        val normalized = normalizedText(line)
+        return normalized.contains("/km") || normalized.contains("/min")
+    }
+
+    private fun isOfferMetricContextLine(line: String): Boolean {
+        return offerDistanceRegex.containsMatchIn(line) ||
+            offerMinutesRegex.containsMatchIn(line) ||
+            isDerivedMetricPriceLine(line)
     }
 
     private fun extractBestRating(ocrLines: List<OcrLine>): String? {
@@ -862,5 +943,15 @@ class MoveSjParser {
         val originAddress: String?,
         val destinationAddress: String?,
         val stopAddresses: List<String>,
+    )
+
+    private data class PriceCandidate(
+        val price: String,
+        val line: OcrLine,
+        val area: Int,
+        val isDerived: Boolean,
+        val isPriceOnly: Boolean,
+        val isBeforeMetrics: Boolean,
+        val distanceToCenter: Int,
     )
 }

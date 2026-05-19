@@ -10,6 +10,7 @@ class UserModel extends UserEntity {
     required super.isActive,
     super.createdAt,
     super.updatedAt,
+    super.profilePhotoBase64,
     super.activeSubscription,
     super.subscriptions,
   });
@@ -26,6 +27,7 @@ class UserModel extends UserEntity {
       isActive: json['isActive'] ?? true,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
+      profilePhotoBase64: json['profilePhotoBase64']?.toString(),
       activeSubscription: activeSubscription is Map
           ? SubscriptionModel.fromJson(
               Map<String, dynamic>.from(activeSubscription),
@@ -51,6 +53,7 @@ class UserModel extends UserEntity {
       'isActive': isActive,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'profilePhotoBase64': profilePhotoBase64,
       'activeSubscription': activeSubscription == null
           ? null
           : activeSubscription is SubscriptionModel

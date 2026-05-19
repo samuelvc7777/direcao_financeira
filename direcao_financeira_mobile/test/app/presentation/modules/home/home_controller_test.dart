@@ -63,6 +63,11 @@ class _FakeAuthRepository implements IAuthRepository {
       throw UnimplementedError();
 
   @override
+  Future<Either<Failure, UserEntity>> updateProfilePhotoBase64(
+    String? profilePhotoBase64,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, void>> saveToken(String token) async =>
       const Right(null);
 
@@ -218,6 +223,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     createdTransactions.add({
       'type': type,
@@ -348,8 +354,10 @@ class _FakeRealtimeClient implements RealtimeClient {
   void disconnect() {}
 
   @override
-  void off(String event) {
-    handlers.remove(event);
+  void off(String event, [void Function(dynamic payload)? handler]) {
+    if (handler == null || handlers[event] == handler) {
+      handlers.remove(event);
+    }
   }
 
   @override
@@ -486,7 +494,7 @@ void main() {
         ];
 
         realtimeClient.emit('transaction.updated');
-        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(const Duration(milliseconds: 900));
 
         expect(transactionRepository.requestedMonths, isNotEmpty);
         expect(controller.gastosPorCategoria.single.categoryLabel, 'Mercado');

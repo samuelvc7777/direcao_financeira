@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter/foundation.dart';
 
@@ -171,12 +173,12 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
     required DateTime startTime,
     required DateTime endTime,
   }) async {
-    debugPrint(
+    _debugLog(
       '[JourneyLocalDataSource] addManualFinishedShift inicio: '
       'km=$totalDrivenKm start=$startTime end=$endTime.',
     );
     if (totalDrivenKm <= 0) {
-      debugPrint('[JourneyLocalDataSource] Falha: totalDrivenKm <= 0.');
+      _debugLog('[JourneyLocalDataSource] Falha: totalDrivenKm <= 0.');
       throw ArgumentError.value(
         totalDrivenKm,
         'totalDrivenKm',
@@ -184,7 +186,7 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       );
     }
     if (!endTime.isAfter(startTime)) {
-      debugPrint('[JourneyLocalDataSource] Falha: endTime <= startTime.');
+      _debugLog('[JourneyLocalDataSource] Falha: endTime <= startTime.');
       throw ArgumentError.value(
         endTime,
         'endTime',
@@ -203,7 +205,7 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
     );
 
     final pendingShifts = await getPendingFinishedShifts();
-    debugPrint(
+    _debugLog(
       '[JourneyLocalDataSource] Pendencias antes de salvar: ${pendingShifts.length}.',
     );
     pendingShifts.add(pendingShift);
@@ -212,7 +214,7 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
       pendingShifts.map((item) => item.toJson()).toList(),
     );
     final savedCount = (storage.read(_pendingShiftsKey) as List?)?.length ?? 0;
-    debugPrint(
+    _debugLog(
       '[JourneyLocalDataSource] Turno manual salvo: '
       'localId=${pendingShift.localId} pendenciasDepois=$savedCount.',
     );
@@ -238,7 +240,9 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
           ..sort((a, b) => b.endTime.compareTo(a.endTime));
 
     final serialized = pendingShifts.map((item) => item.toJson()).toList();
-    await storage.write(_pendingShiftsKey, serialized);
+    if (!_jsonEquals(raw, serialized)) {
+      await storage.write(_pendingShiftsKey, serialized);
+    }
 
     return pendingShifts;
   }
@@ -258,5 +262,19 @@ class JourneyLocalDataSourceImpl implements IJourneyLocalDataSource {
   @override
   Future<void> clearActiveShift() async {
     await storage.remove(_activeShiftKey);
+  }
+}
+
+void _debugLog(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
+
+bool _jsonEquals(Object? left, Object? right) {
+  try {
+    return jsonEncode(left) == jsonEncode(right);
+  } catch (_) {
+    return false;
   }
 }

@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/feedback/app_snackbar.dart';
@@ -16,7 +20,9 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
     required this.preferences,
     required this.getStoredUserUseCase,
     required this.logoutUseCase,
-  });
+    required this.updateProfilePhotoUseCase,
+    ImagePicker? imagePicker,
+  }) : _imagePicker = imagePicker ?? ImagePicker();
 
   static const _appBubbleEnabledKey = 'appBubbleEnabled';
 
@@ -24,6 +30,8 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
   final AppPreferences preferences;
   final GetStoredUserUseCase getStoredUserUseCase;
   final LogoutUseCase logoutUseCase;
+  final UpdateProfilePhotoUseCase updateProfilePhotoUseCase;
+  final ImagePicker _imagePicker;
   var _pendingAppBubbleActivation = false;
 
   late final RxBool isDarkModeEnabled =
@@ -34,10 +42,12 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
   final isAppBubbleBusy = false.obs;
   final userName = 'Samuel Vitor'.obs;
   final userEmail = 'samuelvitorcarvalho717@gmail.com'.obs;
+  final profilePhotoBase64 = RxnString();
   final planName = 'Plano Anual'.obs;
   final planStatus = 'Ativo'.obs;
   final remainingDays = 361.obs;
   final planProgress = 0.99.obs;
+  final isProfilePhotoSaving = false.obs;
 
   final sections = <SettingsSection>[
     SettingsSection(
@@ -83,6 +93,12 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
           subtitle: 'Posicao, cores, tamanhos e comportamento',
           icon: Icons.grid_view_rounded,
           accentColor: AppColors.royalBlue,
+        ),
+        SettingsItemData(
+          title: 'Configurar gravação',
+          subtitle: 'FPS, resolucao, audio, camera e compressao',
+          icon: Icons.videocam_rounded,
+          accentColor: AppColors.sky,
         ),
       ],
     ),
@@ -160,9 +176,54 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
         if (user == null) return;
         userName.value = user.name;
         userEmail.value = user.email;
+        profilePhotoBase64.value = user.profilePhotoBase64;
         _loadSubscription(user.activeSubscription);
       },
     );
+  }
+
+  Future<void> pickProfilePhoto() async {
+    if (isProfilePhotoSaving.value) return;
+
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (image == null) {
+      return;
+    }
+
+    final bytes = await image.readAsBytes();
+    await updateProfilePhotoBytes(bytes);
+  }
+
+  Future<void> updateProfilePhotoBytes(Uint8List bytes) async {
+    if (bytes.isEmpty || isProfilePhotoSaving.value) {
+      return;
+    }
+
+    isProfilePhotoSaving.value = true;
+    try {
+      final encoded = base64Encode(bytes);
+      final result = await updateProfilePhotoUseCase(encoded);
+      result.fold(
+        (failure) =>
+            _showInfo('Nao foi possivel salvar a foto', failure.message),
+        (user) {
+          profilePhotoBase64.value = user.profilePhotoBase64;
+          userName.value = user.name;
+          userEmail.value = user.email;
+          _showInfo(
+            'Foto de perfil',
+            'Foto atualizada e salva no banco de dados.',
+          );
+        },
+      );
+    } finally {
+      isProfilePhotoSaving.value = false;
+    }
   }
 
   void _loadSubscription(SubscriptionEntity? subscription) {
@@ -312,6 +373,11 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
 
     if (item.title == 'Configurar semaforo') {
       Get.toNamed(AppRoutes.trafficLightSettings);
+      return;
+    }
+
+    if (item.title == 'Configurar gravação') {
+      Get.toNamed(AppRoutes.recordingSettings);
       return;
     }
 

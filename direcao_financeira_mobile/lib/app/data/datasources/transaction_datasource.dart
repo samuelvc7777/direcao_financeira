@@ -18,6 +18,7 @@ abstract class ITransactionDataSource {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   });
 
   Future<List<TransactionModel>> createImportedTransactions({

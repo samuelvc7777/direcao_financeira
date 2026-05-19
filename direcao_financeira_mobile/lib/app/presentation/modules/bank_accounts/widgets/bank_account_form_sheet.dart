@@ -24,12 +24,6 @@ class BankAccountFormSheet extends StatefulWidget {
 
 class _BankAccountFormSheetState extends State<BankAccountFormSheet>
     with SingleTickerProviderStateMixin {
-  static const _supportedAccountTypes = <AccountType>[
-    AccountType.checking,
-    AccountType.savings,
-    AccountType.wallet,
-  ];
-
   late final AnimationController _animController;
   late final Animation<double> _fadeAnim;
 
@@ -65,7 +59,7 @@ class _BankAccountFormSheetState extends State<BankAccountFormSheet>
           ? ''
           : (widget.account!.initialBalanceCents / 100.0).toStringAsFixed(2),
     );
-    _selectedType = widget.account?.accountType ?? AccountType.checking;
+    _selectedType = widget.account?.accountType ?? AccountType.wallet;
     _selectedColor = widget.account?.color ?? widget.controller.colorOptions[1];
   }
 
@@ -189,26 +183,10 @@ class _BankAccountFormSheetState extends State<BankAccountFormSheet>
                           const SizedBox(height: 24),
 
                           // ── Tipo de Conta ──
-                          _FieldGroup(
-                            icon: Icons.category_rounded,
-                            title: 'Tipo de conta',
+                          _FixedTypeInfo(
                             accentColor: _accentColor,
-                            children: [
-                              Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children: _supportedAccountTypes.map((type) {
-                                  return _TypeChip(
-                                    label: type.label,
-                                    icon: _iconForType(type),
-                                    isSelected: _selectedType == type,
-                                    accentColor: _accentColor,
-                                    onTap: () =>
-                                        setState(() => _selectedType = type),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
+                            accountType: _selectedType,
+                            isEditing: _isEditing,
                           ),
                           const SizedBox(height: 24),
 
@@ -293,7 +271,7 @@ class _BankAccountFormSheetState extends State<BankAccountFormSheet>
         name: _nameController.text.trim(),
         bankName: _bankNameController.text.trim(),
         color: _selectedColor,
-        accountType: _selectedType,
+        accountType: AccountType.wallet,
         initialBalanceCents: balanceCents,
       );
       return;
@@ -304,7 +282,7 @@ class _BankAccountFormSheetState extends State<BankAccountFormSheet>
       name: _nameController.text.trim(),
       bankName: _bankNameController.text.trim(),
       color: _selectedColor,
-      accountType: _selectedType,
+      accountType: widget.account!.accountType,
       initialBalanceCents: balanceCents,
     );
   }
@@ -680,81 +658,95 @@ class _StyledTextField extends StatelessWidget {
 // TYPE CHIP
 // ─────────────────────────────────────────────────────────
 
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
+// ─────────────────────────────────────────────────────────
+// PALETA DE CORES
+// ─────────────────────────────────────────────────────────
+
+class _FixedTypeInfo extends StatelessWidget {
+  const _FixedTypeInfo({
     required this.accentColor,
-    required this.onTap,
+    required this.accountType,
+    required this.isEditing,
   });
 
-  final String label;
-  final IconData icon;
-  final bool isSelected;
   final Color accentColor;
-  final VoidCallback onTap;
+  final AccountType accountType;
+  final bool isEditing;
 
   @override
   Widget build(BuildContext context) {
     final onSurface = context.theme.colorScheme.onSurface;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? accentColor.withValues(alpha: 0.12)
-              : onSurface.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? accentColor : onSurface.withValues(alpha: 0.08),
-            width: isSelected ? 1.8 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: accentColor.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected
-                  ? accentColor
-                  : onSurface.withValues(alpha: 0.5),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accentColor.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? accentColor
-                    : onSurface.withValues(alpha: 0.65),
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+            child: Icon(
+              _iconForType(accountType),
+              color: accentColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tipo fixo',
+                  style: TextStyle(
+                    color: onSurface.withValues(alpha: 0.55),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  accountType.label,
+                  style: TextStyle(
+                    color: onSurface,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!isEditing)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'Padrão',
+                style: TextStyle(
+                  color: accentColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// PALETA DE CORES
-// ─────────────────────────────────────────────────────────
 
 class _ColorPalette extends StatelessWidget {
   const _ColorPalette({

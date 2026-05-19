@@ -5,6 +5,7 @@ import '../../../models/journey_statistics_model.dart';
 import '../../../models/pending_finished_shift_model.dart';
 import '../../../models/shift_model.dart';
 import '../../../models/shift_route_model.dart';
+import '../../../shared/journey_datetime_parser.dart';
 import '../shared/supabase_table_names.dart';
 import '../shared/supabase_time_filter.dart';
 import '../shared/supabase_user_scope.dart';
@@ -79,9 +80,9 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
     var totalDrivenKm = 0.0;
 
     for (final shift in shiftRows) {
-      final start = DateTime.parse(shift['startTime'] as String).toLocal();
+      final start = parseJourneyDateTimeToLocal(shift['startTime'] as String);
       final end = shift['endTime'] != null
-          ? DateTime.parse(shift['endTime'] as String).toLocal()
+          ? parseJourneyDateTimeToLocal(shift['endTime'] as String)
           : DateTime.now();
       final idle = shift['idleTime'] as int? ?? 0;
       final effectiveSeconds = end.difference(start).inSeconds - idle;
@@ -181,9 +182,9 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
     final items = rows.asMap().entries.map((entry) {
       final index = entry.key + 1;
       final row = entry.value;
-      final start = DateTime.parse(row['startTime'] as String).toLocal();
+      final start = parseJourneyDateTimeToLocal(row['startTime'] as String);
       final end = row['endTime'] != null
-          ? DateTime.parse(row['endTime'] as String).toLocal()
+          ? parseJourneyDateTimeToLocal(row['endTime'] as String)
           : DateTime.now();
       final route = routesByShiftId[row['id'] as int];
       final trackedDistanceKm =

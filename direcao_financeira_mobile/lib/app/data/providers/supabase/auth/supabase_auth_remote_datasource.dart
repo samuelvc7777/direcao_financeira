@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../datasources/auth_datasource.dart';
 import '../../../dtos/auth_session_dto.dart';
+import '../../../models/user_model.dart';
 import '../shared/supabase_user_scope.dart';
 
 class SupabaseAuthRemoteDataSource implements IAuthRemoteDataSource {
@@ -102,5 +103,14 @@ class SupabaseAuthRemoteDataSource implements IAuthRemoteDataSource {
   @override
   Future<void> updatePassword({required String password}) async {
     await client.auth.updateUser(UserAttributes(password: password));
+  }
+
+  @override
+  Future<UserModel> updateProfilePhotoBase64({
+    required String? profilePhotoBase64,
+  }) {
+    return userScope.updateCurrentUserProfilePhotoBase64(
+      profilePhotoBase64: profilePhotoBase64,
+    );
   }
 }

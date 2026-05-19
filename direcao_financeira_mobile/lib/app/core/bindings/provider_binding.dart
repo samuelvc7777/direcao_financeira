@@ -19,6 +19,7 @@ import '../../data/datasources/subscription_datasource.dart';
 import '../../data/datasources/subscription_store_datasource.dart';
 import '../../data/datasources/traffic_light_local_datasource.dart';
 import '../../data/datasources/transaction_datasource.dart';
+import '../preferences/app_preferences.dart';
 import '../../data/providers/nest/auth/nest_auth_remote_datasource.dart';
 import '../../data/providers/nest/finance/nest_bank_account_remote_datasource.dart';
 import '../../data/providers/nest/finance/nest_category_remote_datasource.dart';
@@ -321,6 +322,7 @@ class ProviderBinding extends Bindings {
       RecordingRepositoryImpl(
         localDataSource: Get.find(),
         nativeDataSource: Get.find(),
+        preferences: Get.find<AppPreferences>(),
       ),
       permanent: true,
     );
@@ -525,6 +527,7 @@ class ProviderBinding extends Bindings {
       RecordingRepositoryImpl(
         localDataSource: Get.find(),
         nativeDataSource: Get.find(),
+        preferences: Get.find<AppPreferences>(),
       ),
       permanent: true,
     );

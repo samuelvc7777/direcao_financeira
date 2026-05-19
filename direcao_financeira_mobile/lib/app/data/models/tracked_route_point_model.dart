@@ -1,4 +1,5 @@
 import '../../domain/entities/tracked_route_point_entity.dart';
+import '../shared/journey_datetime_parser.dart';
 
 class TrackedRoutePointModel extends TrackedRoutePointEntity {
   const TrackedRoutePointModel({
@@ -13,7 +14,7 @@ class TrackedRoutePointModel extends TrackedRoutePointEntity {
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       accuracyMeters: (json['accuracyMeters'] as num).toDouble(),
-      recordedAt: DateTime.parse(json['recordedAt'] as String).toLocal(),
+      recordedAt: parseJourneyDateTimeToLocal(json['recordedAt'] as String),
     );
   }
 
@@ -31,7 +32,7 @@ class TrackedRoutePointModel extends TrackedRoutePointEntity {
       latitude: (row['latitude'] as num).toDouble(),
       longitude: (row['longitude'] as num).toDouble(),
       accuracyMeters: (row['accuracy_meters'] as num).toDouble(),
-      recordedAt: DateTime.parse(row['recorded_at'] as String).toLocal(),
+      recordedAt: parseJourneyDateTimeToLocal(row['recorded_at'] as String),
     );
   }
 

@@ -61,12 +61,24 @@ class SupabaseRealtimeClient implements RealtimeClient {
 
   @override
   void on(String event, void Function(dynamic payload) handler) {
-    _handlers.putIfAbsent(event, () => []).add(handler);
+    final handlers = _handlers.putIfAbsent(event, () => []);
+    if (!handlers.contains(handler)) {
+      handlers.add(handler);
+    }
   }
 
   @override
-  void off(String event) {
-    _handlers.remove(event);
+  void off(String event, [void Function(dynamic payload)? handler]) {
+    if (handler == null) {
+      _handlers.remove(event);
+      return;
+    }
+
+    final handlers = _handlers[event];
+    handlers?.remove(handler);
+    if (handlers?.isEmpty ?? false) {
+      _handlers.remove(event);
+    }
   }
 
   @override
@@ -76,36 +88,42 @@ class SupabaseRealtimeClient implements RealtimeClient {
   }
 
   Future<void> _startStreams() async {
-    final userId = await userScope.getCurrentUserId();
+    try {
+      final userId = await userScope.getCurrentUserId();
 
-    _transactionsSubscription ??= client
-        .from(SupabaseTableNames.transactions)
-        .stream(primaryKey: ['id'])
-        .eq('userId', userId)
-        .listen((_) {
-          _emit('transaction.changed');
-          _emit('transaction.created');
-        });
+      _transactionsSubscription ??= client
+          .from(SupabaseTableNames.transactions)
+          .stream(primaryKey: ['id'])
+          .eq('userId', userId)
+          .listen((_) {
+            _emit('transaction.changed');
+            _emit('transaction.created');
+          });
 
-    _shiftsSubscription ??= client
-        .from(SupabaseTableNames.shifts)
-        .stream(primaryKey: ['id'])
-        .eq('userId', userId)
-        .listen((_) {
-          _emit('journey.shift.started');
-          _emit('journey.shift.finished');
-          _emit('journey.shift.paused');
-          _emit('journey.shift.resumed');
-        });
+      _shiftsSubscription ??= client
+          .from(SupabaseTableNames.shifts)
+          .stream(primaryKey: ['id'])
+          .eq('userId', userId)
+          .listen((_) {
+            _emit('journey.shift.started');
+            _emit('journey.shift.finished');
+            _emit('journey.shift.paused');
+            _emit('journey.shift.resumed');
+          });
 
-    _ridesSubscription ??= client
-        .from(SupabaseTableNames.rides)
-        .stream(primaryKey: ['id'])
-        .eq('userId', userId)
-        .listen((_) {
-          _emit('journey.ride.created');
-          _emit('journey.ride.updated');
-        });
+      _ridesSubscription ??= client
+          .from(SupabaseTableNames.rides)
+          .stream(primaryKey: ['id'])
+          .eq('userId', userId)
+          .listen((_) {
+            _emit('journey.ride.created');
+            _emit('journey.ride.updated');
+          });
+    } catch (_) {
+      _isConnected = false;
+      _isOnline.value = false;
+      await _disposeStreams();
+    }
   }
 
   Future<void> _disposeStreams() async {

@@ -176,6 +176,41 @@ class AuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity>> updateProfilePhotoBase64(
+    String? profilePhotoBase64,
+  ) async {
+    try {
+      final user = await remoteDataSource.updateProfilePhotoBase64(
+        profilePhotoBase64: profilePhotoBase64,
+      );
+      await userCache.saveUser(user);
+      return Right(user);
+    } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'AuthRepository.updateProfilePhotoBase64',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao atualizar foto de perfil.',
+        ),
+      );
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'AuthRepository.updateProfilePhotoBase64',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao atualizar foto de perfil.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> saveUser(UserEntity user) async {
     try {
       final userModel = user is UserModel
@@ -188,6 +223,7 @@ class AuthRepository implements IAuthRepository {
               isActive: user.isActive,
               createdAt: user.createdAt,
               updatedAt: user.updatedAt,
+              profilePhotoBase64: user.profilePhotoBase64,
               activeSubscription: user.activeSubscription,
               subscriptions: user.subscriptions,
             );

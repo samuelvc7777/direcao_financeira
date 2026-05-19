@@ -24,7 +24,7 @@ class SupabaseBankAccountRemoteDataSource implements IBankAccountDataSource {
         .order('createdAt');
     final rawTransactions = await client
         .from(SupabaseTableNames.transactions)
-        .select('bankAccountId,type,amountCents')
+        .select('bankAccountId,type,status,amountCents')
         .eq('userId', userId);
 
     final balanceDeltaByAccount = <int, int>{};
@@ -32,6 +32,10 @@ class SupabaseBankAccountRemoteDataSource implements IBankAccountDataSource {
       final row = Map<String, dynamic>.from(transaction as Map);
       final accountId = row['bankAccountId'] as int?;
       if (accountId == null) {
+        continue;
+      }
+
+      if (!isClearedBankAccountTransaction(row)) {
         continue;
       }
 
@@ -152,4 +156,8 @@ class SupabaseBankAccountRemoteDataSource implements IBankAccountDataSource {
         })
         .eq('id', id);
   }
+}
+
+bool isClearedBankAccountTransaction(Map<String, dynamic> row) {
+  return row['status']?.toString().toUpperCase() == 'CLEARED';
 }

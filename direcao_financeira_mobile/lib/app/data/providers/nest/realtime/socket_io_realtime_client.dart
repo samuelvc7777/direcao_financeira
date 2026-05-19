@@ -4,15 +4,14 @@ import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import '../../../../core/network/realtime_client.dart';
 
 class SocketIoRealtimeClient implements RealtimeClient {
-  SocketIoRealtimeClient({
-    required this.baseUrl,
-    required this.enableRealtime,
-  });
+  SocketIoRealtimeClient({required this.baseUrl, required this.enableRealtime});
 
   final String baseUrl;
   final bool enableRealtime;
   final RxBool _isOnline = true.obs;
+  final Map<String, List<void Function(dynamic payload)>> _handlers = {};
   socket_io.Socket? _socket;
+  bool _socketLifecycleHandlersAttached = false;
 
   @override
   RxBool get isOnline => _isOnline;
@@ -31,6 +30,62 @@ class SocketIoRealtimeClient implements RealtimeClient {
           .build(),
     );
 
+    _attachSocketLifecycleHandlers();
+    _attachRegisteredHandlers();
+    _socket?.auth = {'token': token};
+    if (_socket?.connected != true) {
+      _socket?.connect();
+    }
+  }
+
+  @override
+  void disconnect() {
+    _socket?.disconnect();
+    _isOnline.value = false;
+  }
+
+  @override
+  void on(String event, void Function(dynamic payload) handler) {
+    final handlers = _handlers.putIfAbsent(event, () => []);
+    if (handlers.contains(handler)) {
+      return;
+    }
+
+    handlers.add(handler);
+    _socket?.on(event, handler);
+  }
+
+  @override
+  void off(String event, [void Function(dynamic payload)? handler]) {
+    if (handler == null) {
+      _socket?.off(event);
+      _handlers.remove(event);
+      return;
+    }
+
+    _socket?.off(event, handler);
+    final handlers = _handlers[event];
+    handlers?.remove(handler);
+    if (handlers?.isEmpty ?? false) {
+      _handlers.remove(event);
+    }
+  }
+
+  @override
+  Future<void> dispose() async {
+    _socket?.dispose();
+    _socket = null;
+    _socketLifecycleHandlersAttached = false;
+    _handlers.clear();
+    _isOnline.value = false;
+  }
+
+  void _attachSocketLifecycleHandlers() {
+    if (_socketLifecycleHandlersAttached) {
+      return;
+    }
+
+    _socketLifecycleHandlersAttached = true;
     _socket?.onConnect((_) {
       _isOnline.value = true;
     });
@@ -42,28 +97,14 @@ class SocketIoRealtimeClient implements RealtimeClient {
         _isOnline.value = false;
       }
     });
-    _socket?.auth = {'token': token};
-    _socket?.connect();
   }
 
-  @override
-  void disconnect() {
-    _socket?.disconnect();
-  }
-
-  @override
-  void on(String event, void Function(dynamic payload) handler) {
-    _socket?.on(event, handler);
-  }
-
-  @override
-  void off(String event) {
-    _socket?.off(event);
-  }
-
-  @override
-  Future<void> dispose() async {
-    _socket?.dispose();
-    _socket = null;
+  void _attachRegisteredHandlers() {
+    for (final entry in _handlers.entries) {
+      _socket?.off(entry.key);
+      for (final handler in entry.value) {
+        _socket?.on(entry.key, handler);
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/location/location_math.dart';
 import '../models/shift_route_model.dart';
 import '../models/tracked_route_point_model.dart';
+import '../shared/journey_datetime_parser.dart';
 
 abstract class IJourneyRouteLocalDataSource {
   Future<void> ensureRoute({
@@ -41,6 +42,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
   static const _minimumSavedPointDistanceMeters = 200.0;
   static const _minimumSavedPointInterval = Duration(seconds: 30);
   static Database? _database;
+  final _lastSavedPointByShift = <int, TrackedRoutePointModel>{};
 
   Future<Database> get _db async {
     if (_database != null) {
@@ -147,7 +149,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     if (lastLatitude != null &&
         lastLongitude != null &&
         lastRecordedAtRaw != null) {
-      final lastRecordedAt = DateTime.parse(lastRecordedAtRaw).toLocal();
+      final lastRecordedAt = parseJourneyDateTimeToLocal(lastRecordedAtRaw);
       final incrementalDistance = LocationMath.distanceInMeters(
         startLatitude: lastLatitude,
         startLongitude: lastLongitude,
@@ -174,6 +176,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
 
       if (shouldPersistPoint) {
         await db.insert(_pointsTable, point.toDb(localShiftId));
+        _lastSavedPointByShift[localShiftId] = point;
       }
 
       await db.update(
@@ -198,6 +201,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     }
 
     await db.insert(_pointsTable, point.toDb(localShiftId));
+    _lastSavedPointByShift[localShiftId] = point;
     await db.update(
       _routesTable,
       {
@@ -219,6 +223,14 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     required int localShiftId,
     required TrackedRoutePointModel candidatePoint,
   }) async {
+    final cachedPoint = _lastSavedPointByShift[localShiftId];
+    if (cachedPoint != null) {
+      return _shouldPersistPointAfter(
+        lastSavedPoint: cachedPoint,
+        candidatePoint: candidatePoint,
+      );
+    }
+
     final rows = await db.query(
       _pointsTable,
       where: 'local_shift_id = ?',
@@ -232,6 +244,17 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
     }
 
     final lastSavedPoint = TrackedRoutePointModel.fromDb(rows.first);
+    _lastSavedPointByShift[localShiftId] = lastSavedPoint;
+    return _shouldPersistPointAfter(
+      lastSavedPoint: lastSavedPoint,
+      candidatePoint: candidatePoint,
+    );
+  }
+
+  bool _shouldPersistPointAfter({
+    required TrackedRoutePointModel lastSavedPoint,
+    required TrackedRoutePointModel candidatePoint,
+  }) {
     final distanceFromLastSavedPoint = LocationMath.distanceInMeters(
       startLatitude: lastSavedPoint.latitude,
       startLongitude: lastSavedPoint.longitude,
@@ -301,6 +324,7 @@ class JourneyRouteLocalDataSourceImpl implements IJourneyRouteLocalDataSource {
   @override
   Future<void> deleteRoute(int localShiftId) async {
     final db = await _db;
+    _lastSavedPointByShift.remove(localShiftId);
     await db.delete(
       _pointsTable,
       where: 'local_shift_id = ?',

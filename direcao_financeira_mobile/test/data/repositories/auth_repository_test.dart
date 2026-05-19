@@ -8,6 +8,7 @@ import 'package:direcao_financeira_mobile/app/core/session/session_store.dart';
 import 'package:direcao_financeira_mobile/app/core/session/user_cache.dart';
 import 'package:direcao_financeira_mobile/app/data/datasources/auth_datasource.dart';
 import 'package:direcao_financeira_mobile/app/data/dtos/auth_session_dto.dart';
+import 'package:direcao_financeira_mobile/app/data/models/user_model.dart';
 import 'package:direcao_financeira_mobile/app/data/repositories/auth_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/subscription_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
@@ -24,6 +25,8 @@ class _FakeAuthRemoteDataSource implements IAuthRemoteDataSource {
   Object? passwordResetError;
   String? passwordResetEmail;
   String? updatedPassword;
+  UserModel? updatedProfilePhotoResponse;
+  String? updatedProfilePhotoBase64;
 
   @override
   Future<AuthSessionDto> login({
@@ -59,6 +62,14 @@ class _FakeAuthRemoteDataSource implements IAuthRemoteDataSource {
   @override
   Future<void> updatePassword({required String password}) async {
     updatedPassword = password;
+  }
+
+  @override
+  Future<UserModel> updateProfilePhotoBase64({
+    required String? profilePhotoBase64,
+  }) async {
+    updatedProfilePhotoBase64 = profilePhotoBase64;
+    return updatedProfilePhotoResponse ?? buildUser();
   }
 }
 
@@ -222,5 +233,16 @@ void main() {
 
     expect(result.isRight(), isTrue);
     expect(remoteDataSource.passwordResetEmail, 'samuel@example.com');
+  });
+
+  test('updateProfilePhotoBase64 salva foto no cache local', () async {
+    final updatedUser = buildUser(profilePhotoBase64: 'foto-base64');
+    remoteDataSource.updatedProfilePhotoResponse = updatedUser;
+
+    final result = await repository.updateProfilePhotoBase64('foto-base64');
+
+    expect(result.isRight(), isTrue);
+    expect(remoteDataSource.updatedProfilePhotoBase64, 'foto-base64');
+    expect(userCache.user?.profilePhotoBase64, 'foto-base64');
   });
 }

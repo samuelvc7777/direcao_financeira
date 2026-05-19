@@ -17,6 +17,9 @@ class TransactionModel extends TransactionEntity {
     super.installmentGroupId,
     super.installmentNumber,
     super.installmentCount,
+    super.recurrenceGroupId,
+    super.recurrenceNumber,
+    super.recurrenceCount,
     super.categoryName,
     super.categoryColor,
     super.categoryIcon,
@@ -52,6 +55,9 @@ class TransactionModel extends TransactionEntity {
       installmentGroupId: json['installmentGroupId'] as String?,
       installmentNumber: json['installmentNumber'] as int?,
       installmentCount: json['installmentCount'] as int?,
+      recurrenceGroupId: json['recurrenceGroupId'] as String?,
+      recurrenceNumber: json['recurrenceNumber'] as int?,
+      recurrenceCount: json['recurrenceCount'] as int?,
       categoryName: categoryJson?['name'] as String?,
       categoryColor: categoryJson?['color'] as String?,
       categoryIcon: categoryJson?['icon'] as String?,
@@ -73,6 +79,12 @@ class TransactionModel extends TransactionEntity {
       if (bankAccountId != null) 'bankAccountId': bankAccountId,
       if (creditCardId != null) 'creditCardId': creditCardId,
       if (invoiceId != null) 'invoiceId': invoiceId,
+      if (installmentGroupId != null) 'installmentGroupId': installmentGroupId,
+      if (installmentNumber != null) 'installmentNumber': installmentNumber,
+      if (installmentCount != null) 'installmentCount': installmentCount,
+      if (recurrenceGroupId != null) 'recurrenceGroupId': recurrenceGroupId,
+      if (recurrenceNumber != null) 'recurrenceNumber': recurrenceNumber,
+      if (recurrenceCount != null) 'recurrenceCount': recurrenceCount,
     };
   }
 }

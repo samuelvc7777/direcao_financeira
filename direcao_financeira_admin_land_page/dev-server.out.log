@@ -1,0 +1,19 @@
+
+> direcao_financeira_admin_land_page@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+
+✓ Starting...
+✓ Ready in 1129ms
+ GET / 200 in 2.4s (compile: 2.2s, render: 208ms)
+ GET /privacy 200 in 542ms (compile: 438ms, render: 104ms)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+
+✓ Starting...
+✓ Ready in 698ms
+ GET /privacy/ 200 in 643ms (compile: 478ms, render: 164ms)

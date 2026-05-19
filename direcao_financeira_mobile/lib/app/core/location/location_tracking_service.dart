@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -269,7 +270,13 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
   }
 
   Future<void> saveActiveShift(ActiveShiftModel shift) async {
-    await storage.write(_journeyActiveShiftKey, shift.toJson());
+    final nextJson = shift.toJson();
+    final currentJson = storage.read(_journeyActiveShiftKey);
+    if (_jsonEquals(currentJson, nextJson)) {
+      return;
+    }
+
+    await storage.write(_journeyActiveShiftKey, nextJson);
   }
 
   Future<bool> finishStoppedPeriod({
@@ -662,6 +669,14 @@ void journeyLocationTrackingServiceOnStart(ServiceInstance service) async {
     await emitStatus(isTrackingActive: false, force: true);
     service.stopSelf();
   });
+}
+
+bool _jsonEquals(Object? left, Object? right) {
+  try {
+    return jsonEncode(left) == jsonEncode(right);
+  } catch (_) {
+    return false;
+  }
 }
 
 Future<Map<String, dynamic>> _buildTrackingStatusPayload({

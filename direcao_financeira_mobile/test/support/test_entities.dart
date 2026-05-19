@@ -19,6 +19,7 @@ UserModel buildUser({
   int id = 1,
   String email = 'samuel@example.com',
   String name = 'Samuel',
+  String? profilePhotoBase64,
 }) {
   return UserModel(
     id: id,
@@ -26,6 +27,7 @@ UserModel buildUser({
     name: name,
     role: 'user',
     isActive: true,
+    profilePhotoBase64: profilePhotoBase64,
   );
 }
 
@@ -91,6 +93,9 @@ TransactionModel buildTransaction({
   TransactionStatus status = TransactionStatus.cleared,
   DateTime? date,
   String description = 'Posto Shell',
+  String? recurrenceGroupId,
+  int? recurrenceNumber,
+  int? recurrenceCount,
 }) {
   return TransactionModel(
     id: id,
@@ -103,6 +108,9 @@ TransactionModel buildTransaction({
     transactionDate: date ?? DateTime(2026, 1, 10),
     bankAccountId: 1,
     categoryName: 'Combustivel',
+    recurrenceGroupId: recurrenceGroupId,
+    recurrenceNumber: recurrenceNumber,
+    recurrenceCount: recurrenceCount,
   );
 }
 

@@ -39,6 +39,7 @@ class AppBubbleService : Service() {
     private var recordingIconView: TextView? = null
     private var bubbleLayoutParams: WindowManager.LayoutParams? = null
     private var menuLayoutParams: WindowManager.LayoutParams? = null
+    private var hiddenForRideOffer = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -47,6 +48,14 @@ class AppBubbleService : Service() {
             ACTION_STOP -> {
                 setBubbleEnabled(this, false)
                 stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_HIDE_FOR_RIDE_OFFER -> {
+                hideForRideOffer()
+                return START_NOT_STICKY
+            }
+            ACTION_RESTORE_AFTER_RIDE_OFFER -> {
+                restoreAfterRideOffer()
                 return START_NOT_STICKY
             }
             ACTION_START, null -> {
@@ -75,6 +84,10 @@ class AppBubbleService : Service() {
     }
 
     private fun ensureBubbleVisible() {
+        if (hiddenForRideOffer) {
+            return
+        }
+
         if (bubbleView != null) {
             return
         }
@@ -444,6 +457,27 @@ class AppBubbleService : Service() {
         windowManager = null
     }
 
+    private fun hideForRideOffer() {
+        if (hiddenForRideOffer) {
+            return
+        }
+
+        hiddenForRideOffer = true
+        removeMenu()
+        removeBubble()
+    }
+
+    private fun restoreAfterRideOffer() {
+        if (!hiddenForRideOffer) {
+            return
+        }
+
+        hiddenForRideOffer = false
+        if (isBubbleEnabled(this) && Settings.canDrawOverlays(this)) {
+            ensureBubbleVisible()
+        }
+    }
+
     private fun dispatchBubbleAction(action: String) {
         val launchIntent =
             packageManager.getLaunchIntentForPackage(packageName)?.apply {
@@ -546,6 +580,10 @@ class AppBubbleService : Service() {
     companion object {
         private const val ACTION_START = "com.direcao_financeira.app_bubble.START"
         private const val ACTION_STOP = "com.direcao_financeira.app_bubble.STOP"
+        private const val ACTION_HIDE_FOR_RIDE_OFFER =
+            "com.direcao_financeira.app_bubble.HIDE_FOR_RIDE_OFFER"
+        private const val ACTION_RESTORE_AFTER_RIDE_OFFER =
+            "com.direcao_financeira.app_bubble.RESTORE_AFTER_RIDE_OFFER"
         const val ACTION_OPEN_JOURNEY_SHIFTS =
             "com.direcao_financeira.app_bubble.OPEN_JOURNEY_SHIFTS"
         const val ACTION_OPEN_JOURNEY_RIDES =
@@ -584,6 +622,30 @@ class AppBubbleService : Service() {
         }
 
         fun isRunning(): Boolean = isRunning
+
+        fun hideForRideOffer(context: Context) {
+            if (!isRunning) {
+                return
+            }
+
+            context.startService(
+                Intent(context, AppBubbleService::class.java).apply {
+                    action = ACTION_HIDE_FOR_RIDE_OFFER
+                },
+            )
+        }
+
+        fun restoreAfterRideOffer(context: Context) {
+            if (!isRunning) {
+                return
+            }
+
+            context.startService(
+                Intent(context, AppBubbleService::class.java).apply {
+                    action = ACTION_RESTORE_AFTER_RIDE_OFFER
+                },
+            )
+        }
 
         fun startIfEnabled(context: Context) {
             if (isBubbleEnabled(context) && Settings.canDrawOverlays(context)) {

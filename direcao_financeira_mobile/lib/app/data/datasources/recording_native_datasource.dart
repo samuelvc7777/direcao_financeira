@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 
 abstract class IRecordingNativeDataSource {
-  Future<Map<String, dynamic>> startRecording();
+  Future<Map<String, dynamic>> startRecording({Map<String, dynamic>? settings});
 
   Future<Map<String, dynamic>?> stopRecording();
 
@@ -36,9 +36,12 @@ class RecordingNativeDataSourceImpl implements IRecordingNativeDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> startRecording() async {
+  Future<Map<String, dynamic>> startRecording({
+    Map<String, dynamic>? settings,
+  }) async {
     final payload = await _channel.invokeMapMethod<String, dynamic>(
       'startRecording',
+      settings,
     );
     if (payload == null) {
       throw StateError('A gravacao nao retornou metadados.');

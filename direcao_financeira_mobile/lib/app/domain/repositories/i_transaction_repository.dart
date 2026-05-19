@@ -19,6 +19,7 @@ abstract class ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   });
 
   Future<Either<Failure, List<TransactionEntity>>> createImportedTransactions({

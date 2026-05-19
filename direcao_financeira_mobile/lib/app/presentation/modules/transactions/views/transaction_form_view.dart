@@ -27,6 +27,8 @@ class TransactionFormView extends GetView<TransactionsController> {
       descriptionController.text = trans.description;
       isPaid.value = trans.status == TransactionStatus.cleared;
       selectedDate.value = trans.transactionDate;
+      isRecurring.value = trans.recurrenceGroupId != null;
+      recurrenceCount.value = trans.recurrenceCount ?? 2;
       selectedAccount.value = controller.activeAccounts.firstWhereOrNull(
         (a) => a.id == trans.bankAccountId,
       );
@@ -48,6 +50,8 @@ class TransactionFormView extends GetView<TransactionsController> {
   final TransactionEntity? editingTransaction;
   final Rx<TransactionType> selectedType = TransactionType.expense.obs;
   final RxBool isPaid = true.obs;
+  final RxBool isRecurring = false.obs;
+  final RxInt recurrenceCount = 2.obs;
   final RxBool isAmountFocused = false.obs;
   final Rx<DateTime> selectedDate = DateTime.now().obs;
   final Rx<BankAccountEntity?> selectedAccount = Rx<BankAccountEntity?>(null);
@@ -58,6 +62,8 @@ class TransactionFormView extends GetView<TransactionsController> {
     selectedType.value = type;
     selectedCategory.value = null;
     isPaid.value = true;
+    isRecurring.value = false;
+    recurrenceCount.value = 2;
   }
 
   @override
@@ -78,7 +84,7 @@ class TransactionFormView extends GetView<TransactionsController> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          editing ? 'Editar Transacao' : 'Nova Transacao',
+          editing ? 'Editar Transação' : 'Nova Transação',
           style: TextStyle(
             color: cs.onSurface,
             fontSize: 18,
@@ -90,7 +96,7 @@ class TransactionFormView extends GetView<TransactionsController> {
         if (controller.isLoading.value) {
           final isExp = selectedType.value == TransactionType.expense;
           return AppLoadingScreen(
-            label: editing ? 'Carregando transacao' : 'Preparando formulario',
+            label: editing ? 'Carregando transação' : 'Preparando formulário',
             accentColor: isExp ? AppColors.rose : AppColors.emerald,
           );
         }
@@ -99,6 +105,7 @@ class TransactionFormView extends GetView<TransactionsController> {
         final activeColor = isExpense ? AppColors.rose : AppColors.emerald;
         final muted = cs.onSurface.withValues(alpha: 0.64);
         final subtle = cs.onSurface.withValues(alpha: 0.48);
+        final effectiveIsPaid = isPaid.value;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -112,7 +119,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                     children: [
                       Expanded(
                         child: _TypeTab(
-                          label: 'Saida',
+                          label: 'Saída',
                           isSelected: isExpense,
                           activeColor: AppColors.rose,
                           onTap: () => _toggleType(TransactionType.expense),
@@ -198,7 +205,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'DETALHES DA TRANSACAO',
+                    'DETALHES DA TRANSAÇÃO',
                     style: TextStyle(
                       color: muted,
                       fontSize: 12,
@@ -214,14 +221,14 @@ class TransactionFormView extends GetView<TransactionsController> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: isPaid.value
+                          color: effectiveIsPaid
                               ? activeColor.withValues(alpha: 0.12)
                               : cs.surfaceContainerHighest,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.check_rounded,
-                          color: isPaid.value ? activeColor : cs.onSurface,
+                          color: effectiveIsPaid ? activeColor : cs.onSurface,
                           size: 16,
                         ),
                       ),
@@ -238,9 +245,15 @@ class TransactionFormView extends GetView<TransactionsController> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isPaid.value ? 'Pago' : 'Pendente',
+                              isRecurring.value
+                                  ? (effectiveIsPaid
+                                        ? (isExpense
+                                              ? 'Pago neste mês'
+                                              : 'Recebido neste mês')
+                                        : 'Pendente neste mês')
+                                  : (effectiveIsPaid ? 'Pago' : 'Pendente'),
                               style: TextStyle(
-                                color: isPaid.value
+                                color: effectiveIsPaid
                                     ? activeColor
                                     : cs.onSurface,
                                 fontSize: 15,
@@ -251,7 +264,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                         ),
                       ),
                       Switch(
-                        value: isPaid.value,
+                        value: effectiveIsPaid,
                         onChanged: (v) => isPaid.value = v,
                         activeThumbColor: cs.onPrimary,
                         activeTrackColor: activeColor,
@@ -261,6 +274,201 @@ class TransactionFormView extends GetView<TransactionsController> {
                     ],
                   ),
                 ),
+                if (!editing) ...[
+                  const SizedBox(height: 14),
+                  _SectionCard(
+                    child: Obx(() {
+                      return Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: isRecurring.value
+                                  ? activeColor.withValues(alpha: 0.12)
+                                  : cs.surfaceContainerHighest,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.repeat_rounded,
+                              color: isRecurring.value
+                                  ? activeColor
+                                  : cs.onSurface,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Recorrência mensal',
+                                  style: TextStyle(color: muted, fontSize: 13),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isRecurring.value
+                                      ? '${recurrenceCount.value} meses'
+                                      : 'Desativada',
+                                  style: TextStyle(
+                                    color: isRecurring.value
+                                        ? activeColor
+                                        : cs.onSurface,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: isRecurring.value,
+                            onChanged: (v) {
+                              isRecurring.value = v;
+                              recurrenceCount.value = 2;
+                            },
+                            activeThumbColor: cs.onPrimary,
+                            activeTrackColor: activeColor,
+                            inactiveThumbColor: cs.surfaceContainerHighest,
+                            inactiveTrackColor: cs.surfaceContainerHighest,
+                          ),
+                        ],
+                      );
+                    }),
+                  ),
+                  Obx(
+                    () => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: isRecurring.value
+                          ? Column(
+                              key: const ValueKey('recurrence-selector'),
+                              children: [
+                                const SizedBox(height: 14),
+                                _SectionCard(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: activeColor.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.calendar_month_rounded,
+                                          color: activeColor,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Meses de recorrência',
+                                              style: TextStyle(
+                                                color: muted,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Inclui este lançamento',
+                                              style: TextStyle(
+                                                color: cs.onSurface,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: cs.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () {
+                                                if (recurrenceCount.value > 2) {
+                                                  recurrenceCount.value--;
+                                                }
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                child: Icon(
+                                                  Icons.remove_rounded,
+                                                  color:
+                                                      recurrenceCount.value > 2
+                                                      ? cs.onSurface
+                                                      : cs.onSurface.withValues(
+                                                          alpha: 0.24,
+                                                        ),
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 40,
+                                              child: Text(
+                                                '${recurrenceCount.value}x',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  color: cs.onSurface,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            GestureDetector(
+                                              onTap: () {
+                                                if (recurrenceCount.value <
+                                                    60) {
+                                                  recurrenceCount.value++;
+                                                }
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                child: Icon(
+                                                  Icons.add_rounded,
+                                                  color:
+                                                      recurrenceCount.value < 60
+                                                      ? cs.onSurface
+                                                      : cs.onSurface.withValues(
+                                                          alpha: 0.24,
+                                                        ),
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -338,7 +546,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                           controller: descriptionController,
                           style: TextStyle(color: cs.onSurface, fontSize: 16),
                           decoration: InputDecoration(
-                            hintText: 'Descricao (opcional)',
+                            hintText: 'Descrição (opcional)',
                             hintStyle: TextStyle(color: muted, fontSize: 15),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -372,7 +580,7 @@ class TransactionFormView extends GetView<TransactionsController> {
                             ),
                           )
                         : Text(
-                            editing ? 'Salvar Alteracoes' : 'Salvar Transacao',
+                            editing ? 'Salvar Alterações' : 'Salvar Transação',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -417,11 +625,11 @@ class TransactionFormView extends GetView<TransactionsController> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedAccount.value == null) {
-      AppSnackbar.show('Atencao', 'Selecione a conta.');
+      AppSnackbar.show('Atenção', 'Selecione a conta.');
       return;
     }
     if (selectedCategory.value == null) {
-      AppSnackbar.show('Atencao', 'Selecione a categoria.');
+      AppSnackbar.show('Atenção', 'Selecione a categoria.');
       return;
     }
     if (editingTransaction != null) {
@@ -430,30 +638,35 @@ class TransactionFormView extends GetView<TransactionsController> {
             amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
           ) ??
           0;
-      await controller.updateTransaction(
-        editingTransaction!.id,
-        status: isPaid.value
-            ? TransactionStatus.cleared
-            : TransactionStatus.pending,
-        categoryId: selectedCategory.value!.id,
-        description: descriptionController.text.trim().isEmpty
-            ? selectedCategory.value!.name
-            : descriptionController.text.trim(),
-        amountCents: amountCents,
-        transactionDate: selectedDate.value,
-        scope: TransactionMutationScope.current,
-      );
+      if (editingTransaction!.recurrenceGroupId != null) {
+        _showScopeDialog(amountCents);
+      } else {
+        await controller.updateTransaction(
+          editingTransaction!.id,
+          status: isPaid.value
+              ? TransactionStatus.cleared
+              : TransactionStatus.pending,
+          categoryId: selectedCategory.value!.id,
+          description: descriptionController.text.trim().isEmpty
+              ? selectedCategory.value!.name
+              : descriptionController.text.trim(),
+          amountCents: amountCents,
+          transactionDate: selectedDate.value,
+          scope: TransactionMutationScope.current,
+        );
+      }
     } else {
       final amountCents =
           int.tryParse(
             amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
           ) ??
           0;
+      final resolvedStatus = isPaid.value
+          ? TransactionStatus.cleared
+          : TransactionStatus.pending;
       await controller.createTransaction(
         type: selectedType.value,
-        status: isPaid.value
-            ? TransactionStatus.cleared
-            : TransactionStatus.pending,
+        status: resolvedStatus,
         assetType: AssetType.bankAccount,
         amountCents: amountCents,
         categoryId: selectedCategory.value!.id,
@@ -463,8 +676,75 @@ class TransactionFormView extends GetView<TransactionsController> {
         transactionDate: selectedDate.value,
         bankAccountId: selectedAccount.value!.id,
         creditCardId: null,
+        recurrenceCount: isRecurring.value ? recurrenceCount.value : null,
       );
     }
+  }
+
+  void _showScopeDialog(int amountCents) {
+    final cs = Get.theme.colorScheme;
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: cs.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Editar recorrência',
+          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Deseja aplicar as mudanças apenas nesta ocorrência ou em todas?',
+          style: TextStyle(color: cs.onSurface.withValues(alpha: 0.72)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.62)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _performUpdate(amountCents, TransactionMutationScope.all);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: cs.errorContainer,
+              foregroundColor: cs.onErrorContainer,
+              elevation: 0,
+            ),
+            child: const Text('Todas'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _performUpdate(amountCents, TransactionMutationScope.current);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.violet,
+              foregroundColor: cs.onPrimary,
+            ),
+            child: const Text('Apenas esta'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performUpdate(int amountCents, TransactionMutationScope scope) {
+    controller.updateTransaction(
+      editingTransaction!.id,
+      status: isPaid.value
+          ? TransactionStatus.cleared
+          : TransactionStatus.pending,
+      categoryId: selectedCategory.value!.id,
+      description: descriptionController.text.trim().isEmpty
+          ? selectedCategory.value!.name
+          : descriptionController.text.trim(),
+      amountCents: amountCents,
+      transactionDate: selectedDate.value,
+      scope: scope,
+    );
   }
 }
 

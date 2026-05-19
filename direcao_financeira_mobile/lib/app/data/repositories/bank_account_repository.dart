@@ -9,6 +9,10 @@ import '../../domain/repositories/i_bank_account_repository.dart';
 import '../datasources/bank_account_datasource.dart';
 
 class BankAccountRepository implements IBankAccountRepository {
+  static const _legacyWalletName = 'Dinheiro';
+  static const _legacyWalletBankName = 'Dinheiro';
+  static const _legacyWalletColor = '#06B6D4';
+
   BankAccountRepository({
     required this.dataSource,
     required this.apiErrorMapper,
@@ -18,11 +22,14 @@ class BankAccountRepository implements IBankAccountRepository {
   final IBankAccountDataSource dataSource;
   final ApiErrorMapper apiErrorMapper;
   final ApiRequestLogger apiRequestLogger;
+  Future<void>? _walletMigrationFuture;
 
   @override
   Future<Either<Failure, List<BankAccountEntity>>> getBankAccounts() async {
     try {
-      return Right(await dataSource.getBankAccounts());
+      final accounts = await dataSource.getBankAccounts();
+      final migratedAccounts = await _ensureLegacyWalletAccount(accounts);
+      return Right(migratedAccounts);
     } on DioException catch (e) {
       apiRequestLogger.logRepositoryFailure(
         source: 'BankAccountRepository.getBankAccounts',
@@ -46,6 +53,59 @@ class BankAccountRepository implements IBankAccountRepository {
         ),
       );
     }
+  }
+
+  Future<List<BankAccountEntity>> _ensureLegacyWalletAccount(
+    List<BankAccountEntity> accounts,
+  ) async {
+    final hasWallet = accounts.any(
+      (account) => account.accountType == AccountType.wallet,
+    );
+    final hasActiveWallet = accounts.any(
+      (account) =>
+          account.accountType == AccountType.wallet && account.isActive,
+    );
+    if (hasWallet && hasActiveWallet) {
+      return accounts;
+    }
+
+    if (_walletMigrationFuture != null) {
+      await _walletMigrationFuture;
+      return dataSource.getBankAccounts();
+    }
+
+    _walletMigrationFuture = _runLegacyWalletMigration(accounts);
+    try {
+      await _walletMigrationFuture;
+    } finally {
+      _walletMigrationFuture = null;
+    }
+
+    return dataSource.getBankAccounts();
+  }
+
+  Future<void> _runLegacyWalletMigration(
+    List<BankAccountEntity> accounts,
+  ) async {
+    final wallet = accounts
+        .where((account) => account.accountType == AccountType.wallet)
+        .toList();
+    if (wallet.isNotEmpty) {
+      if (wallet.any((account) => account.isActive)) {
+        return;
+      }
+
+      await reactivateBankAccount(wallet.first.id);
+      return;
+    }
+
+    await createBankAccount(
+      name: _legacyWalletName,
+      bankName: _legacyWalletBankName,
+      color: _legacyWalletColor,
+      accountType: AccountType.wallet,
+      initialBalanceCents: 0,
+    );
   }
 
   @override

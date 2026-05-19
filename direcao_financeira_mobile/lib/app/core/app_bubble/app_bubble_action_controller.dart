@@ -6,8 +6,8 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../presentation/modules/journey/journey_binding.dart';
-import '../../presentation/modules/journey/journey_controller.dart';
 import '../../routes/app_pages.dart';
+import '../../presentation/modules/journey/journey_controller.dart';
 
 class AppBubbleActionController extends GetxController {
   static const MethodChannel _platform = MethodChannel(
@@ -30,6 +30,8 @@ class AppBubbleActionController extends GetxController {
         return;
       }
       await _handleAction(payload);
+    } on MissingPluginException {
+      // Em testes e em ambientes sem o bridge nativo, nao ha acao pendente para consumir.
     } on PlatformException catch (e) {
       developer.log('Erro ao consumir acao pendente da bolinha: ${e.message}');
     }

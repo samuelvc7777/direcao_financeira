@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../settings_controller.dart';
+import 'settings_profile_avatar.dart';
 
 class SettingsProfileCard extends StatelessWidget {
   const SettingsProfileCard({super.key, required this.controller});
@@ -44,7 +45,12 @@ class SettingsProfileCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Avatar(name: controller.userName.value),
+                SettingsProfileAvatar(
+                  name: controller.userName.value,
+                  photoBase64: controller.profilePhotoBase64.value,
+                  isBusy: controller.isProfilePhotoSaving.value,
+                  onTap: controller.pickProfilePhoto,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -154,55 +160,6 @@ class SettingsProfileCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = context.theme.colorScheme;
-    final parts = name.trim().split(RegExp(r'\s+'));
-    final initials = parts
-        .take(2)
-        .map((part) => part.isEmpty ? '' : part[0])
-        .join()
-        .toUpperCase();
-
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.royalBlue.withValues(alpha: 0.92),
-            AppColors.royalBlue.withValues(alpha: 0.62),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.royalBlue.withValues(alpha: 0.22),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initials.isEmpty ? 'SV' : initials,
-        style: TextStyle(
-          color: colorScheme.onPrimary,
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
         ),
       ),
     );

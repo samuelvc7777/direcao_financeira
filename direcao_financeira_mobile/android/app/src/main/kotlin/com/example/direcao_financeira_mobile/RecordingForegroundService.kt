@@ -43,6 +43,10 @@ class RecordingForegroundService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_START, null -> {
+                if (isRunning || isStarting) {
+                    return START_NOT_STICKY
+                }
+
                 if (!hasRuntimePermissions(this)) {
                     markFailed("Permissoes de camera e microfone nao concedidas.")
                     stopSelf()
@@ -62,22 +66,23 @@ class RecordingForegroundService : Service() {
                     startForeground(NOTIFICATION_ID, notification)
                 }
                 startCameraRecording()
-                return START_STICKY
+                return START_NOT_STICKY
             }
             else -> return START_NOT_STICKY
         }
     }
 
     override fun onDestroy() {
-        finishRecording(status = RecordingStatus.COMPLETED)
+        finishRecording(status = currentSession?.terminalStatus() ?: RecordingStatus.COMPLETED)
         super.onDestroy()
     }
 
     @SuppressLint("MissingPermission")
     private fun startCameraRecording() {
-        if (isRunning) {
+        if (isRunning || isStarting) {
             return
         }
+        isStarting = true
 
         val session = currentSession ?: createSession(this).also { currentSession = it }
 
@@ -89,7 +94,7 @@ class RecordingForegroundService : Service() {
             mediaRecorder = recorder
 
             val cameraManager = getSystemService(CameraManager::class.java)
-            val cameraId = selectFrontCamera(cameraManager)
+            val cameraId = selectCamera(cameraManager, currentConfig.cameraFacing)
                 ?: throw IllegalStateException("Nenhuma camera disponivel.")
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
             val sensorOrientation = characteristics.get(android.hardware.camera2.CameraCharacteristics.SENSOR_ORIENTATION) ?: 270
@@ -145,6 +150,7 @@ class RecordingForegroundService : Service() {
                         )
                         recorder.start()
                         isRunning = true
+                        isStarting = false
                     } catch (error: Exception) {
                         Log.e(LOG_TAG, "Falha ao iniciar MediaRecorder", error)
                         markFailed(error.message ?: "Falha ao iniciar gravacao.")
@@ -169,37 +175,65 @@ class RecordingForegroundService : Service() {
             MediaRecorder()
         }
 
-        val profile = if (CamcorderProfile.hasProfile(CamcorderProfile.QUALITY_720P)) {
-            CamcorderProfile.get(CamcorderProfile.QUALITY_720P)
-        } else {
-            CamcorderProfile.get(CamcorderProfile.QUALITY_LOW)
-        }
+        val profile = resolveCamcorderProfile(currentConfig.resolution)
 
-        recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        if (currentConfig.audioEnabled) {
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        }
         recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         recorder.setOutputFile(filePath)
-        recorder.setVideoEncodingBitRate(profile.videoBitRate)
-        recorder.setVideoFrameRate(profile.videoFrameRate)
+        val bitrate = (profile.videoBitRate * currentConfig.compressionProfile.bitrateMultiplier).toInt()
+            .coerceAtLeast(1)
+        recorder.setVideoEncodingBitRate(bitrate)
+        recorder.setVideoFrameRate(currentConfig.fps.coerceAtLeast(1))
         recorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight)
         recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        if (currentConfig.audioEnabled) {
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        }
         recorder.prepare()
         return recorder
     }
 
-    private fun selectFrontCamera(cameraManager: CameraManager): String? {
+    private fun selectCamera(
+        cameraManager: CameraManager,
+        facing: RecordingCameraFacing,
+    ): String? {
         return cameraManager.cameraIdList.firstOrNull { cameraId ->
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-            val facing = characteristics.get(
+            val lensFacing = characteristics.get(
                 android.hardware.camera2.CameraCharacteristics.LENS_FACING,
             )
-            facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
+            when (facing) {
+                RecordingCameraFacing.FRONT ->
+                    lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
+                RecordingCameraFacing.BACK ->
+                    lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+            }
         } ?: cameraManager.cameraIdList.firstOrNull()
     }
 
+    private fun resolveCamcorderProfile(resolution: RecordingResolution): CamcorderProfile {
+        val quality = when (resolution) {
+            RecordingResolution.P480 -> CamcorderProfile.QUALITY_480P
+            RecordingResolution.P720 -> CamcorderProfile.QUALITY_720P
+            RecordingResolution.P1080 -> CamcorderProfile.QUALITY_1080P
+        }
+
+        if (CamcorderProfile.hasProfile(quality)) {
+            return CamcorderProfile.get(quality)
+        }
+
+        if (CamcorderProfile.hasProfile(CamcorderProfile.QUALITY_720P)) {
+            return CamcorderProfile.get(CamcorderProfile.QUALITY_720P)
+        }
+
+        return CamcorderProfile.get(CamcorderProfile.QUALITY_LOW)
+    }
+
     private fun finishRecording(status: RecordingStatus) {
-        if (!isRunning && mediaRecorder == null && cameraDevice == null) {
+        if (!isRunning && !isStarting && mediaRecorder == null && cameraDevice == null) {
             return
         }
 
@@ -220,7 +254,9 @@ class RecordingForegroundService : Service() {
         cameraThread = null
         cameraHandler = null
         isRunning = false
-        currentSession = currentSession?.finished(status = status)
+        isStarting = false
+        currentConfig = RecordingConfig.default()
+        currentSession = currentSession?.finished(status = currentSession?.terminalStatus() ?: status)
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
@@ -230,6 +266,7 @@ class RecordingForegroundService : Service() {
             errorMessage = message,
         )
         isRunning = false
+        isStarting = false
     }
 
     private fun createNotification(): Notification {
@@ -313,10 +350,25 @@ class RecordingForegroundService : Service() {
         private var isRunning = false
 
         @Volatile
-        private var currentSession: RecordingSession? = null
+        private var isStarting = false
 
-        fun start(context: Context): RecordingSession {
-            val session = createSession(context)
+        @Volatile
+        private var currentSession: RecordingSession? = null
+        @Volatile
+        private var currentConfig: RecordingConfig = RecordingConfig.default()
+
+        fun start(
+            context: Context,
+            settings: Map<String, Any?>? = null,
+        ): RecordingSession {
+            currentConfig = RecordingConfig.fromMap(settings)
+            val activeSession = currentSession
+            if ((isRunning || isStarting) && activeSession != null) {
+                return activeSession
+            }
+
+            val session = activeSession?.takeIf { it.status == RecordingStatus.RECORDING }
+                ?: createSession(context)
             currentSession = session
             val intent = Intent(context, RecordingForegroundService::class.java).apply {
                 action = ACTION_START
@@ -332,6 +384,14 @@ class RecordingForegroundService : Service() {
         }
 
         fun stop(context: Context): RecordingSession? {
+            if (!isRunning && !isStarting) {
+                currentSession =
+                    currentSession?.finished(
+                        status = currentSession?.terminalStatus() ?: RecordingStatus.COMPLETED,
+                    )
+                return currentSession
+            }
+
             val intent = Intent(context, RecordingForegroundService::class.java).apply {
                 action = ACTION_STOP
             }
@@ -387,11 +447,20 @@ data class RecordingSession(
         status: RecordingStatus,
         errorMessage: String? = null,
     ): RecordingSession {
+        val effectiveStatus = terminalStatus() ?: status
         return copy(
-            status = status,
+            status = effectiveStatus,
             finishedAtMillis = System.currentTimeMillis(),
-            errorMessage = errorMessage,
+            errorMessage = errorMessage ?: this.errorMessage,
         )
+    }
+
+    fun terminalStatus(): RecordingStatus? {
+        return when (status) {
+            RecordingStatus.COMPLETED,
+            RecordingStatus.FAILED -> status
+            RecordingStatus.RECORDING -> null
+        }
     }
 
     fun toMap(): Map<String, Any?> {
@@ -411,5 +480,87 @@ data class RecordingSession(
 
     private fun isoString(millis: Long): String {
         return java.time.Instant.ofEpochMilli(millis).toString()
+    }
+}
+
+private enum class RecordingResolution {
+    P480,
+    P720,
+    P1080;
+
+    companion object {
+        fun from(value: Any?): RecordingResolution {
+            return when (value?.toString()?.lowercase()) {
+                "480p" -> P480
+                "1080p" -> P1080
+                else -> P720
+            }
+        }
+    }
+}
+
+private enum class RecordingCameraFacing {
+    FRONT,
+    BACK;
+
+    companion object {
+        fun from(value: Any?): RecordingCameraFacing {
+            return when (value?.toString()?.lowercase()) {
+                "back" -> BACK
+                else -> FRONT
+            }
+        }
+    }
+}
+
+private enum class RecordingCompressionProfile(val bitrateMultiplier: Double) {
+    ECONOMICAL(0.82),
+    BALANCED(1.0),
+    HIGH(1.22);
+
+    companion object {
+        fun from(value: Any?): RecordingCompressionProfile {
+            return when (value?.toString()?.lowercase()) {
+                "economical" -> ECONOMICAL
+                "high" -> HIGH
+                else -> BALANCED
+            }
+        }
+    }
+}
+
+private data class RecordingConfig(
+    val resolution: RecordingResolution,
+    val fps: Int,
+    val audioEnabled: Boolean,
+    val cameraFacing: RecordingCameraFacing,
+    val compressionProfile: RecordingCompressionProfile,
+) {
+    companion object {
+        fun default(): RecordingConfig {
+            return RecordingConfig(
+                resolution = RecordingResolution.P720,
+                fps = 30,
+                audioEnabled = true,
+                cameraFacing = RecordingCameraFacing.FRONT,
+                compressionProfile = RecordingCompressionProfile.BALANCED,
+            )
+        }
+
+        fun fromMap(settings: Map<String, Any?>?): RecordingConfig {
+            val defaults = default()
+            if (settings == null) return defaults
+            return RecordingConfig(
+                resolution = RecordingResolution.from(settings["resolution"]),
+                fps = (settings["fps"] as? Number)?.toInt()?.coerceAtLeast(1)
+                    ?: defaults.fps,
+                audioEnabled = settings["audioEnabled"] as? Boolean
+                    ?: defaults.audioEnabled,
+                cameraFacing = RecordingCameraFacing.from(settings["cameraFacing"]),
+                compressionProfile = RecordingCompressionProfile.from(
+                    settings["compressionProfile"],
+                ),
+            )
+        }
     }
 }

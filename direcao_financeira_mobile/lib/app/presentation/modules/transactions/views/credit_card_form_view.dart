@@ -106,7 +106,7 @@ class CreditCardFormView extends GetView<TransactionsController> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _TypeTab(
-                  label: editing ? 'Editar Cartao' : 'Cartao de Credito',
+                  label: editing ? 'Editar Cartão' : 'Cartão de Crédito',
                   icon: Icons.credit_card_rounded,
                   activeColor: activeColor,
                 ),
@@ -338,7 +338,7 @@ class CreditCardFormView extends GetView<TransactionsController> {
                 ),
                 const SizedBox(height: 14),
                 _SelectionField<CreditCardEntity>(
-                  label: 'Cartao',
+                  label: 'Cartão',
                   hint: 'Toque para selecionar',
                   icon: Icons.credit_card_rounded,
                   value: selectedCard.value,
@@ -367,7 +367,7 @@ class CreditCardFormView extends GetView<TransactionsController> {
                           controller: descriptionController,
                           style: TextStyle(color: textColor, fontSize: 16),
                           decoration: InputDecoration(
-                            hintText: 'Descricao (opcional)',
+                            hintText: 'Descrição (opcional)',
                             hintStyle: TextStyle(color: muted, fontSize: 15),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -401,7 +401,7 @@ class CreditCardFormView extends GetView<TransactionsController> {
                             ),
                           )
                         : Text(
-                            editing ? 'Salvar Alteracoes' : 'Salvar Compra',
+                            editing ? 'Salvar Alterações' : 'Salvar Compra',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -447,11 +447,11 @@ class CreditCardFormView extends GetView<TransactionsController> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedCard.value == null) {
-      AppSnackbar.show('Atencao', 'Selecione o cartao.');
+      AppSnackbar.show('Atenção', 'Selecione o cartão.');
       return;
     }
     if (selectedCategory.value == null) {
-      AppSnackbar.show('Atencao', 'Selecione a categoria.');
+      AppSnackbar.show('Atenção', 'Selecione a categoria.');
       return;
     }
     final amountCents =
@@ -499,7 +499,7 @@ class CreditCardFormView extends GetView<TransactionsController> {
           style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Deseja aplicar as mudancas apenas nesta parcela ou em todas?',
+          'Deseja aplicar as mudanças apenas nesta parcela ou em todas?',
           style: TextStyle(color: cs.onSurface.withValues(alpha: 0.72)),
         ),
         actions: [

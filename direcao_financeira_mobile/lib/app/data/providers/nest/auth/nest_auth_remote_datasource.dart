@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../datasources/auth_datasource.dart';
 import '../../../dtos/auth_session_dto.dart';
+import '../../../models/user_model.dart';
 
 class NestAuthRemoteDataSource implements IAuthRemoteDataSource {
   NestAuthRemoteDataSource({required this.dio});
@@ -47,5 +48,14 @@ class NestAuthRemoteDataSource implements IAuthRemoteDataSource {
   @override
   Future<void> updatePassword({required String password}) async {
     await dio.post('/auth/reset-password', data: {'password': password});
+  }
+
+  @override
+  Future<UserModel> updateProfilePhotoBase64({
+    required String? profilePhotoBase64,
+  }) async {
+    throw UnsupportedError(
+      'Atualizacao de foto de perfil ainda nao esta disponivel no backend Nest.',
+    );
   }
 }

@@ -12,6 +12,7 @@ class TransactionsDayGroupSection extends StatelessWidget {
     required this.group,
     required this.amountFormat,
     required this.compactAmountFormat,
+    required this.onQuickStatusChange,
     required this.onEdit,
     required this.onDelete,
   });
@@ -19,6 +20,7 @@ class TransactionsDayGroupSection extends StatelessWidget {
   final TransactionsDayGroup group;
   final NumberFormat amountFormat;
   final NumberFormat compactAmountFormat;
+  final ValueChanged<TransactionEntity> onQuickStatusChange;
   final ValueChanged<TransactionEntity> onEdit;
   final ValueChanged<TransactionEntity> onDelete;
 
@@ -89,6 +91,8 @@ class TransactionsDayGroupSection extends StatelessWidget {
               _TransactionFinanceCard(
                 entry: group.transactions[index],
                 amountFormat: amountFormat,
+                onQuickStatusChange: () =>
+                    onQuickStatusChange(group.transactions[index].transaction),
                 onEdit: () => onEdit(group.transactions[index].transaction),
                 onDelete: () => onDelete(group.transactions[index].transaction),
               ),
@@ -106,12 +110,14 @@ class _TransactionFinanceCard extends StatelessWidget {
   const _TransactionFinanceCard({
     required this.entry,
     required this.amountFormat,
+    required this.onQuickStatusChange,
     required this.onEdit,
     required this.onDelete,
   });
 
   final DisplayedTransactionEntry entry;
   final NumberFormat amountFormat;
+  final VoidCallback onQuickStatusChange;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -320,9 +326,7 @@ class _TransactionFinanceCard extends StatelessWidget {
                         ),
                         _InfoChip(
                           label: secondaryChipLabel,
-                          icon: transaction.assetType == AssetType.creditCard
-                              ? Icons.layers_rounded
-                              : Icons.account_balance_wallet_rounded,
+                          icon: _resolveSecondaryChipIcon(),
                           backgroundColor: AppColors.violet.withValues(
                             alpha: 0.13,
                           ),
@@ -333,40 +337,84 @@ class _TransactionFinanceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _TimeLabel(timeLabel: timeLabel),
-                        const Spacer(),
-                        if (entry.canEditOrDelete) ...[
-                          _ActionButton(
-                            label: 'Editar',
-                            icon: Icons.edit_rounded,
-                            backgroundColor:
-                                colorScheme.surfaceContainerHighest,
-                            textColor: context.theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7),
-                            onTap: onEdit,
-                          ),
-                          const SizedBox(width: 8),
-                          _ActionButton(
-                            label: 'Excluir',
-                            icon: Icons.delete_rounded,
-                            backgroundColor: AppColors.rose.withValues(
-                              alpha: 0.14,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Wrap(
+                              alignment: WrapAlignment.end,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (entry.canEditOrDelete) ...[
+                                  if (transaction.status ==
+                                      TransactionStatus.pending)
+                                    _ActionButton(
+                                      label:
+                                          transaction.type ==
+                                              TransactionType.expense
+                                          ? 'Pagar'
+                                          : 'Receber',
+                                      icon:
+                                          transaction.type ==
+                                              TransactionType.expense
+                                          ? Icons.payments_rounded
+                                          : Icons.download_done_rounded,
+                                      backgroundColor:
+                                          transaction.type ==
+                                              TransactionType.expense
+                                          ? AppColors.rose.withValues(
+                                              alpha: 0.14,
+                                            )
+                                          : AppColors.emerald.withValues(
+                                              alpha: 0.14,
+                                            ),
+                                      textColor:
+                                          transaction.type ==
+                                              TransactionType.expense
+                                          ? AppColors.rose
+                                          : AppColors.emerald,
+                                      onTap: onQuickStatusChange,
+                                    ),
+                                  _ActionButton(
+                                    label: 'Editar',
+                                    icon: Icons.edit_rounded,
+                                    backgroundColor:
+                                        colorScheme.surfaceContainerHighest,
+                                    textColor: context
+                                        .theme
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                    onTap: onEdit,
+                                  ),
+                                  _ActionButton(
+                                    label: 'Excluir',
+                                    icon: Icons.delete_rounded,
+                                    backgroundColor: AppColors.rose.withValues(
+                                      alpha: 0.14,
+                                    ),
+                                    textColor: AppColors.rose,
+                                    onTap: onDelete,
+                                  ),
+                                ] else
+                                  Text(
+                                    'Lancamento interno',
+                                    style: TextStyle(
+                                      color: context.theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.42),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                              ],
                             ),
-                            textColor: AppColors.rose,
-                            onTap: onDelete,
                           ),
-                        ] else
-                          Text(
-                            'Lancamento interno',
-                            style: TextStyle(
-                              color: context.theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.42),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -426,7 +474,7 @@ class _TransactionFinanceCard extends StatelessWidget {
       if (targetName != null && targetName.isNotEmpty) {
         return targetName;
       }
-      return 'Cartao';
+      return 'Cartão';
     }
 
     if (transaction.assetType == AssetType.creditCard) {
@@ -437,12 +485,35 @@ class _TransactionFinanceCard extends StatelessWidget {
       return 'À vista';
     }
 
+    if (transaction.recurrenceNumber != null &&
+        transaction.recurrenceCount != null) {
+      return '${transaction.recurrenceNumber}/${transaction.recurrenceCount}';
+    }
+
+    if (transaction.recurrenceGroupId != null) {
+      return 'Recorrente';
+    }
+
     final assetName = transaction.assetName?.trim();
     if (assetName != null && assetName.isNotEmpty) {
       return assetName;
     }
 
     return 'À vista';
+  }
+
+  IconData _resolveSecondaryChipIcon() {
+    if (entry.isInvoicePaymentTransfer) {
+      return Icons.outbox_rounded;
+    }
+
+    if (transaction.recurrenceGroupId != null) {
+      return Icons.repeat_rounded;
+    }
+
+    return transaction.assetType == AssetType.creditCard
+        ? Icons.layers_rounded
+        : Icons.account_balance_wallet_rounded;
   }
 
   IconData _resolveIcon() {
@@ -474,7 +545,7 @@ class _TransactionFinanceCard extends StatelessWidget {
 
   String _resolveStatusChipLabel(bool isTransfer) {
     if (isTransfer) {
-      return 'Saida';
+      return 'Saída';
     }
 
     if (transaction.status == TransactionStatus.pending) {

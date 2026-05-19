@@ -79,7 +79,9 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         .eq('id', id)
         .single();
 
-    final enriched = await _enrichTransactions([Map<String, dynamic>.from(row)]);
+    final enriched = await _enrichTransactions([
+      Map<String, dynamic>.from(row),
+    ]);
     return enriched.first;
   }
 
@@ -95,17 +97,29 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     final userId = await userScope.getCurrentUserId();
     final normalizedInstallmentCount =
         installmentCount != null && installmentCount > 1 ? installmentCount : 1;
+    final normalizedRecurrenceCount =
+        recurrenceCount != null && recurrenceCount > 1 ? recurrenceCount : 1;
+    final seriesCount = normalizedRecurrenceCount > 1
+        ? normalizedRecurrenceCount
+        : normalizedInstallmentCount;
     final installmentGroupId = normalizedInstallmentCount > 1
+        ? '${DateTime.now().microsecondsSinceEpoch}'
+        : null;
+    final recurrenceGroupId = normalizedRecurrenceCount > 1
         ? '${DateTime.now().microsecondsSinceEpoch}'
         : null;
 
     final payload = <Map<String, dynamic>>[];
     final now = DateTime.now().toUtc().toIso8601String();
-    for (var index = 0; index < normalizedInstallmentCount; index++) {
+    for (var index = 0; index < seriesCount; index++) {
+      final entryStatus = normalizedRecurrenceCount > 1 && index > 0
+          ? TransactionStatus.pending
+          : status;
       final installmentDate = DateTime(
         transactionDate.year,
         transactionDate.month + index,
@@ -119,7 +133,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
       final entry = <String, dynamic>{
         'userId': userId,
         'type': TransactionTypeCodec.encode(type),
-        'status': TransactionStatusCodec.encode(status),
+        'status': TransactionStatusCodec.encode(entryStatus),
         'assetType': AssetTypeCodec.encode(assetType),
         'amountCents': amountCents,
         'categoryId': categoryId,
@@ -137,6 +151,11 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
         entry['installmentGroupId'] = installmentGroupId;
         entry['installmentNumber'] = index + 1;
         entry['installmentCount'] = normalizedInstallmentCount;
+      }
+      if (recurrenceGroupId != null) {
+        entry['recurrenceGroupId'] = recurrenceGroupId;
+        entry['recurrenceNumber'] = index + 1;
+        entry['recurrenceCount'] = normalizedRecurrenceCount;
       }
       payload.add(entry);
     }
@@ -168,6 +187,7 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
           bankAccountId: draft.bankAccountId,
           creditCardId: draft.creditCardId,
           installmentCount: draft.installmentCount,
+          recurrenceCount: draft.recurrenceCount,
         ),
       );
     }
@@ -230,13 +250,13 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     final rowsToUpdate = await _resolveRowsForScope(baseRow, scope);
 
     if (scope == TransactionMutationScope.all &&
-        baseRow['installmentGroupId'] != null &&
+        _seriesGroupId(baseRow) != null &&
         transactionDate != null) {
       for (final row in rowsToUpdate) {
-        final installmentNumber = row['installmentNumber'] as int? ?? 1;
+        final seriesNumber = _seriesNumber(row);
         final recalculatedDate = DateTime(
           transactionDate.year,
-          transactionDate.month + (installmentNumber - 1),
+          transactionDate.month + ((seriesNumber ?? 1) - 1),
           transactionDate.day,
           transactionDate.hour,
           transactionDate.minute,
@@ -282,7 +302,9 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
           payload['amountCents'] = amountCents;
         }
         if (transactionDate != null) {
-          payload['transactionDate'] = transactionDate.toUtc().toIso8601String();
+          payload['transactionDate'] = transactionDate
+              .toUtc()
+              .toIso8601String();
         }
         payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
 
@@ -326,15 +348,15 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
     TransactionMutationScope? scope,
   ) async {
     if (scope != TransactionMutationScope.all ||
-        baseRow['installmentGroupId'] == null) {
+        _seriesGroupId(baseRow) == null) {
       return [baseRow];
     }
 
     final groupRows = await client!
         .from(SupabaseTableNames.transactions)
         .select()
-        .eq('installmentGroupId', baseRow['installmentGroupId'])
-        .order('installmentNumber');
+        .eq(_seriesGroupColumn(baseRow), _seriesGroupId(baseRow)!)
+        .order(_seriesNumberColumn(baseRow));
 
     return _toRowList(groupRows);
   }
@@ -416,6 +438,27 @@ class SupabaseTransactionRemoteDataSource implements ITransactionDataSource {
 
     return data.map((row) => Map<String, dynamic>.from(row as Map)).toList();
   }
+
+  String? _seriesGroupId(Map<String, dynamic> row) {
+    return row['installmentGroupId'] as String? ??
+        row['recurrenceGroupId'] as String?;
+  }
+
+  String _seriesGroupColumn(Map<String, dynamic> row) {
+    return row['installmentGroupId'] != null
+        ? 'installmentGroupId'
+        : 'recurrenceGroupId';
+  }
+
+  String _seriesNumberColumn(Map<String, dynamic> row) {
+    return row['installmentGroupId'] != null
+        ? 'installmentNumber'
+        : 'recurrenceNumber';
+  }
+
+  int? _seriesNumber(Map<String, dynamic> row) {
+    return row['installmentNumber'] as int? ?? row['recurrenceNumber'] as int?;
+  }
 }
 
 class _SupabaseTransactionUserScopeAdapter
@@ -448,9 +491,7 @@ class _SupabaseTransactionQueryGateway
         .lt('transactionDate', startOfNextMonthUtc.toIso8601String())
         .order('transactionDate', ascending: false);
 
-    return rows
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
+    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
   }
 
   @override

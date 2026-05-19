@@ -12,7 +12,7 @@ enum AccountType {
       case AccountType.savings:
         return 'Poupanca';
       case AccountType.wallet:
-        return 'Carteira (Dinheiro)';
+        return 'Dinheiro';
       case AccountType.investment:
         return 'Investimento';
       case AccountType.other:

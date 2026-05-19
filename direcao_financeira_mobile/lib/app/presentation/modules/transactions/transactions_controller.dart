@@ -55,7 +55,16 @@ class DisplayedTransactionEntry {
 
   DateTime get transactionDate => transaction.transactionDate;
 
+  bool get affectsBalance =>
+      transaction.status == TransactionStatus.cleared &&
+      (pairedTransaction?.status ?? TransactionStatus.cleared) ==
+          TransactionStatus.cleared;
+
   int get totalCents {
+    if (!affectsBalance) {
+      return 0;
+    }
+
     if (isInvoicePaymentTransfer) {
       return -transaction.displayedAmountCents;
     }
@@ -231,7 +240,9 @@ class TransactionsController extends GetxController {
 
   int get totalIncomeCents => displayedMonthTransactions
       .where(
-        (transaction) => transaction.kind == DisplayedTransactionKind.income,
+        (transaction) =>
+            transaction.affectsBalance &&
+            transaction.kind == DisplayedTransactionKind.income,
       )
       .fold<int>(
         0,
@@ -242,8 +253,9 @@ class TransactionsController extends GetxController {
   int get totalExpenseCents => displayedMonthTransactions
       .where(
         (transaction) =>
-            transaction.kind == DisplayedTransactionKind.expense ||
-            transaction.kind == DisplayedTransactionKind.transfer,
+            transaction.affectsBalance &&
+            (transaction.kind == DisplayedTransactionKind.expense ||
+                transaction.kind == DisplayedTransactionKind.transfer),
       )
       .fold<int>(
         0,
@@ -329,6 +341,7 @@ class TransactionsController extends GetxController {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     isSubmitting.value = true;
 
@@ -343,6 +356,7 @@ class TransactionsController extends GetxController {
       bankAccountId: bankAccountId,
       creditCardId: creditCardId,
       installmentCount: installmentCount,
+      recurrenceCount: recurrenceCount,
     );
 
     isSubmitting.value = false;
@@ -384,7 +398,7 @@ class TransactionsController extends GetxController {
 
     AppSnackbar.show(
       'Sucesso',
-      'Transacao registrada com sucesso.',
+      'Transação registrada com sucesso.',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: AppColors.success.withValues(alpha: 0.12),
       colorText: Get.theme.colorScheme.onSurface,
@@ -402,6 +416,7 @@ class TransactionsController extends GetxController {
     int? amountCents,
     DateTime? transactionDate,
     TransactionMutationScope? scope,
+    bool closeAfterSuccess = true,
   }) async {
     isSubmitting.value = true;
 
@@ -417,23 +432,28 @@ class TransactionsController extends GetxController {
 
     isSubmitting.value = false;
 
-    result.fold((failure) => AppSnackbar.show('Erro', failure.message), (
-      transaction,
-    ) {
-      if (scope == TransactionMutationScope.all) {
-        loadData(silent: true);
-      } else {
-        final index = transactions.indexWhere((t) => t.id == id);
-        if (index != -1) {
-          transactions[index] = transaction;
+    await result.fold<Future<void>>(
+      (failure) async {
+        AppSnackbar.show('Erro', failure.message);
+      },
+      (transaction) async {
+        if (scope == TransactionMutationScope.all) {
+          await loadData(silent: true);
+        } else {
+          final index = transactions.indexWhere((t) => t.id == id);
+          if (index != -1) {
+            transactions[index] = transaction;
+          }
         }
-      }
 
-      dashboardRefreshNotifier.requestRefresh();
+        dashboardRefreshNotifier.requestRefresh();
 
-      Get.back();
-      AppSnackbar.show('Sucesso', 'Transacao atualizada.');
-    });
+        if (closeAfterSuccess) {
+          Get.back();
+        }
+        AppSnackbar.show('Sucesso', 'Transação atualizada.');
+      },
+    );
   }
 
   Future<void> deleteTransaction(
@@ -448,30 +468,35 @@ class TransactionsController extends GetxController {
     isLoading.value = true;
     Get.closeAllSnackbars();
 
-    final result = await deleteTransactionUseCase(id, scope: scope);
+    try {
+      final result = await deleteTransactionUseCase(id, scope: scope);
 
-    result.fold(
-      (failure) {
-        deletingTransactionIds.remove(id);
-        isLoading.value = false;
-        Get.closeAllSnackbars();
-        AppSnackbar.show('Erro', failure.message);
-      },
-      (_) {
-        if (scope == TransactionMutationScope.all) {
-          loadData(silent: true);
-        } else {
-          transactions.removeWhere((t) => t.id == id);
-          isLoading.value = false;
-        }
+      await result.fold(
+        (failure) async {
+          Get.closeAllSnackbars();
+          if (Get.context != null) {
+            AppSnackbar.show('Erro', failure.message);
+          }
+        },
+        (_) async {
+          if (scope == TransactionMutationScope.all) {
+            await loadData(silent: true);
+          } else {
+            transactions.removeWhere((t) => t.id == id);
+          }
 
-        dashboardRefreshNotifier.requestRefresh();
+          dashboardRefreshNotifier.requestRefresh();
 
-        deletingTransactionIds.remove(id);
-        Get.closeAllSnackbars();
-        AppSnackbar.show('Sucesso', 'Transacao excluida.');
-      },
-    );
+          Get.closeAllSnackbars();
+          if (Get.context != null) {
+            AppSnackbar.show('Sucesso', 'Transação excluída.');
+          }
+        },
+      );
+    } finally {
+      deletingTransactionIds.remove(id);
+      isLoading.value = false;
+    }
   }
 
   bool isDeletingTransaction(int id) => deletingTransactionIds.contains(id);

@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityService.TakeScreenshotCallback
 import android.app.KeyguardManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.ColorSpace
 import android.hardware.HardwareBuffer
@@ -101,12 +102,14 @@ class ScreenReaderService : AccessibilityService() {
             ocrWatchdogRunnable = null
             ocrInFlight = false
             floatingOverlay?.hide()
+            restoreAppBubbleAfterRideOffer()
             lastOfferData = null
             logLockscreenMessage("runtime_inactive_skip")
             return
         }
 
         if (!SettingsManager.shouldShowTrafficLight()) {
+            restoreAppBubbleAfterRideOffer()
             logLockscreenMessage("traffic_light_disabled_skip")
             return
         }
@@ -117,6 +120,7 @@ class ScreenReaderService : AccessibilityService() {
                 !isSupportedRidePackage(packageName) ||
                 !isRelevantMonitoredPackage(packageName)
         ) {
+            restoreAppBubbleAfterRideOffer()
             logLockscreenEvent(
                 "package_filtered",
                 event = event,
@@ -173,6 +177,7 @@ class ScreenReaderService : AccessibilityService() {
                 )
                 val candidate = buildOcrScreenCandidate("MoveSj")
                 if (!candidate.shouldRunOcr) {
+                    restoreAppBubbleAfterRideOffer()
                     logLockscreenMessage(
                         "ocr_skip_prefilter",
                         extra =
@@ -211,6 +216,7 @@ class ScreenReaderService : AccessibilityService() {
                 )
                 val candidate = buildOcrScreenCandidate("99")
                 if (!candidate.shouldRunOcr) {
+                    restoreAppBubbleAfterRideOffer()
                     logLockscreenMessage(
                         "ocr_skip_prefilter",
                         extra =
@@ -246,12 +252,12 @@ class ScreenReaderService : AccessibilityService() {
         val signature = buildOfferSignature(offerData)
         val appKey = resolveOfferAppKey(offerData)
         val moveSjCoreSignature = buildMoveSjCoreSignature(offerData)
-        Log.d(logTag, "MoveSj processOffer signature=$signature summary=${offerLogSummary(offerData)}")
+        debugLog("MoveSj processOffer signature=$signature summary=${offerLogSummary(offerData)}")
         if (
             isDuplicateOffer(signature) ||
                 (appKey == "MoveSj" && isDuplicateMoveSjCoreOffer(moveSjCoreSignature))
         ) {
-            Log.d(logTag, "MoveSj oferta ignorada por assinatura duplicada.")
+            debugLog("MoveSj oferta ignorada por assinatura duplicada.")
             logLockscreenMessage("process_offer_duplicate_signature", extra = offerLogSummary(offerData))
             return
         }
@@ -264,6 +270,7 @@ class ScreenReaderService : AccessibilityService() {
         lastAcceptedOfferAtElapsed = SystemClock.elapsedRealtime()
         lastAcceptedAppKey = appKey
         lastAcceptedScreenFingerprint = buildOfferScreenFingerprint(offerData)
+        hideAppBubbleForRideOffer()
 
         pendingOverlayRunnable?.let(mainHandler::removeCallbacks)
         pendingOverlayRunnable =
@@ -1010,6 +1017,8 @@ class ScreenReaderService : AccessibilityService() {
                             reason = "parse_incomplete",
                             extra = mapOf("lineCount" to lines.size),
                         )
+                    } else {
+                        restoreAppBubbleAfterRideOffer()
                     }
                 }.onFailure { error ->
                     logLockscreenMessage(
@@ -1083,6 +1092,8 @@ class ScreenReaderService : AccessibilityService() {
                     if (offerData != null) {
                         logLockscreenMessage("ocr_offer_parsed", extra = offerLogSummary(offerData))
                         processOffer(offerData)
+                    } else {
+                        restoreAppBubbleAfterRideOffer()
                     }
                 }.onFailure { error ->
                     logLockscreenMessage(
@@ -1148,7 +1159,7 @@ class ScreenReaderService : AccessibilityService() {
                 }
 
                 currentChannel.invokeMethod("onRaceDetected", data)
-                Log.d(logTag, "MoveSj invokeMethod onRaceDetected summary=${offerLogSummary(data)}")
+                debugLog("MoveSj invokeMethod onRaceDetected summary=${offerLogSummary(data)}")
             }.onFailure { error ->
                 logLockscreenMessage(
                     "flutter_notify_failure",
@@ -1169,7 +1180,16 @@ class ScreenReaderService : AccessibilityService() {
         ocrWatchdogRunnable = null
         ocrInFlight = false
         floatingOverlay?.hide()
+        restoreAppBubbleAfterRideOffer()
         logLockscreenMessage("service_interrupt")
+    }
+
+    private fun hideAppBubbleForRideOffer() {
+        AppBubbleService.hideForRideOffer(this)
+    }
+
+    private fun restoreAppBubbleAfterRideOffer() {
+        AppBubbleService.restoreAfterRideOffer(this)
     }
 
     private fun logLockscreenEvent(
@@ -1194,7 +1214,17 @@ class ScreenReaderService : AccessibilityService() {
         stage: String,
         extra: Map<String, Any?> = emptyMap(),
     ) {
-        Log.d(logTag, "$lockLogPrefix stage=$stage ${extra.entries.joinToString(" ") { "${it.key}=${it.value}" }}")
+        debugLog("$lockLogPrefix stage=$stage ${extra.entries.joinToString(" ") { "${it.key}=${it.value}" }}")
+    }
+
+    private fun debugLog(message: String) {
+        if (isDebugBuild()) {
+            Log.d(logTag, message)
+        }
+    }
+
+    private fun isDebugBuild(): Boolean {
+        return (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
 
     private fun isKeyguardLocked(): Boolean {

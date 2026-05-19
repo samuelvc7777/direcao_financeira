@@ -75,7 +75,7 @@ class _FakeRealtimeClient implements RealtimeClient {
   Future<void> dispose() async {}
 
   @override
-  void off(String event) {}
+  void off(String event, [void Function(dynamic payload)? handler]) {}
 
   @override
   void on(String event, void Function(dynamic payload) handler) {}

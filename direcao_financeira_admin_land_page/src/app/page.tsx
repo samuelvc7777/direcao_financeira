@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  PieChart, TrendingUp, Target, ShieldCheck, Smartphone, 
-  CheckCircle2, ArrowRight, Star, ChevronRight, Play,
+  TrendingUp, Target, ShieldCheck, Smartphone,
+  CheckCircle2, ArrowRight, Star,
   Wallet, BarChart3, Lock, Users, Zap, Apple, 
   CalendarDays, CalendarRange, CalendarCheck, Menu, X,
   Sun, Moon
@@ -29,20 +29,16 @@ const GooglePlayIcon = ({ size = 24, className = "" }: { size?: number, classNam
 );
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<"mensal" | "trimestral" | "anual">("anual");
 
   useEffect(() => {
-    setMounted(true);
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  if (!mounted) return null;
 
   const plans = [
     {
@@ -537,7 +533,7 @@ export default function Home() {
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-10 text-xs text-slate-400 dark:text-slate-600 font-black uppercase tracking-[0.3em]">
-            <a href="#" className="hover:text-blue-600 transition-colors">Privacidade</a>
+            <a href="/privacy" className="hover:text-blue-600 transition-colors">Privacidade</a>
             <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Termos</a>
             <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Ouvidoria</a>
             <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Segurança</a>

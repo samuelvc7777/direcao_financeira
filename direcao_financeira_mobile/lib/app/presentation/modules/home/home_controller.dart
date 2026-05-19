@@ -65,6 +65,8 @@ class HomeController extends GetxController {
 
   final currentTabIndex = 0.obs;
   Worker? _dashboardRefreshWorker;
+  Worker? _dashboardRealtimeWorker;
+  final _dashboardRealtimeRefreshTick = 0.obs;
   int _dashboardLoadToken = 0;
   static const _dashboardRealtimeEvents = <String>[
     'transaction.created',
@@ -91,18 +93,28 @@ class HomeController extends GetxController {
   }
 
   void _setupSocketListeners() {
+    _dashboardRealtimeWorker = debounce<int>(
+      _dashboardRealtimeRefreshTick,
+      (_) => loadDashboardData(silent: true),
+      time: const Duration(milliseconds: 800),
+    );
     for (final event in _dashboardRealtimeEvents) {
-      realtimeClient.on(event, (_) => loadDashboardData(silent: true));
+      realtimeClient.on(event, _handleDashboardRealtimeEvent);
     }
   }
 
   @override
   void onClose() {
     _dashboardRefreshWorker?.dispose();
+    _dashboardRealtimeWorker?.dispose();
     for (final event in _dashboardRealtimeEvents) {
-      realtimeClient.off(event);
+      realtimeClient.off(event, _handleDashboardRealtimeEvent);
     }
     super.onClose();
+  }
+
+  void _handleDashboardRealtimeEvent(dynamic _) {
+    _dashboardRealtimeRefreshTick.value++;
   }
 
   Future<void> loadDashboardData({

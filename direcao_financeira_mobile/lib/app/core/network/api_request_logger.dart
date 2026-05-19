@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'api_error_mapper.dart';
 
 class ApiRequestLogger {
-  ApiRequestLogger({required this.apiErrorMapper, this.enabled = true});
+  ApiRequestLogger({required this.apiErrorMapper, this.enabled = kDebugMode});
 
   final ApiErrorMapper apiErrorMapper;
   final bool enabled;

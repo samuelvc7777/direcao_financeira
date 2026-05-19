@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../core/accessibility/accessibility_service.dart';
 import '../../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../costs_gains_settings/costs_gains_draft.dart';
 import '../costs_gains_settings/costs_gains_flow_coordinator.dart';
@@ -165,6 +166,9 @@ class CostsGainsWizardController extends GetxController {
       ),
       (entity) {
         final savedDraft = CostsGainsDraft.fromEntity(entity);
+        if (Get.isRegistered<AccessibilityService>()) {
+          Get.find<AccessibilityService>().syncSettingsWithNative();
+        }
         if (_returnResultOnSave) {
           Get.back(result: savedDraft);
           return;

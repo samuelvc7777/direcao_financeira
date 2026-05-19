@@ -25,6 +25,8 @@ object SettingsManager {
     private const val KEY_PASSENGER_RATING_BAD = "passenger_rating_bad"
     private const val KEY_PASSENGER_RATING_GOOD = "passenger_rating_good"
     private const val KEY_PASSENGER_RATING_CUSTOMIZED = "passenger_rating_customized"
+    private const val KEY_FUEL_PRICE_PER_LITER_CENTS = "fuel_price_per_liter_cents"
+    private const val KEY_KM_PER_LITER = "km_per_liter"
     private const val KEY_TRAFFIC_LIGHT_ACTIVE = "traffic_light_active"
     private const val KEY_JOURNEY_ACTIVE = "journey_active"
 
@@ -56,6 +58,8 @@ object SettingsManager {
     var passengerRatingBad: Double = 4.6
     var passengerRatingGood: Double = 5.0
     var passengerRatingCustomized: Boolean = false
+    var fuelPricePerLiterCents: Int = 0
+    var kmPerLiter: Double = 0.0
     var trafficLightActive: Boolean = false
     var journeyActive: Boolean = false
 
@@ -96,6 +100,8 @@ object SettingsManager {
             prefs.getFloat(KEY_PASSENGER_RATING_GOOD, passengerRatingGood.toFloat()).toDouble()
         passengerRatingCustomized =
             prefs.getBoolean(KEY_PASSENGER_RATING_CUSTOMIZED, passengerRatingCustomized)
+        fuelPricePerLiterCents = prefs.getInt(KEY_FUEL_PRICE_PER_LITER_CENTS, fuelPricePerLiterCents)
+        kmPerLiter = prefs.getFloat(KEY_KM_PER_LITER, kmPerLiter.toFloat()).toDouble()
         trafficLightActive = prefs.getBoolean(KEY_TRAFFIC_LIGHT_ACTIVE, false)
         journeyActive = prefs.getBoolean(KEY_JOURNEY_ACTIVE, false)
     }
@@ -143,6 +149,9 @@ object SettingsManager {
             (data["passenger_rating_good"] as? Number)?.toDouble() ?: passengerRatingGood
         passengerRatingCustomized =
             (data["passenger_rating_customized"] as? Boolean) ?: passengerRatingCustomized
+        fuelPricePerLiterCents =
+            (data["fuel_price_per_liter_cents"] as? Number)?.toInt() ?: fuelPricePerLiterCents
+        kmPerLiter = (data["km_per_liter"] as? Number)?.toDouble() ?: kmPerLiter
 
         persist(context)
     }
@@ -213,6 +222,8 @@ object SettingsManager {
             .putFloat(KEY_PASSENGER_RATING_BAD, passengerRatingBad.toFloat())
             .putFloat(KEY_PASSENGER_RATING_GOOD, passengerRatingGood.toFloat())
             .putBoolean(KEY_PASSENGER_RATING_CUSTOMIZED, passengerRatingCustomized)
+            .putInt(KEY_FUEL_PRICE_PER_LITER_CENTS, fuelPricePerLiterCents)
+            .putFloat(KEY_KM_PER_LITER, kmPerLiter.toFloat())
             .putBoolean(KEY_TRAFFIC_LIGHT_ACTIVE, trafficLightActive)
             .putBoolean(KEY_JOURNEY_ACTIVE, journeyActive)
             .apply()

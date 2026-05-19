@@ -1,6 +1,7 @@
 package com.example.direcao_financeira_mobile
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -40,7 +41,7 @@ class FloatingOverlay(
 
     fun show(data: Map<String, Any>) {
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        Log.d(logTag, "$lockLogPrefix overlay_show_called app=${data["platform_name"] ?: data["app"]} isShowing=$isShowing")
+        debugLog("$lockLogPrefix overlay_show_called app=${data["platform_name"] ?: data["app"]} isShowing=$isShowing")
         val signature = buildLayoutSignature()
         val shouldRebuild =
             !isShowing || overlayView == null || currentLayoutParams == null || layoutSignature != signature
@@ -61,9 +62,9 @@ class FloatingOverlay(
         if (isShowing && overlayView != null) {
             try {
                 windowManager?.removeView(overlayView)
-                Log.d(logTag, "$lockLogPrefix overlay_hide_success")
+                debugLog("$lockLogPrefix overlay_hide_success")
             } catch (_: Exception) {
-                Log.d(logTag, "$lockLogPrefix overlay_hide_failure")
+                debugLog("$lockLogPrefix overlay_hide_failure")
             }
         }
 
@@ -244,13 +245,12 @@ class FloatingOverlay(
             }
 
         currentLayoutParams = params
-        Log.d(
-            logTag,
+        debugLog(
             "$lockLogPrefix overlay_add_view type=${params.type} flags=${params.flags} x=${params.x} y=${params.y}",
         )
         wm.addView(container, params)
         isShowing = true
-        Log.d(logTag, "$lockLogPrefix overlay_add_view_success")
+        debugLog("$lockLogPrefix overlay_add_view_success")
     }
 
     private fun bindData(data: Map<String, Any>) {
@@ -283,8 +283,7 @@ class FloatingOverlay(
 
         overlayView?.let { view ->
             currentLayoutParams?.let { params ->
-                Log.d(
-                    logTag,
+                debugLog(
                     "$lockLogPrefix overlay_update_view x=${params.x} y=${params.y} app=$appName summary=${summaryTextView?.text}",
                 )
                 windowManager?.updateViewLayout(view, params)
@@ -348,6 +347,7 @@ class FloatingOverlay(
                 .toDoubleOrNull() ?: 0.0
         val totalKm = (data["km_total"] as? Number)?.toDouble() ?: 0.0
         val totalMinutes = (data["minutos_total"] as? Number)?.toInt() ?: 0
+        val fuelCostValue = calculateFuelCostValue(totalKm)
         val rating =
             data["avaliacao"]?.toString()
                 ?.replace("\u2605", "")
@@ -361,8 +361,18 @@ class FloatingOverlay(
             rating = rating,
             gainPerKm = if (totalKm > 0) grossValue / totalKm else 0.0,
             gainPerHour = if (totalMinutes > 0) (grossValue / totalMinutes) * 60 else 0.0,
-            profitValue = grossValue,
+            profitValue = grossValue - fuelCostValue,
         )
+    }
+
+    private fun calculateFuelCostValue(totalKm: Double): Double {
+        if (totalKm <= 0 || SettingsManager.kmPerLiter <= 0 || SettingsManager.fuelPricePerLiterCents <= 0) {
+            return 0.0
+        }
+
+        val litersUsed = totalKm / SettingsManager.kmPerLiter
+        val fuelPricePerLiter = SettingsManager.fuelPricePerLiterCents / 100.0
+        return litersUsed * fuelPricePerLiter
     }
 
     private fun evaluateSignalStatus(metrics: OverlayOfferMetrics): OverlaySignalStatus {
@@ -609,6 +619,16 @@ class FloatingOverlay(
             dp,
             context.resources.displayMetrics,
         ).toInt()
+    }
+
+    private fun debugLog(message: String) {
+        if (isDebugBuild()) {
+            Log.d(logTag, message)
+        }
+    }
+
+    private fun isDebugBuild(): Boolean {
+        return (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
 
     private data class OverlayOfferMetrics(

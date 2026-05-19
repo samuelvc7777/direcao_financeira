@@ -1,5 +1,6 @@
 import '../../domain/entities/shift_entity.dart';
 import '../../domain/entities/shift_route_entity.dart';
+import '../shared/journey_datetime_parser.dart';
 import 'shift_model.dart';
 
 class PendingFinishedShiftModel {
@@ -27,13 +28,13 @@ class PendingFinishedShiftModel {
 
     return PendingFinishedShiftModel(
       localId: json['localId'] as int,
-      remoteShiftId: parsedRemoteShiftId != null &&
-              parsedRemoteShiftId <= maxDatabaseInt
+      remoteShiftId:
+          parsedRemoteShiftId != null && parsedRemoteShiftId <= maxDatabaseInt
           ? parsedRemoteShiftId
           : null,
-      startTime: DateTime.parse(json['startTime'] as String).toLocal(),
-      endTime: DateTime.parse(json['endTime'] as String).toLocal(),
-      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      startTime: parseJourneyDateTimeToLocal(json['startTime'] as String),
+      endTime: parseJourneyDateTimeToLocal(json['endTime'] as String),
+      createdAt: parseJourneyDateTimeToLocal(json['createdAt'] as String),
       idleTimeSeconds: json['idleTimeSeconds'] as int? ?? 0,
       totalDrivenKm: (json['totalDrivenKm'] as num?)?.toDouble() ?? 0.0,
     );
@@ -51,21 +52,18 @@ class PendingFinishedShiftModel {
     };
   }
 
-  ShiftEntity toShiftEntity({
-    required int index,
-    ShiftRouteEntity? route,
-  }) {
+  ShiftEntity toShiftEntity({required int index, ShiftRouteEntity? route}) {
     String two(int value) => value.toString().padLeft(2, '0');
 
     String formatDate(DateTime value) =>
         '${two(value.day)}/${two(value.month)}/${value.year}';
-    String formatTime(DateTime value) => '${two(value.hour)}:${two(value.minute)}';
+    String formatTime(DateTime value) =>
+        '${two(value.hour)}:${two(value.minute)}';
     final totalSeconds = endTime.difference(startTime).inSeconds;
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
     final seconds = totalSeconds % 60;
-    final duration =
-        '${two(hours)}:${two(minutes)}:${two(seconds)}';
+    final duration = '${two(hours)}:${two(minutes)}:${two(seconds)}';
 
     return ShiftModel(
       index: index,

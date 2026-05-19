@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:get_storage/get_storage.dart';
 
 import '../../core/errors/exceptions.dart';
@@ -96,19 +98,25 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
       );
     }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    await _writePendingRideEntries(entries);
+    final serialized = _serializePendingRideEntries(entries);
+    if (!_jsonEquals(raw, serialized)) {
+      await storage.write(_pendingRidesKey, serialized);
+    }
     return entries;
   }
 
   Future<void> _writePendingRideEntries(
     List<_PendingRideStorageEntry> entries,
   ) async {
-    await storage.write(
-      _pendingRidesKey,
-      entries
-          .map((entry) => entry.model.toJson(createdAt: entry.createdAt))
-          .toList(),
-    );
+    await storage.write(_pendingRidesKey, _serializePendingRideEntries(entries));
+  }
+
+  List<Map<String, dynamic>> _serializePendingRideEntries(
+    List<_PendingRideStorageEntry> entries,
+  ) {
+    return entries
+        .map((entry) => entry.model.toJson(createdAt: entry.createdAt))
+        .toList();
   }
 }
 
@@ -120,4 +128,12 @@ class _PendingRideStorageEntry {
 
   final RideModel model;
   final DateTime createdAt;
+}
+
+bool _jsonEquals(Object? left, Object? right) {
+  try {
+    return jsonEncode(left) == jsonEncode(right);
+  } catch (_) {
+    return false;
+  }
 }

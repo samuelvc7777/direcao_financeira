@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -128,6 +130,8 @@ class TransactionsView extends GetView<TransactionsController> {
                                 group: groups[index],
                                 amountFormat: currencyFormat,
                                 compactAmountFormat: compactCurrencyFormat,
+                                onQuickStatusChange:
+                                    _onQuickStatusChangeTransaction,
                                 onEdit: _onEditTransaction,
                                 onDelete: _onDeleteTransaction,
                               ),
@@ -168,8 +172,21 @@ class TransactionsView extends GetView<TransactionsController> {
     }
   }
 
+  void _onQuickStatusChangeTransaction(TransactionEntity transaction) {
+    unawaited(
+      controller.updateTransaction(
+        transaction.id,
+        status: TransactionStatus.cleared,
+        scope: TransactionMutationScope.current,
+        closeAfterSuccess: false,
+      ),
+    );
+  }
+
   void _onDeleteTransaction(TransactionEntity transaction) {
     final isInstallment = transaction.installmentGroupId != null;
+    final isRecurring = transaction.recurrenceGroupId != null;
+    final isGrouped = isInstallment || isRecurring;
     final theme = Get.theme;
     final colorScheme = theme.colorScheme;
     final surfaceColor = colorScheme.surface;
@@ -189,6 +206,8 @@ class TransactionsView extends GetView<TransactionsController> {
         content: Text(
           isInstallment
               ? 'Esta transação faz parte de uma compra parcelada. O que deseja fazer?'
+              : isRecurring
+              ? 'Esta transação faz parte de uma recorrência mensal. O que deseja fazer?'
               : 'Deseja realmente excluir esta transação?',
           style: TextStyle(color: bodyColor),
         ),
@@ -203,7 +222,7 @@ class TransactionsView extends GetView<TransactionsController> {
               ),
             ),
           ),
-          if (isInstallment)
+          if (isGrouped)
             ElevatedButton(
               onPressed: () {
                 if (controller.isDeletingTransaction(transaction.id)) {
@@ -222,7 +241,7 @@ class TransactionsView extends GetView<TransactionsController> {
                 foregroundColor: colorScheme.onErrorContainer,
                 elevation: 0,
               ),
-              child: const Text('Todas Parcelas'),
+              child: Text(isRecurring ? 'Todas Ocorrências' : 'Todas Parcelas'),
             ),
           ElevatedButton(
             onPressed: () {
@@ -242,7 +261,7 @@ class TransactionsView extends GetView<TransactionsController> {
               foregroundColor: colorScheme.onError,
               elevation: 0,
             ),
-            child: Text(isInstallment ? 'Apenas esta' : 'Excluir'),
+            child: Text(isGrouped ? 'Apenas esta' : 'Excluir'),
           ),
         ],
       ),

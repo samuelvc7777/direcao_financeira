@@ -16,6 +16,7 @@ import 'package:get/get.dart';
 class _FakeAuthRepository implements IAuthRepository {
   bool logoutCalled = false;
   UserEntity? storedUser;
+  String? updatedProfilePhotoBase64;
 
   @override
   Either<Failure, UserEntity?> getStoredUser() => Right(storedUser);
@@ -54,6 +55,14 @@ class _FakeAuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity>> updateProfilePhotoBase64(
+    String? profilePhotoBase64,
+  ) {
+    updatedProfilePhotoBase64 = profilePhotoBase64;
+    throw UnimplementedError();
+  }
+
+  @override
   Future<Either<Failure, void>> saveToken(String token) {
     throw UnimplementedError();
   }
@@ -73,7 +82,25 @@ class _FakePreferences implements AppPreferences {
   bool? readBool(String key) => initialValue;
 
   @override
+  int? readInt(String key) => null;
+
+  @override
+  double? readDouble(String key) => null;
+
+  @override
+  String? readString(String key) => null;
+
+  @override
   Future<void> writeBool(String key, bool value) async {}
+
+  @override
+  Future<void> writeInt(String key, int value) async {}
+
+  @override
+  Future<void> writeDouble(String key, double value) async {}
+
+  @override
+  Future<void> writeString(String key, String value) async {}
 }
 
 class _FakeAppBubbleService implements AppBubbleService {
@@ -120,6 +147,7 @@ void main() {
       preferences: preferences,
       getStoredUserUseCase: GetStoredUserUseCase(repository),
       logoutUseCase: LogoutUseCase(repository),
+      updateProfilePhotoUseCase: UpdateProfilePhotoUseCase(repository),
     )..onInit();
     Get.put<SettingsController>(controller);
 
@@ -136,6 +164,7 @@ void main() {
     expect(find.text('FINANCAS'), findsOneWidget);
     expect(find.text('CATEGORIAS'), findsOneWidget);
     expect(find.text('CONFIGURACOES DE TRABALHO (SEMAFORO)'), findsOneWidget);
+    expect(find.text('Configurar gravação'), findsOneWidget);
     expect(find.text('JORNADA E METAS'), findsOneWidget);
     expect(find.text('Sair da conta'), findsOneWidget);
   });
@@ -149,6 +178,7 @@ void main() {
       preferences: preferences,
       getStoredUserUseCase: GetStoredUserUseCase(repository),
       logoutUseCase: LogoutUseCase(repository),
+      updateProfilePhotoUseCase: UpdateProfilePhotoUseCase(repository),
     );
     Get.put<SettingsController>(controller);
 

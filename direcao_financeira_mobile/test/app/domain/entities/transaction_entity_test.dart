@@ -37,4 +37,26 @@ void main() {
     expect(first.displayedAmount, 21.21);
     expect(eleventh.displayedAmount, 21.20);
   });
+
+  test('TransactionEntity expõe serie recorrente corretamente', () {
+    final recurring = TransactionEntity(
+      id: 3,
+      type: TransactionType.expense,
+      status: TransactionStatus.pending,
+      assetType: AssetType.bankAccount,
+      amountCents: 12990,
+      categoryId: 7,
+      description: 'Assinatura mensal',
+      transactionDate: DateTime(2026, 5, 12),
+      bankAccountId: 1,
+      recurrenceGroupId: 'rec-1',
+      recurrenceNumber: 2,
+      recurrenceCount: 6,
+    );
+
+    expect(recurring.hasRecurrenceSeries, isTrue);
+    expect(recurring.hasAnySeries, isTrue);
+    expect(recurring.seriesNumber, 2);
+    expect(recurring.seriesCount, 6);
+  });
 }

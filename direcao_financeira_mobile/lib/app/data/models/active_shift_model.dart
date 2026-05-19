@@ -1,4 +1,5 @@
 import '../../domain/entities/active_shift_entity.dart';
+import '../shared/journey_datetime_parser.dart';
 
 class ActiveShiftModel extends ActiveShiftEntity {
   const ActiveShiftModel({
@@ -49,20 +50,20 @@ class ActiveShiftModel extends ActiveShiftEntity {
     return ActiveShiftModel(
       id: json['id'] as int,
       remoteShiftId: json['remoteShiftId'] as int?,
-      startTime: DateTime.parse(json['startTime'] as String).toLocal(),
-      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      startTime: parseJourneyDateTimeToLocal(json['startTime'] as String),
+      createdAt: parseJourneyDateTimeToLocal(json['createdAt'] as String),
       currentDrivenKm: (json['currentDrivenKm'] as num?)?.toDouble() ?? 0.0,
       idleTimeSeconds: json['idleTime'] as int? ?? 0,
       pausedAt: json['pausedAt'] != null
-          ? DateTime.parse(json['pausedAt'] as String).toLocal()
+          ? parseJourneyDateTimeToLocal(json['pausedAt'] as String)
           : null,
       lowSpeedSince: json['lowSpeedSince'] != null
-          ? DateTime.parse(json['lowSpeedSince'] as String).toLocal()
+          ? parseJourneyDateTimeToLocal(json['lowSpeedSince'] as String)
           : null,
       lastMotionIdleCheckpointAt: json['lastMotionIdleCheckpointAt'] != null
-          ? DateTime.parse(
+          ? parseJourneyDateTimeToLocal(
               json['lastMotionIdleCheckpointAt'] as String,
-            ).toLocal()
+            )
           : null,
     );
   }

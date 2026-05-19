@@ -334,6 +334,90 @@ class MoveSjParserTest {
     }
 
     @Test
+    fun `resolve valor principal ignorando linhas derivadas por km e por min`() {
+        val lines =
+            listOf(
+                "Move",
+                "RECUSAR",
+                "Samuel",
+                "1,7 km (R$ 7,87/km)",
+                "5 min (R$ 2,56/min)",
+                "R$ 13,51",
+                "(Motorista)",
+                "R$ 13,51",
+                "ACEITAR (8)",
+            )
+
+        val priceText = parser.resolveBestPriceText(lines, lines.joinToString("\n"))
+
+        assertEquals("R$ 13,51", priceText)
+    }
+
+    @Test
+    fun `ocr da movesj nao usa valor por km como valor bruto`() {
+        val lines =
+            listOf(
+                "Move",
+                "RECUSAR",
+                "Samuel",
+                "1,7 km (R$ 7,87/km)",
+                "5 min (R$ 2,56/min)",
+                "R$ 13,51",
+                "(Motorista)",
+                "R$ 13,51",
+                "5,00★",
+                "7 m (1 min)",
+                "R. Herculano Veloso, 413 - Jardim America, Santa Cruz de Minas - MG, 36302-833, Brasil",
+                "1,7 km (5 min)",
+                "Independente Esporte Clube - Avenida Domingos Pinto Camarano - Colonia do Marcal, Sao Joao del Rei - MG, CEP 36302004, Brasil",
+                "ACEITAR (8)",
+            )
+
+        val offerData = parser.parseOcrOffer(lines.joinToString("\n"), lines)!!
+
+        assertEquals("R$ 13,51", offerData["valor_bruto"])
+        assertEquals(1.7, offerData["km_total"])
+        assertEquals(5, offerData["minutos_total"])
+    }
+
+    @Test
+    fun `ocr posicional da movesj black prioriza valor principal acima das metricas`() {
+        val ocrLines =
+            listOf(
+                MoveSjParser.OcrLine("Move Black", 20, 92, 220, 132),
+                MoveSjParser.OcrLine("RECUSAR", 24, 215, 294, 286),
+                MoveSjParser.OcrLine("Samuel", 58, 441, 181, 477),
+                MoveSjParser.OcrLine("5,00â˜…", 65, 520, 191, 554),
+                MoveSjParser.OcrLine("R$ 19,80", 315, 428, 598, 526),
+                MoveSjParser.OcrLine("(Motorista)", 644, 403, 869, 442),
+                MoveSjParser.OcrLine("R$ 19,80", 642, 464, 857, 514),
+                MoveSjParser.OcrLine("3,4 km (R$ 5,76/km)", 316, 548, 714, 592),
+                MoveSjParser.OcrLine("R$ 5,76", 320, 554, 746, 640),
+                MoveSjParser.OcrLine("9 min (R$ 2,00/min)", 316, 612, 700, 656),
+                MoveSjParser.OcrLine("1,2 km (3 min)", 34, 740, 242, 780),
+                MoveSjParser.OcrLine("Av. Min. Gabriel Passos, 2172 - Santa", 23, 801, 900, 842),
+                MoveSjParser.OcrLine("Cruz De Minas, Santa Cruz de Minas - MG,", 23, 857, 938, 896),
+                MoveSjParser.OcrLine("36328-000, Brasil", 23, 912, 356, 950),
+                MoveSjParser.OcrLine("2,3 km (6 min)", 34, 1046, 254, 1086),
+                MoveSjParser.OcrLine("Independente Esporte Clube - Avenida", 21, 1112, 904, 1152),
+                MoveSjParser.OcrLine("Domingos Pinto Camarano - Colônia", 20, 1168, 852, 1208),
+                MoveSjParser.OcrLine("do Marçal, São João del Rei - MG, CEP", 20, 1224, 870, 1264),
+                MoveSjParser.OcrLine("36302004, Brasil", 20, 1280, 330, 1320),
+                MoveSjParser.OcrLine("ACEITAR (7)", 274, 1454, 638, 1510),
+            ).shuffled()
+
+        val offerData =
+            parser.parsePositionedOcrOffer(
+                rawText = ocrLines.joinToString("\n") { it.text },
+                ocrLines = ocrLines,
+            )!!
+
+        assertEquals("R$ 19,80", offerData["valor_bruto"])
+        assertEquals(3.4, offerData["km_total"])
+        assertEquals(9, offerData["minutos_total"])
+    }
+
+    @Test
     fun `nao reconhece tela generica sem marcadores de oferta`() {
         val isOfferScreen =
             parser.isOfferScreenFromLines(

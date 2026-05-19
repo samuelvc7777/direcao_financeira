@@ -19,3 +19,13 @@ class LogoutUseCase {
 
   Future<Either<Failure, void>> call() => _repository.logout();
 }
+
+class UpdateProfilePhotoUseCase {
+  UpdateProfilePhotoUseCase(this._repository);
+
+  final IAuthRepository _repository;
+
+  Future<Either<Failure, UserEntity>> call(String? profilePhotoBase64) {
+    return _repository.updateProfilePhotoBase64(profilePhotoBase64);
+  }
+}

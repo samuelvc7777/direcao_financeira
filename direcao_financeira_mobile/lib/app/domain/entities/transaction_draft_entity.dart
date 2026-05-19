@@ -10,6 +10,7 @@ class TransactionDraftEntity {
   final int? bankAccountId;
   final int? creditCardId;
   final int? installmentCount;
+  final int? recurrenceCount;
 
   const TransactionDraftEntity({
     required this.type,
@@ -21,5 +22,6 @@ class TransactionDraftEntity {
     this.bankAccountId,
     this.creditCardId,
     this.installmentCount,
+    this.recurrenceCount,
   });
 }

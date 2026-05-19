@@ -24,7 +24,7 @@ class JourneySyncService {
 
   Future<int> syncPendingShiftsIfOnline() async {
     if (!realtimeClient.isOnline.value) {
-      debugPrint('[JourneySyncService] Offline: sincronizacao ignorada.');
+      _debugLog('[JourneySyncService] Offline: sincronizacao ignorada.');
       return 0;
     }
 
@@ -34,13 +34,13 @@ class JourneySyncService {
   Future<int> syncPendingShifts() async {
     final currentSync = _syncPendingShiftsFuture;
     if (currentSync != null) {
-      debugPrint(
+      _debugLog(
         '[JourneySyncService] Reutilizando sincronizacao em andamento.',
       );
       return currentSync;
     }
 
-    debugPrint('[JourneySyncService] Iniciando sincronizacao de pendencias.');
+    _debugLog('[JourneySyncService] Iniciando sincronizacao de pendencias.');
     final syncFuture = _performPendingShiftSync();
     _syncPendingShiftsFuture = syncFuture;
 
@@ -112,12 +112,12 @@ class JourneySyncService {
 
   Future<int> _performPendingShiftSync() async {
     if (!realtimeClient.isOnline.value) {
-      debugPrint('[JourneySyncService] _perform: offline.');
+      _debugLog('[JourneySyncService] _perform: offline.');
       return 0;
     }
 
     final pendingShifts = await localDataSource.getPendingFinishedShifts();
-    debugPrint(
+    _debugLog(
       '[JourneySyncService] _perform: pendencias=${pendingShifts.length}.',
     );
     var syncedCount = 0;
@@ -126,7 +126,7 @@ class JourneySyncService {
       ..sort((a, b) => a.endTime.compareTo(b.endTime));
 
     for (final shift in orderedShifts) {
-      debugPrint(
+      _debugLog(
         '[JourneySyncService] Sincronizando turno localId=${shift.localId} '
         'remoteShiftId=${shift.remoteShiftId} start=${shift.startTime} '
         'end=${shift.endTime} km=${shift.totalDrivenKm}.',
@@ -134,7 +134,7 @@ class JourneySyncService {
       final route = await routeLocalDataSource.getRouteByLocalShiftId(
         shift.localId,
       );
-      debugPrint(
+      _debugLog(
         '[JourneySyncService] Rota localId=${shift.localId}: '
         'hasRoute=${route != null} points=${route?.pointCount ?? 0}.',
       );
@@ -142,7 +142,7 @@ class JourneySyncService {
         shift,
         route,
       );
-      debugPrint(
+      _debugLog(
         '[JourneySyncService] Turno localId=${shift.localId} sincronizado '
         'remoteShiftId=$remoteShiftId.',
       );
@@ -154,9 +154,15 @@ class JourneySyncService {
       syncedCount++;
     }
 
-    debugPrint(
+    _debugLog(
       '[JourneySyncService] Sincronizacao finalizada syncedCount=$syncedCount.',
     );
     return syncedCount;
+  }
+
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      debugPrint(message);
+    }
   }
 }

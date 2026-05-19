@@ -36,6 +36,8 @@ import '../presentation/modules/journey/shift_route_binding.dart';
 import '../presentation/modules/journey/shift_route_view.dart';
 import '../presentation/modules/traffic_light_settings/traffic_light_settings_view.dart';
 import '../presentation/modules/traffic_light_settings/traffic_light_settings_binding.dart';
+import '../presentation/modules/recording_settings/recording_settings_view.dart';
+import '../presentation/modules/recording_settings/recording_settings_binding.dart';
 import '../presentation/modules/costs_gains_settings/costs_gains_settings_binding.dart';
 import '../presentation/modules/costs_gains_settings/costs_gains_settings_view.dart';
 import '../presentation/modules/costs_gains_wizard/costs_gains_wizard_binding.dart';
@@ -64,6 +66,7 @@ class AppRoutes {
   static const String journeyAddRide = '/journey/add-ride';
   static const String journeyImportRidePhoto = '/journey/import-ride-photo';
   static const String trafficLightSettings = '/traffic-light-settings';
+  static const String recordingSettings = '/recording-settings';
   static const String costsGainsSettings = '/costs-gains-settings';
   static const String costsGainsWizard = '/costs-gains-wizard';
 }
@@ -215,6 +218,13 @@ class AppPages {
       name: AppRoutes.trafficLightSettings,
       page: () => const TrafficLightSettingsView(),
       binding: TrafficLightSettingsBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.recordingSettings,
+      page: () => const RecordingSettingsView(),
+      binding: RecordingSettingsBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

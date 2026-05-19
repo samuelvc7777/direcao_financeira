@@ -54,6 +54,9 @@ class TransactionEntity {
   final String? installmentGroupId;
   final int? installmentNumber;
   final int? installmentCount;
+  final String? recurrenceGroupId;
+  final int? recurrenceNumber;
+  final int? recurrenceCount;
 
   // Campos extras que podem vir populados do backend (joins)
   final String? categoryName;
@@ -76,6 +79,9 @@ class TransactionEntity {
     this.installmentGroupId,
     this.installmentNumber,
     this.installmentCount,
+    this.recurrenceGroupId,
+    this.recurrenceNumber,
+    this.recurrenceCount,
     this.categoryName,
     this.categoryColor,
     this.categoryIcon,
@@ -83,6 +89,22 @@ class TransactionEntity {
   });
 
   double get amount => amountCents / 100.0;
+
+  bool get hasInstallmentSeries =>
+      installmentGroupId != null &&
+      installmentNumber != null &&
+      installmentCount != null;
+
+  bool get hasRecurrenceSeries =>
+      recurrenceGroupId != null &&
+      recurrenceNumber != null &&
+      recurrenceCount != null;
+
+  bool get hasAnySeries => hasInstallmentSeries || hasRecurrenceSeries;
+
+  int? get seriesNumber => installmentNumber ?? recurrenceNumber;
+
+  int? get seriesCount => installmentCount ?? recurrenceCount;
 
   bool get isInternalInvoicePayment =>
       description.startsWith(kInternalInvoicePaymentDescriptionPrefix);

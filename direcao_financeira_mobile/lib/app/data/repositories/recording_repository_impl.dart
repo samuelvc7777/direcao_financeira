@@ -1,6 +1,8 @@
 import 'package:dartz/dartz.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/preferences/app_preferences.dart';
+import '../../core/recording/recording_settings.dart';
 import '../../domain/entities/paged_result_entity.dart';
 import '../../domain/entities/recording_entity.dart';
 import '../../domain/repositories/i_recording_repository.dart';
@@ -12,10 +14,12 @@ class RecordingRepositoryImpl implements IRecordingRepository {
   RecordingRepositoryImpl({
     required this.localDataSource,
     required this.nativeDataSource,
+    this.preferences,
   });
 
   final IRecordingLocalDataSource localDataSource;
   final IRecordingNativeDataSource nativeDataSource;
+  final AppPreferences? preferences;
 
   @override
   Future<Either<Failure, PagedResultEntity<RecordingEntity>>> getRecordings({
@@ -100,13 +104,24 @@ class RecordingRepositoryImpl implements IRecordingRepository {
         return Right(active);
       }
 
-      final payload = await nativeDataSource.startRecording();
+      final payload = await nativeDataSource.startRecording(
+        settings: _resolveSettings().toNativeArguments(),
+      );
       final recording = RecordingModel.fromNativeStart(payload);
       await localDataSource.upsertRecording(recording);
       return Right(recording);
     } catch (e) {
       return Left(ServerFailure('Erro ao iniciar gravacao: $e'));
     }
+  }
+
+  RecordingSettingsSnapshot _resolveSettings() {
+    final currentPreferences = preferences;
+    if (currentPreferences == null) {
+      return RecordingSettingsSnapshot.defaults();
+    }
+
+    return RecordingSettingsSnapshot.fromPreferences(currentPreferences);
   }
 
   @override

@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -18,7 +19,7 @@ class RideOfferNotificationDispatcher(
 ) {
     fun show(data: Map<String, Any>): Boolean {
         if (!canPostNotifications()) {
-            Log.d(logTag, "ride_offer_notification_permission_denied")
+            debugLog("ride_offer_notification_permission_denied")
             return false
         }
 
@@ -66,7 +67,7 @@ class RideOfferNotificationDispatcher(
             notificationManager.notify(content.notificationId, builder.build())
             true
         }.getOrElse { error ->
-            Log.d(logTag, "ride_offer_notification_failure message=${error.message}")
+            debugLog("ride_offer_notification_failure message=${error.message}")
             false
         }
     }
@@ -153,6 +154,12 @@ class RideOfferNotificationDispatcher(
             PendingIntent.FLAG_IMMUTABLE
         } else {
             0
+        }
+    }
+
+    private fun debugLog(message: String) {
+        if ((context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            Log.d(logTag, message)
         }
     }
 

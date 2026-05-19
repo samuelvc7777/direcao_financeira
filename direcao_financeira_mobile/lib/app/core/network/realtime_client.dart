@@ -6,6 +6,6 @@ abstract class RealtimeClient {
   void connect({required String token});
   void disconnect();
   void on(String event, void Function(dynamic payload) handler);
-  void off(String event);
+  void off(String event, [void Function(dynamic payload)? handler]);
   Future<void> dispose();
 }

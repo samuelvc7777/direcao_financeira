@@ -128,7 +128,8 @@ class MainActivity : FlutterActivity() {
                             )
                             return@setMethodCallHandler
                         }
-                        val session = RecordingForegroundService.start(this)
+                        val settings = call.arguments as? Map<String, Any?>
+                        val session = RecordingForegroundService.start(this, settings)
                         result.success(session.toMap())
                     }
                     "stopRecording" -> {

@@ -1,4 +1,5 @@
 import '../dtos/auth_session_dto.dart';
+import '../models/user_model.dart';
 
 abstract class IAuthRemoteDataSource {
   Future<AuthSessionDto> login({
@@ -15,4 +16,8 @@ abstract class IAuthRemoteDataSource {
   Future<void> sendPasswordResetEmail({required String email});
 
   Future<void> updatePassword({required String password});
+
+  Future<UserModel> updateProfilePhotoBase64({
+    required String? profilePhotoBase64,
+  });
 }

@@ -102,6 +102,11 @@ class _FakeAuthRepository implements IAuthRepository {
       const Right(null);
 
   @override
+  Future<Either<Failure, UserEntity>> updateProfilePhotoBase64(
+    String? profilePhotoBase64,
+  ) async => Left(DatabaseFailure('nao implementado'));
+
+  @override
   Future<Either<Failure, void>> saveToken(String token) async =>
       const Right(null);
 
@@ -120,19 +125,43 @@ class _FakeBankAccountRepository implements IBankAccountRepository {
     required String color,
     required AccountType accountType,
     required int initialBalanceCents,
-  }) async => Right(buildBankAccount(name: name));
+  }) async {
+    final created = buildBankAccount(
+      id: accounts.isEmpty ? 1 : accounts.last.id + 1,
+      name: name,
+      isActive: true,
+    );
+    accounts = [...accounts, created];
+    return Right(created);
+  }
 
   @override
-  Future<Either<Failure, void>> deactivateBankAccount(int id) async =>
-      const Right(null);
+  Future<Either<Failure, void>> deactivateBankAccount(int id) async {
+    accounts = [
+      for (final account in accounts)
+        if (account.id == id)
+          buildBankAccount(id: account.id, name: account.name, isActive: false)
+        else
+          account,
+    ];
+    return const Right(null);
+  }
 
   @override
   Future<Either<Failure, List<BankAccountEntity>>> getBankAccounts() async =>
       Right(accounts);
 
   @override
-  Future<Either<Failure, void>> reactivateBankAccount(int id) async =>
-      const Right(null);
+  Future<Either<Failure, void>> reactivateBankAccount(int id) async {
+    accounts = [
+      for (final account in accounts)
+        if (account.id == id)
+          buildBankAccount(id: account.id, name: account.name, isActive: true)
+        else
+          account,
+    ];
+    return const Right(null);
+  }
 
   @override
   Future<Either<Failure, BankAccountEntity>> updateBankAccount({
@@ -143,8 +172,18 @@ class _FakeBankAccountRepository implements IBankAccountRepository {
     required AccountType accountType,
     required int initialBalanceCents,
     bool? isActive,
-  }) async =>
-      Right(buildBankAccount(id: id, name: name, isActive: isActive ?? true));
+  }) async {
+    final updated = buildBankAccount(
+      id: id,
+      name: name,
+      isActive: isActive ?? true,
+    );
+    accounts = [
+      for (final account in accounts)
+        if (account.id == id) updated else account,
+    ];
+    return Right(updated);
+  }
 }
 
 class _FakeCategoryRepository implements ICategoryRepository {
@@ -245,6 +284,7 @@ class _FakeTransactionRepository implements ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     final created = buildTransaction(
       id: 99,
@@ -278,7 +318,15 @@ class _FakeTransactionRepository implements ITransactionRepository {
   Future<Either<Failure, void>> deleteTransaction(
     int id, {
     TransactionMutationScope? scope,
-  }) async => const Right(null);
+  }) async {
+    if (scope == TransactionMutationScope.all) {
+      transactions.clear();
+    } else {
+      transactions.removeWhere((transaction) => transaction.id == id);
+    }
+
+    return const Right(null);
+  }
 
   @override
   Future<Either<Failure, TransactionEntity>> getTransaction(int id) async =>
@@ -651,8 +699,10 @@ class _FakeRealtimeClient implements RealtimeClient {
   Future<void> dispose() async {}
 
   @override
-  void off(String event) {
-    handlers.remove(event);
+  void off(String event, [void Function(dynamic payload)? handler]) {
+    if (handler == null || handlers[event] == handler) {
+      handlers.remove(event);
+    }
   }
 
   @override
@@ -849,12 +899,14 @@ void main() {
         buildBankAccount(isActive: true),
         buildBankAccount(id: 2, isActive: false),
       ];
+    final notifier = DefaultDashboardRefreshNotifier();
     final controller = BankAccountsController(
       loadBankAccountsUseCase: LoadBankAccountsUseCase(repository),
       createBankAccountUseCase: CreateBankAccountUseCase(repository),
       updateBankAccountUseCase: UpdateBankAccountUseCase(repository),
       deactivateBankAccountUseCase: DeactivateBankAccountUseCase(repository),
       reactivateBankAccountUseCase: ReactivateBankAccountUseCase(repository),
+      dashboardRefreshNotifier: notifier,
     );
 
     await controller.loadBankAccounts();
@@ -862,6 +914,18 @@ void main() {
     expect(controller.bankAccounts.length, 2);
     expect(controller.activeAccounts.length, 1);
     expect(controller.inactiveAccounts.length, 1);
+
+    final before = notifier.refreshTick.value;
+    await controller.createBankAccount(
+      name: 'Nova conta',
+      bankName: 'Banco X',
+      color: '#06B6D4',
+      accountType: AccountType.wallet,
+      initialBalanceCents: 2500,
+    );
+
+    expect(notifier.refreshTick.value, before + 1);
+    expect(controller.bankAccounts.length, 3);
   });
 
   test('CategoriesController carrega categorias e separa por tipo', () async {
@@ -1034,6 +1098,64 @@ void main() {
     );
   });
 
+  testWidgets(
+    'TransactionsController encerra loading ao excluir todas as ocorrencias',
+    (tester) async {
+      final transactionRepository = _FakeTransactionRepository()
+        ..transactions = [
+          buildTransaction(
+            id: 1,
+            recurrenceGroupId: 'rec-1',
+            recurrenceNumber: 1,
+            recurrenceCount: 3,
+          ),
+        ];
+      final categoryRepository = _FakeCategoryRepository()
+        ..categories = [buildCategory()];
+      final bankRepository = _FakeBankAccountRepository()
+        ..accounts = [buildBankAccount()];
+      final cardRepository = _FakeCreditCardRepository()
+        ..cards = [buildCreditCard()];
+      final notifier = DefaultDashboardRefreshNotifier();
+      final previousTestMode = Get.testMode;
+      Get.testMode = true;
+
+      final controller = TransactionsController(
+        createTransactionUseCase: CreateTransactionUseCase(
+          transactionRepository,
+        ),
+        updateTransactionUseCase: UpdateTransactionUseCase(
+          transactionRepository,
+        ),
+        deleteTransactionUseCase: DeleteTransactionUseCase(
+          transactionRepository,
+        ),
+        getTransactionsUseCase: GetTransactionsUseCase(transactionRepository),
+        getCategoriesUseCase: GetCategoriesUseCase(categoryRepository),
+        getBankAccountsUseCase: GetBankAccountsUseCase(bankRepository),
+        getCreditCardsUseCase: GetCreditCardsUseCase(cardRepository),
+        dashboardRefreshNotifier: notifier,
+      );
+
+      try {
+        await controller.loadData();
+        expect(controller.isLoading.value, isFalse);
+        expect(controller.transactions, hasLength(1));
+
+        await controller.deleteTransaction(
+          1,
+          scope: TransactionMutationScope.all,
+        );
+
+        expect(controller.isLoading.value, isFalse);
+        expect(controller.deletingTransactionIds, isEmpty);
+        expect(controller.transactions, isEmpty);
+      } finally {
+        Get.testMode = previousTestMode;
+      }
+    },
+  );
+
   test(
     'TransactionsController recarrega o mes ao navegar entre periodos',
     () async {
@@ -1072,6 +1194,64 @@ void main() {
       await controller.goToNextMonth();
       expect(controller.selectedMonth.value, DateTime(2026, 3, 1));
       expect(transactionRepository.requestedMonths, [DateTime(2026, 3, 1)]);
+    },
+  );
+
+  test(
+    'TransactionsController nao soma transacoes pendentes no saldo',
+    () async {
+      final transactionRepository = _FakeTransactionRepository()
+        ..transactions = [
+          buildTransaction(
+            id: 1,
+            type: TransactionType.income,
+            status: TransactionStatus.cleared,
+          ),
+          buildTransaction(
+            id: 2,
+            type: TransactionType.income,
+            status: TransactionStatus.pending,
+          ),
+          buildTransaction(
+            id: 3,
+            type: TransactionType.expense,
+            status: TransactionStatus.pending,
+          ),
+          buildTransaction(
+            id: 4,
+            type: TransactionType.expense,
+            status: TransactionStatus.cleared,
+          ),
+        ];
+      final controller = TransactionsController(
+        createTransactionUseCase: CreateTransactionUseCase(
+          transactionRepository,
+        ),
+        updateTransactionUseCase: UpdateTransactionUseCase(
+          transactionRepository,
+        ),
+        deleteTransactionUseCase: DeleteTransactionUseCase(
+          transactionRepository,
+        ),
+        getTransactionsUseCase: GetTransactionsUseCase(transactionRepository),
+        getCategoriesUseCase: GetCategoriesUseCase(_FakeCategoryRepository()),
+        getBankAccountsUseCase: GetBankAccountsUseCase(
+          _FakeBankAccountRepository(),
+        ),
+        getCreditCardsUseCase: GetCreditCardsUseCase(
+          _FakeCreditCardRepository(),
+        ),
+        dashboardRefreshNotifier: DefaultDashboardRefreshNotifier(),
+      );
+
+      controller.selectedMonth.value = DateTime(2026, 1);
+      await controller.loadData();
+
+      expect(controller.visibleTransactions.length, 4);
+      expect(controller.totalIncomeCents, 2500);
+      expect(controller.totalExpenseCents, 2500);
+      expect(controller.balanceCents, 0);
+      expect(controller.groupedVisibleTransactions.single.totalCents, 0);
     },
   );
 

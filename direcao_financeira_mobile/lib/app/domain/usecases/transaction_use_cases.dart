@@ -63,6 +63,7 @@ class CreateTransactionUseCase {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     return await repository.createTransaction(
       type: type,
@@ -75,6 +76,7 @@ class CreateTransactionUseCase {
       bankAccountId: bankAccountId,
       creditCardId: creditCardId,
       installmentCount: installmentCount,
+      recurrenceCount: recurrenceCount,
     );
   }
 }

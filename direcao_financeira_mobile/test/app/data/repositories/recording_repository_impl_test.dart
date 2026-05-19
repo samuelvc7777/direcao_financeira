@@ -71,7 +71,9 @@ class _FakeRecordingNativeDataSource implements IRecordingNativeDataSource {
   Future<bool> requestPermissions() async => permissionGranted;
 
   @override
-  Future<Map<String, dynamic>> startRecording() async {
+  Future<Map<String, dynamic>> startRecording({
+    Map<String, dynamic>? settings,
+  }) async {
     recording = true;
     return {
       'id': 'native-1',

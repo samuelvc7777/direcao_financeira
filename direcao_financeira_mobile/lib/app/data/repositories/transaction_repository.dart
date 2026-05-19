@@ -93,6 +93,7 @@ class TransactionRepository implements ITransactionRepository {
     int? bankAccountId,
     int? creditCardId,
     int? installmentCount,
+    int? recurrenceCount,
   }) async {
     try {
       final transaction = await dataSource.createTransaction(
@@ -106,6 +107,7 @@ class TransactionRepository implements ITransactionRepository {
         bankAccountId: bankAccountId,
         creditCardId: creditCardId,
         installmentCount: installmentCount,
+        recurrenceCount: recurrenceCount,
       );
 
       return Right(transaction);
