@@ -13,6 +13,12 @@ abstract class ISubscriptionRepository {
   Future<Either<Failure, List<SubscriptionEntity>>> getSubscriptionHistory();
   Future<Either<Failure, List<PlanEntity>>> getAvailablePlans();
   Future<Either<Failure, SubscriptionEntity?>> changePlan(int planId);
+  Future<Either<Failure, SubscriptionEntity?>> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  });
   Future<Either<Failure, SubscriptionEntity?>> cancelSubscription();
   Future<Either<Failure, SubscriptionEntity?>> renewSubscription({
     required bool autoRenew,

@@ -38,6 +38,19 @@ class _FakeSubscriptionRemoteDataSource
   }
 
   @override
+  Future<SubscriptionModel?> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) async {
+    if (error != null) {
+      throw error!;
+    }
+    return activeSubscription;
+  }
+
+  @override
   Future<List<PlanModel>> getAvailablePlans() async {
     if (error != null) {
       throw error!;

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../datasources/subscription_datasource.dart';
@@ -28,20 +29,36 @@ class SupabaseSubscriptionRemoteDataSource
 
   @override
   Future<List<PlanModel>> getAvailablePlans() async {
+    debugPrint(
+      '[SupabaseSubscriptionRemoteDataSource] getAvailablePlans -> consultando planos ativos.',
+    );
+
     final rows = await client
         .from(SupabaseTableNames.plans)
         .select()
         .eq('isActive', true)
         .order('priceCents');
 
-    return (rows as List)
+    final rawRows = rows as List;
+    debugPrint(
+      '[SupabaseSubscriptionRemoteDataSource] getAvailablePlans -> linhas brutas=${rawRows.length} dados=$rawRows',
+    );
+
+    final plans = rawRows
         .map((row) => PlanModel.fromJson(Map<String, dynamic>.from(row as Map)))
         .toList();
+
+    debugPrint(
+      '[SupabaseSubscriptionRemoteDataSource] getAvailablePlans -> planos mapeados=${plans.map((plan) => "${plan.id}:${plan.code}").toList()}',
+    );
+
+    return plans;
   }
 
   @override
   Future<SubscriptionModel?> changePlan(int planId) async {
     final userId = await userScope.getCurrentUserId();
+    final now = DateTime.now().toUtc();
     final planRow = await client
         .from(SupabaseTableNames.plans)
         .select()
@@ -55,8 +72,9 @@ class SupabaseSubscriptionRemoteDataSource
           .from(SupabaseTableNames.subscriptions)
           .update({
             'status': 'CANCELED',
-            'canceledAt': DateTime.now().toUtc().toIso8601String(),
+            'canceledAt': now.toIso8601String(),
             'autoRenew': false,
+            'updatedAt': now.toIso8601String(),
           })
           .eq('id', active.id);
     }
@@ -67,12 +85,118 @@ class SupabaseSubscriptionRemoteDataSource
           'userId': userId,
           'planId': plan.id,
           'status': 'ACTIVE',
-          'startDate': DateTime.now().toUtc().toIso8601String(),
-          'endDate': DateTime.now()
+          'startDate': now.toIso8601String(),
+          'endDate': now
               .add(Duration(days: plan.durationDays))
               .toUtc()
               .toIso8601String(),
           'autoRenew': false,
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        })
+        .select()
+        .single();
+
+    return SubscriptionModel.fromJson({
+      ...Map<String, dynamic>.from(inserted),
+      'plan': plan.toJson(),
+    });
+  }
+
+  @override
+  Future<SubscriptionModel?> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) async {
+    final normalizedToken = purchaseToken.trim();
+    if (normalizedToken.isEmpty) {
+      throw const AuthException(
+        'Compra recebida sem token de verificacao da Play Store.',
+      );
+    }
+
+    final userId = await userScope.getCurrentUserId();
+    final now = DateTime.now().toUtc();
+    final planRow = await client
+        .from(SupabaseTableNames.plans)
+        .select()
+        .eq('id', planId)
+        .single();
+    final plan = PlanModel.fromJson(Map<String, dynamic>.from(planRow));
+    final fallbackEndDate = now.add(Duration(days: plan.durationDays)).toUtc();
+
+    final existingRow = await client
+        .from(SupabaseTableNames.subscriptions)
+        .select()
+        .eq('googlePlayPurchaseToken', normalizedToken)
+        .maybeSingle();
+
+    if (existingRow != null) {
+      final existing = SubscriptionModel.fromJson({
+        ...Map<String, dynamic>.from(existingRow),
+        'plan': plan.toJson(),
+      });
+      final preservedEndDate =
+          existing.endDate != null && existing.endDate!.isAfter(now)
+          ? existing.endDate!
+          : fallbackEndDate;
+
+      final updated = await client
+          .from(SupabaseTableNames.subscriptions)
+          .update({
+            'userId': userId,
+            'planId': plan.id,
+            'status': 'ACTIVE',
+            'endDate': preservedEndDate.toIso8601String(),
+            'canceledAt': null,
+            'autoRenew': true,
+            'googlePlayProductId': productId,
+            'googlePlayOrderId': purchaseId,
+            'googlePlayLinkedAt': now.toIso8601String(),
+            'googlePlayExpiresAt': preservedEndDate.toIso8601String(),
+            'updatedAt': now.toIso8601String(),
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+      return SubscriptionModel.fromJson({
+        ...Map<String, dynamic>.from(updated),
+        'plan': plan.toJson(),
+      });
+    }
+
+    final active = await userScope.getActiveSubscription(userId);
+    if (active != null) {
+      await client
+          .from(SupabaseTableNames.subscriptions)
+          .update({
+            'status': 'CANCELED',
+            'canceledAt': now.toIso8601String(),
+            'autoRenew': false,
+            'updatedAt': now.toIso8601String(),
+          })
+          .eq('id', active.id);
+    }
+
+    final inserted = await client
+        .from(SupabaseTableNames.subscriptions)
+        .insert({
+          'userId': userId,
+          'planId': plan.id,
+          'status': 'ACTIVE',
+          'startDate': now.toIso8601String(),
+          'endDate': fallbackEndDate.toIso8601String(),
+          'autoRenew': true,
+          'googlePlayProductId': productId,
+          'googlePlayPurchaseToken': normalizedToken,
+          'googlePlayOrderId': purchaseId,
+          'googlePlayLinkedAt': now.toIso8601String(),
+          'googlePlayExpiresAt': fallbackEndDate.toIso8601String(),
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
         })
         .select()
         .single();
@@ -90,12 +214,15 @@ class SupabaseSubscriptionRemoteDataSource
       return null;
     }
 
+    final now = DateTime.now().toUtc();
+
     final updated = await client
         .from(SupabaseTableNames.subscriptions)
         .update({
           'status': 'CANCELED',
-          'canceledAt': DateTime.now().toUtc().toIso8601String(),
+          'canceledAt': now.toIso8601String(),
           'autoRenew': false,
+          'updatedAt': now.toIso8601String(),
         })
         .eq('id', active.id)
         .select()
@@ -128,9 +255,11 @@ class SupabaseSubscriptionRemoteDataSource
       return null;
     }
 
+    final now = DateTime.now().toUtc();
+
     final updated = await client
         .from(SupabaseTableNames.subscriptions)
-        .update({'autoRenew': autoRenew})
+        .update({'autoRenew': autoRenew, 'updatedAt': now.toIso8601String()})
         .eq('id', active.id)
         .select()
         .single();

@@ -31,6 +31,11 @@ void main() async {
       );
     }
 
+    final uri = Uri.tryParse(environment.supabaseUrl);
+    debugPrint(
+      '[main] Supabase configurado -> host=${uri?.host ?? 'invalido'} backendProvider=${environment.backendProvider.name}',
+    );
+
     await Supabase.initialize(
       url: environment.supabaseUrl,
       anonKey: environment.supabaseAnonKey,

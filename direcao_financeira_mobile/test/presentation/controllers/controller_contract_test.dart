@@ -7,7 +7,7 @@ import 'package:direcao_financeira_mobile/app/core/dashboard/dashboard_refresh_n
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/network/journey_realtime_bridge.dart';
 import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart';
-import 'package:direcao_financeira_mobile/app/core/subscription/play_store_subscription_contract.dart';
+import 'package:direcao_financeira_mobile/app/core/update/play_store_update_service.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/finish_shift_result_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/journey_statistics_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/location_tracking_status_entity.dart';
@@ -391,6 +391,14 @@ class _FakeSubscriptionRepository implements ISubscriptionRepository {
       Right(activeSubscription);
 
   @override
+  Future<Either<Failure, SubscriptionEntity?>> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) async => Right(activeSubscription);
+
+  @override
   Future<Either<Failure, void>> completePurchase(String productId) async =>
       const Right(null);
 
@@ -683,6 +691,14 @@ class _FakeHomeTabNavigation implements HomeTabNavigation {
   }
 }
 
+class _FakeAppUpdateService implements AppUpdateService {
+  @override
+  Future<bool> hasUpdateAvailable() async => false;
+
+  @override
+  Future<bool> openStorePage() async => true;
+}
+
 class _FakeRealtimeClient implements RealtimeClient {
   @override
   final RxBool isOnline = true.obs;
@@ -867,6 +883,7 @@ void main() {
       dashboardRefreshNotifier: notifier,
       homeTabNavigation: navigation,
       realtimeClient: realtimeClient,
+      appUpdateService: _FakeAppUpdateService(),
     );
 
     controller.onInit();
@@ -1270,6 +1287,7 @@ void main() {
         ),
         getAvailablePlansUseCase: GetAvailablePlansUseCase(repository),
         changePlanUseCase: ChangePlanUseCase(repository),
+        syncStorePurchaseUseCase: SyncStorePurchaseUseCase(repository),
         cancelSubscriptionUseCase: CancelSubscriptionUseCase(repository),
         renewSubscriptionUseCase: RenewSubscriptionUseCase(repository),
         syncStoredUserSubscriptionUseCase: SyncStoredUserSubscriptionUseCase(
@@ -1313,6 +1331,7 @@ void main() {
         ),
         getAvailablePlansUseCase: GetAvailablePlansUseCase(repository),
         changePlanUseCase: ChangePlanUseCase(repository),
+        syncStorePurchaseUseCase: SyncStorePurchaseUseCase(repository),
         cancelSubscriptionUseCase: CancelSubscriptionUseCase(repository),
         renewSubscriptionUseCase: RenewSubscriptionUseCase(repository),
         syncStoredUserSubscriptionUseCase: SyncStoredUserSubscriptionUseCase(
@@ -1335,7 +1354,7 @@ void main() {
       expect(controller.storeProductsById, isEmpty);
       expect(
         controller.storeErrorMessage.value,
-        contains(playStoreMonthlySubscriptionProductId),
+        contains('Nenhum plano compativel'),
       );
     },
   );

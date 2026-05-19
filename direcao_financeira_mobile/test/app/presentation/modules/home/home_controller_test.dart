@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:direcao_financeira_mobile/app/core/dashboard/dashboard_refresh_notifier.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/network/realtime_client.dart';
+import 'package:direcao_financeira_mobile/app/core/update/play_store_update_service.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/bank_account_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/category_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/credit_card_entity.dart';
@@ -339,6 +340,20 @@ class _FakeHomeTabNavigation implements HomeTabNavigation {
   void openTransactionsTab() {}
 }
 
+class _FakeAppUpdateService implements AppUpdateService {
+  bool available = false;
+  bool openStoreCalled = false;
+
+  @override
+  Future<bool> hasUpdateAvailable() async => available;
+
+  @override
+  Future<bool> openStorePage() async {
+    openStoreCalled = true;
+    return true;
+  }
+}
+
 class _FakeRealtimeClient implements RealtimeClient {
   @override
   final RxBool isOnline = true.obs;
@@ -377,6 +392,7 @@ void main() {
     late _FakeTransactionRepository transactionRepository;
     late _FakeCategoryRepository categoryRepository;
     late _FakeCreditCardRepository creditCardRepository;
+    late _FakeAppUpdateService appUpdateService;
     late _FakeRealtimeClient realtimeClient;
     late HomeController controller;
 
@@ -399,6 +415,7 @@ void main() {
         ];
       categoryRepository = _FakeCategoryRepository();
       creditCardRepository = _FakeCreditCardRepository();
+      appUpdateService = _FakeAppUpdateService();
       realtimeClient = _FakeRealtimeClient();
       controller = HomeController(
         getStoredUserUseCase: GetStoredUserUseCase(_FakeAuthRepository()),
@@ -416,6 +433,7 @@ void main() {
         dashboardRefreshNotifier: DefaultDashboardRefreshNotifier(),
         homeTabNavigation: _FakeHomeTabNavigation(),
         realtimeClient: realtimeClient,
+        appUpdateService: appUpdateService,
       );
     });
 
@@ -588,6 +606,23 @@ void main() {
         TransactionType.income,
       );
       expect(categoryRepository.categories, hasLength(2));
+    });
+
+    test('carrega estado de update disponivel na abertura', () async {
+      appUpdateService.available = true;
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.isUpdateAvailable.value, isTrue);
+
+      controller.onClose();
+    });
+
+    test('abre a loja quando o usuario toca no botao de atualizar', () async {
+      await controller.openAppStore();
+
+      expect(appUpdateService.openStoreCalled, isTrue);
     });
   });
 }

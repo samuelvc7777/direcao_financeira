@@ -246,7 +246,7 @@ export async function createPlan(payload: Partial<Plan>) {
   const { data, error } = await supabase
     .from(TABLES.plans)
     .insert({
-      code: payload.code,
+      code: normalizePlanCode(payload.code),
       name: payload.name,
       description: payload.description,
       priceCents: payload.priceCents,
@@ -268,7 +268,7 @@ export async function updatePlan(id: number, payload: Partial<Plan>) {
   const { data, error } = await supabase
     .from(TABLES.plans)
     .update({
-      code: payload.code,
+      code: normalizePlanCode(payload.code),
       name: payload.name,
       description: payload.description,
       priceCents: payload.priceCents,
@@ -284,6 +284,10 @@ export async function updatePlan(id: number, payload: Partial<Plan>) {
   assertNoError(error);
 
   return data as Plan;
+}
+
+function normalizePlanCode(code: string | undefined) {
+  return code?.trim().toLowerCase() ?? '';
 }
 
 export async function deletePlan(id: number) {

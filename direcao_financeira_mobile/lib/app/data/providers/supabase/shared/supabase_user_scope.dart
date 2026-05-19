@@ -109,7 +109,7 @@ class SupabaseUserScope {
       }
     }
 
-    return history.isEmpty ? null : history.first;
+    return null;
   }
 
   Future<List<SubscriptionModel>> getSubscriptionHistory(int userId) async {

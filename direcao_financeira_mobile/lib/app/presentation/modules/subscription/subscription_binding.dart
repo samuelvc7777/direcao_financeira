@@ -32,6 +32,12 @@ class SubscriptionBinding extends Bindings {
         fenix: true,
       );
     }
+    if (!Get.isRegistered<SyncStorePurchaseUseCase>()) {
+      Get.lazyPut(
+        () => SyncStorePurchaseUseCase(Get.find<ISubscriptionRepository>()),
+        fenix: true,
+      );
+    }
     if (!Get.isRegistered<CancelSubscriptionUseCase>()) {
       Get.lazyPut(
         () => CancelSubscriptionUseCase(Get.find<ISubscriptionRepository>()),
@@ -99,6 +105,7 @@ class SubscriptionBinding extends Bindings {
               Get.find<GetSubscriptionHistoryUseCase>(),
           getAvailablePlansUseCase: Get.find<GetAvailablePlansUseCase>(),
           changePlanUseCase: Get.find<ChangePlanUseCase>(),
+          syncStorePurchaseUseCase: Get.find<SyncStorePurchaseUseCase>(),
           cancelSubscriptionUseCase: Get.find<CancelSubscriptionUseCase>(),
           renewSubscriptionUseCase: Get.find<RenewSubscriptionUseCase>(),
           syncStoredUserSubscriptionUseCase:

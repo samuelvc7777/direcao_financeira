@@ -69,6 +69,25 @@ class NestSubscriptionRemoteDataSource
   }
 
   @override
+  Future<SubscriptionModel?> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) async {
+    final response = await dio.post(
+      '/subscriptions/me/store-purchase',
+      data: {
+        'planId': planId,
+        'productId': productId,
+        'purchaseToken': purchaseToken,
+        'purchaseId': purchaseId,
+      },
+    );
+    return _extractActiveSubscription(response.data);
+  }
+
+  @override
   Future<SubscriptionModel?> cancelSubscription() async {
     final response = await dio.post('/subscriptions/me/cancel');
     return _extractActiveSubscription(response.data);

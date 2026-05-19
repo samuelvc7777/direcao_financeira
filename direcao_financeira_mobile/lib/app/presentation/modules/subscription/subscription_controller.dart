@@ -18,6 +18,7 @@ class SubscriptionController extends GetxController {
     required this.getSubscriptionHistoryUseCase,
     required this.getAvailablePlansUseCase,
     required this.changePlanUseCase,
+    required this.syncStorePurchaseUseCase,
     required this.cancelSubscriptionUseCase,
     required this.renewSubscriptionUseCase,
     required this.syncStoredUserSubscriptionUseCase,
@@ -33,6 +34,7 @@ class SubscriptionController extends GetxController {
   final GetSubscriptionHistoryUseCase getSubscriptionHistoryUseCase;
   final GetAvailablePlansUseCase getAvailablePlansUseCase;
   final ChangePlanUseCase changePlanUseCase;
+  final SyncStorePurchaseUseCase syncStorePurchaseUseCase;
   final CancelSubscriptionUseCase cancelSubscriptionUseCase;
   final RenewSubscriptionUseCase renewSubscriptionUseCase;
   final SyncStoredUserSubscriptionUseCase syncStoredUserSubscriptionUseCase;
@@ -62,6 +64,7 @@ class SubscriptionController extends GetxController {
   final storeProductsById = <String, StoreProductEntity>{}.obs;
 
   StreamSubscription<StorePurchaseEventEntity>? _purchaseSubscription;
+  bool _didAttemptStartupRestore = false;
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'pt_BR',
@@ -74,6 +77,9 @@ class SubscriptionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    debugPrint(
+      '[SubscriptionController] onInit -> abrindo tela de assinatura.',
+    );
     _listenToPurchaseUpdates();
     loadData();
   }
@@ -85,6 +91,7 @@ class SubscriptionController extends GetxController {
   }
 
   Future<void> loadData() async {
+    debugPrint('[SubscriptionController] loadData -> iniciando carregamento.');
     isLoading.value = true;
     errorMessage.value = null;
 
@@ -114,10 +121,13 @@ class SubscriptionController extends GetxController {
 
     _syncSelectedPlan();
     await _loadStoreCatalog();
+    _syncSelectedPlan();
     await syncStoredUserSubscriptionUseCase(
       activeSubscription: activeSubscription.value,
       subscriptions: history,
     );
+    await _maybeRestorePurchasesOnStartup();
+    _logSubscriptionState('loadData');
 
     isLoading.value = false;
   }
@@ -142,6 +152,9 @@ class SubscriptionController extends GetxController {
   Future<void> purchaseSelectedPlan() async {
     final plan = selectedPlan;
     if (plan == null) {
+      debugPrint(
+        '[SubscriptionController] purchaseSelectedPlan bloqueado -> nenhum plano selecionado.',
+      );
       _showFeedback(
         title: 'Plano necessario',
         message: 'Selecione um plano antes de continuar.',
@@ -157,6 +170,11 @@ class SubscriptionController extends GetxController {
 
     final product = storeProductForPlan(plan);
     if (product == null) {
+      debugPrint(
+        '[SubscriptionController] purchaseSelectedPlan bloqueado -> '
+        'plano=${plan.id} code=${plan.code} sem produto correspondente. '
+        'storeProducts=${storeProductsById.keys.toList()}',
+      );
       _showFeedback(
         title: 'Produto indisponivel',
         message:
@@ -188,17 +206,25 @@ class SubscriptionController extends GetxController {
     isPurchaseLoading.value = false;
   }
 
-  Future<void> restorePurchases() async {
+  Future<void> restorePurchases({bool showFeedback = true}) async {
     isRestoringPurchases.value = true;
 
     final result = await restorePurchasesUseCase();
     result.fold(
-      (failure) =>
-          _showFeedback(title: 'Erro', message: failure.message, isError: true),
-      (_) => _showFeedback(
-        title: 'Play Store',
-        message: 'Buscando compras anteriores para restaurar sua assinatura.',
-      ),
+      (failure) {
+        if (showFeedback) {
+          _showFeedback(title: 'Erro', message: failure.message, isError: true);
+        }
+      },
+      (_) {
+        if (showFeedback) {
+          _showFeedback(
+            title: 'Play Store',
+            message:
+                'Buscando compras anteriores para restaurar sua assinatura.',
+          );
+        }
+      },
     );
 
     isRestoringPurchases.value = false;
@@ -329,45 +355,80 @@ class SubscriptionController extends GetxController {
       (value) => value,
     );
     isStoreAvailable.value = storeAvailable;
+    debugPrint(
+      '[SubscriptionController] _loadStoreCatalog -> '
+      'storeAvailable=$storeAvailable',
+    );
 
     if (!storeAvailable) {
+      debugPrint(
+        '[SubscriptionController] _loadStoreCatalog -> loja indisponivel, sem catalogo.',
+      );
       return;
     }
 
-    final invalidCodes = plans
+    final supportedPlans = plans
+        .map((plan) => plan.code.trim())
+        .where(isSupportedAndroidSubscriptionCode)
+        .toSet();
+    final unsupportedCodes = plans
         .map((plan) => plan.code.trim())
         .where((code) => !isSupportedAndroidSubscriptionCode(code))
         .toSet();
-    if (invalidCodes.isNotEmpty) {
+
+    if (unsupportedCodes.isNotEmpty) {
+      debugPrint(
+        '[SubscriptionController] _loadStoreCatalog -> '
+        'codigo(s) nao suportado(s)=$unsupportedCodes',
+      );
+    }
+
+    if (supportedPlans.isEmpty) {
       storeErrorMessage.value =
-          'O app Android desta versao aceita somente o produto '
-          '$playStoreMonthlySubscriptionProductId. Ajuste o code do plano no backend antes de testar a compra.';
+          'Nenhum plano compativel com a Play Store foi encontrado no backend.';
+      debugPrint(
+        '[SubscriptionController] _loadStoreCatalog -> nenhum plano suportado encontrado.',
+      );
       return;
     }
 
-    final productIds = plans
-        .map((plan) => plan.code)
+    final productIds = supportedPlans
         .where((code) => code.trim().isNotEmpty)
         .toSet();
     if (productIds.isEmpty) {
       storeErrorMessage.value =
           'Nenhum plano possui code configurado para a Play Store.';
+      debugPrint(
+        '[SubscriptionController] _loadStoreCatalog -> nenhum plano com code configurado.',
+      );
       return;
     }
 
     isStoreCatalogLoading.value = true;
     final productsResult = await getStoreProductsUseCase(productIds);
     productsResult.fold(
-      (failure) => storeErrorMessage.value = failure.message,
+      (failure) {
+        storeErrorMessage.value = failure.message;
+        debugPrint(
+          '[SubscriptionController] _loadStoreCatalog -> erro ao carregar produtos: '
+          '${failure.message}',
+        );
+      },
       (products) {
         storeProductsById.assignAll({
           for (final product in products) product.productId: product,
         });
+        debugPrint(
+          '[SubscriptionController] _loadStoreCatalog -> produtos retornados=${storeProductsById.keys.toList()}',
+        );
 
         if (products.isEmpty) {
           storeErrorMessage.value =
               'A Google Play nao retornou o produto '
               '$playStoreMonthlySubscriptionProductId para os planos atuais.';
+          debugPrint(
+            '[SubscriptionController] _loadStoreCatalog -> catalogo vazio.',
+          );
           return;
         }
 
@@ -377,6 +438,9 @@ class SubscriptionController extends GetxController {
           storeErrorMessage.value =
               'O plano mensal Android precisa existir na Google Play com o ID '
               '$playStoreMonthlySubscriptionProductId.';
+          debugPrint(
+            '[SubscriptionController] _loadStoreCatalog -> produto oficial nao encontrado.',
+          );
         }
       },
     );
@@ -440,9 +504,25 @@ class SubscriptionController extends GetxController {
     isStoreSyncingPurchase.value = true;
     pendingPurchaseProductId.value = event.productId;
 
-    final result = isCurrentPlan(plan)
-        ? await renewSubscriptionUseCase(autoRenew: true)
-        : await changePlanUseCase(plan.id);
+    final purchaseToken = event.verificationData.trim();
+    if (purchaseToken.isEmpty) {
+      isStoreSyncingPurchase.value = false;
+      pendingPurchaseProductId.value = null;
+      _showFeedback(
+        title: 'Compra recebida',
+        message:
+            'A Play Store confirmou a compra, mas nao retornou o token necessario para sincronizar com o Supabase.',
+        isError: true,
+      );
+      return;
+    }
+
+    final result = await syncStorePurchaseUseCase(
+      planId: plan.id,
+      productId: event.productId,
+      purchaseToken: purchaseToken,
+      purchaseId: event.purchaseId,
+    );
 
     await result.fold(
       (failure) async {
@@ -467,6 +547,26 @@ class SubscriptionController extends GetxController {
 
     isStoreSyncingPurchase.value = false;
     pendingPurchaseProductId.value = null;
+  }
+
+  Future<void> _maybeRestorePurchasesOnStartup() async {
+    if (_didAttemptStartupRestore || !usesPlayStoreBilling) {
+      return;
+    }
+
+    _didAttemptStartupRestore = true;
+
+    if (selectedPlan == null) {
+      debugPrint(
+        '[SubscriptionController] _maybeRestorePurchasesOnStartup -> sem plano selecionado, restauracao ignorada.',
+      );
+      return;
+    }
+
+    debugPrint(
+      '[SubscriptionController] _maybeRestorePurchasesOnStartup -> iniciando restore silencioso.',
+    );
+    await restorePurchases(showFeedback: false);
   }
 
   PlanEntity? _findPlanByProductId(String productId) {
@@ -500,14 +600,52 @@ class SubscriptionController extends GetxController {
 
   void _syncSelectedPlan() {
     final currentPlanId = activeSubscription.value?.plan?.id;
-    if (currentPlanId != null) {
+    final currentPlan = activeSubscription.value?.plan;
+    if (currentPlan != null &&
+        (!usesPlayStoreBilling ||
+            isSupportedAndroidSubscriptionCode(currentPlan.code))) {
       selectedPlanId.value = currentPlanId;
+      debugPrint(
+        '[SubscriptionController] _syncSelectedPlan -> plano atual selecionado id=$currentPlanId',
+      );
       return;
+    }
+
+    if (usesPlayStoreBilling) {
+      for (final plan in plans) {
+        if (isSupportedAndroidSubscriptionCode(plan.code)) {
+          selectedPlanId.value = plan.id;
+          debugPrint(
+            '[SubscriptionController] _syncSelectedPlan -> selecionando plano suportado id=${plan.id} code=${plan.code}',
+          );
+          return;
+        }
+      }
     }
 
     if (plans.isNotEmpty) {
       selectedPlanId.value = plans.first.id;
+      debugPrint(
+        '[SubscriptionController] _syncSelectedPlan -> selecionando primeiro plano id=${plans.first.id}',
+      );
     }
+  }
+
+  void _logSubscriptionState(String source) {
+    final plan = selectedPlan;
+    debugPrint(
+      '[SubscriptionController] $source -> '
+      'usesPlayStoreBilling=$usesPlayStoreBilling '
+      'isStoreAvailable=${isStoreAvailable.value} '
+      'isStoreCatalogLoading=${isStoreCatalogLoading.value} '
+      'selectedPlanId=${selectedPlanId.value} '
+      'selectedPlanCode=${plan?.code} '
+      'selectedPlanIdDomain=${plan?.id} '
+      'plans=${plans.map((item) => "${item.id}:${item.code}").toList()} '
+      'storeProducts=${storeProductsById.keys.toList()} '
+      'storeErrorMessage=${storeErrorMessage.value} '
+      'canPurchaseSelectedPlan=$canPurchaseSelectedPlan',
+    );
   }
 
   void _showFeedback({

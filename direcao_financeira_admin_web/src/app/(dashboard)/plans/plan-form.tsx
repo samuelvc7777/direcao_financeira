@@ -68,7 +68,7 @@ export function PlanForm({ mode, planId }: PlanFormProps) {
 
       setPlan(currentPlan);
       setFormData({
-        code: currentPlan.code,
+        code: currentPlan.code.toLowerCase(),
         name: currentPlan.name,
         description: currentPlan.description || '',
         price: convertCentsToReais(currentPlan.priceCents),
@@ -93,8 +93,9 @@ export function PlanForm({ mode, planId }: PlanFormProps) {
     setError(null);
 
     try {
+      const normalizedCode = formData.code.trim().toLowerCase();
       const payload = {
-        code: formData.code,
+        code: normalizedCode,
         name: formData.name,
         description: formData.description,
         priceCents: convertReaisToCents(formData.price),
@@ -222,10 +223,10 @@ export function PlanForm({ mode, planId }: PlanFormProps) {
                 <input
                   required
                   type="text"
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium uppercase"
-                  placeholder="Ex: PRATA"
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                  placeholder="Ex: premium_monthly"
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase() })}
                 />
               </div>
             </div>
@@ -346,7 +347,7 @@ export function PlanForm({ mode, planId }: PlanFormProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold">{formData.name || 'Nome do plano'}</h3>
-                  <span className="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                  <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                     {formData.code || 'COD'}
                   </span>
                 </div>

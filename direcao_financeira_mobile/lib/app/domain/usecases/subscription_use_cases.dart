@@ -47,6 +47,26 @@ class ChangePlanUseCase {
   }
 }
 
+class SyncStorePurchaseUseCase {
+  SyncStorePurchaseUseCase(this._repository);
+
+  final ISubscriptionRepository _repository;
+
+  Future<Either<Failure, SubscriptionEntity?>> call({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) {
+    return _repository.syncStorePurchase(
+      planId: planId,
+      productId: productId,
+      purchaseToken: purchaseToken,
+      purchaseId: purchaseId,
+    );
+  }
+}
+
 class CancelSubscriptionUseCase {
   CancelSubscriptionUseCase(this._repository);
 

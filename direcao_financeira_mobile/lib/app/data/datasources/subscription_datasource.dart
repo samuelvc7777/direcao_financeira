@@ -8,6 +8,12 @@ abstract class ISubscriptionRemoteDataSource {
   Future<List<SubscriptionModel>> getSubscriptionHistory();
   Future<List<PlanModel>> getAvailablePlans();
   Future<SubscriptionModel?> changePlan(int planId);
+  Future<SubscriptionModel?> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  });
   Future<SubscriptionModel?> cancelSubscription();
   Future<SubscriptionModel?> renewSubscription({required bool autoRenew});
 }

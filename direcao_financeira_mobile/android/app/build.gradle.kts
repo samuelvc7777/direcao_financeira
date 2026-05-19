@@ -62,6 +62,12 @@ flutter {
     source = "../.."
 }
 
+listOf("Debug", "Profile", "Release").forEach { variant ->
+    tasks.matching { it.name == "output${variant}AppLinkSettings" }.configureEach {
+        dependsOn("process${variant}MainManifest")
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation("com.google.mlkit:text-recognition:16.0.1")

@@ -143,6 +143,47 @@ class SubscriptionRepository implements ISubscriptionRepository {
   }
 
   @override
+  Future<Either<Failure, SubscriptionEntity?>> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) async {
+    try {
+      return Right(
+        await remoteDataSource.syncStorePurchase(
+          planId: planId,
+          productId: productId,
+          purchaseToken: purchaseToken,
+          purchaseId: purchaseId,
+        ),
+      );
+    } on DioException catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.syncStorePurchase',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro ao sincronizar compra da Play Store.',
+        ),
+      );
+    } catch (e) {
+      apiRequestLogger.logRepositoryFailure(
+        source: 'SubscriptionRepository.syncStorePurchase',
+        error: e,
+      );
+      return Left(
+        apiErrorMapper.mapToFailure(
+          e,
+          fallback: 'Erro inesperado ao sincronizar compra da Play Store.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, SubscriptionEntity?>> cancelSubscription() async {
     try {
       return Right(await remoteDataSource.cancelSubscription());
