@@ -20,21 +20,16 @@ class JourneyStatisticsEntity {
   final int totalShifts;
   final String totalTime;
   final String averageTime;
-  final String idleTime;
   final String drivenKm;
   final double totalDrivenKmValue;
-  final String averageKmh;
   final RideStatisticsEntity rideStats;
 
   const JourneyStatisticsEntity({
     required this.totalShifts,
     required this.totalTime,
     required this.averageTime,
-    required this.idleTime,
     required this.drivenKm,
     required this.totalDrivenKmValue,
-    required this.averageKmh,
     required this.rideStats,
   });
 }
-

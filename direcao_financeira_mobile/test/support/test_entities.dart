@@ -192,10 +192,8 @@ JourneyStatisticsEntity buildJourneyStatistics() {
     totalShifts: 1,
     totalTime: '01:00:00',
     averageTime: '01:00:00',
-    idleTime: '00:10:00',
     drivenKm: '10.0 km',
     totalDrivenKmValue: 10.0,
-    averageKmh: '10.0 km/h',
     rideStats: RideStatisticsEntity(
       totalRides: 1,
       grossEarningsCents: 5000,

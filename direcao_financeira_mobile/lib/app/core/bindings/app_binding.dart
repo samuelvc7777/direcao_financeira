@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../config/app_environment.dart';
+import '../accessibility/accessibility_service.dart';
 import '../network/realtime_feedback_controller.dart';
 import '../session/session_coordinator.dart';
 import 'core_binding.dart';
@@ -27,6 +28,13 @@ class AppBinding extends Bindings {
       );
     }
 
-    unawaited(Get.find<SessionCoordinator>().restoreSession());
+    unawaited(_restoreSessionAndSyncNativeSettings());
+  }
+
+  Future<void> _restoreSessionAndSyncNativeSettings() async {
+    await Get.find<SessionCoordinator>().restoreSession();
+    if (Get.isRegistered<AccessibilityService>()) {
+      await Get.find<AccessibilityService>().syncSettingsWithNative();
+    }
   }
 }

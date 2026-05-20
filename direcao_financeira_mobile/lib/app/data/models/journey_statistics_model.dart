@@ -38,10 +38,8 @@ class JourneyStatisticsModel extends JourneyStatisticsEntity {
     required super.totalShifts,
     required super.totalTime,
     required super.averageTime,
-    required super.idleTime,
     required super.drivenKm,
     required super.totalDrivenKmValue,
-    required super.averageKmh,
     required super.rideStats,
   });
 
@@ -50,21 +48,21 @@ class JourneyStatisticsModel extends JourneyStatisticsEntity {
       totalShifts: json['totalShifts'] as int,
       totalTime: json['totalTime'] as String,
       averageTime: json['averageTime'] as String,
-      idleTime: json['idleTime'] as String,
       drivenKm: json['drivenKm'] as String,
       totalDrivenKmValue:
           (json['totalDrivenKmValue'] as num?)?.toDouble() ?? 0.0,
-      averageKmh: json['averageKmh'] as String,
-      rideStats: json['rideStats'] != null 
-        ? RideStatisticsModel.fromJson(json['rideStats'] as Map<String, dynamic>)
-        : const RideStatisticsModel(
-            totalRides: 0,
-            grossEarningsCents: 0,
-            netEarningsCents: 0,
-            totalCostsCents: 0,
-            ridesTotalKm: 0.0,
-            ridesTotalTime: 0,
-          ),
+      rideStats: json['rideStats'] != null
+          ? RideStatisticsModel.fromJson(
+              json['rideStats'] as Map<String, dynamic>,
+            )
+          : const RideStatisticsModel(
+              totalRides: 0,
+              grossEarningsCents: 0,
+              netEarningsCents: 0,
+              totalCostsCents: 0,
+              ridesTotalKm: 0.0,
+              ridesTotalTime: 0,
+            ),
     );
   }
 
@@ -73,10 +71,8 @@ class JourneyStatisticsModel extends JourneyStatisticsEntity {
       'totalShifts': totalShifts,
       'totalTime': totalTime,
       'averageTime': averageTime,
-      'idleTime': idleTime,
       'drivenKm': drivenKm,
       'totalDrivenKmValue': totalDrivenKmValue,
-      'averageKmh': averageKmh,
       'rideStats': (rideStats as RideStatisticsModel).toJson(),
     };
   }

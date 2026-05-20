@@ -117,6 +117,7 @@ class SupabaseUserScope {
         .from(SupabaseTableNames.subscriptions)
         .select()
         .eq('userId', userId)
+        .order('updatedAt', ascending: false)
         .order('createdAt', ascending: false);
 
     final rows = (rawRows as List)

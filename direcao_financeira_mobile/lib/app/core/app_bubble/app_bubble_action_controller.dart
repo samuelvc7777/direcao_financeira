@@ -100,7 +100,7 @@ class AppBubbleActionController extends GetxController {
       return;
     }
 
-    await Get.find<JourneyController>().toggleTrafficLight();
+    await Get.find<JourneyController>().ensureTrafficLightActive();
   }
 
   Future<void> _toggleRecording() async {

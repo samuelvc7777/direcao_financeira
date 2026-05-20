@@ -10,9 +10,7 @@
 //       totalShifts: 0,
 //       totalTime: '00:00:00',
 //       averageTime: '00:00:00',
-//       idleTime: '00:00:00',
 //       drivenKm: '0.0 km',
-//       averageKmh: '0.0 km/h',
 //       rideStats: RideStatisticsModel(
 //         totalRides: 0,
 //         grossEarningsCents: 0,

@@ -128,6 +128,7 @@ class SubscriptionController extends GetxController {
     );
     await _maybeRestorePurchasesOnStartup();
     _logSubscriptionState('loadData');
+    _logActiveSubscriptionState('loadData');
 
     isLoading.value = false;
   }
@@ -645,6 +646,19 @@ class SubscriptionController extends GetxController {
       'storeProducts=${storeProductsById.keys.toList()} '
       'storeErrorMessage=${storeErrorMessage.value} '
       'canPurchaseSelectedPlan=$canPurchaseSelectedPlan',
+    );
+  }
+
+  void _logActiveSubscriptionState(String source) {
+    final subscription = activeSubscription.value;
+    debugPrint(
+      '[SubscriptionController] $source activeSubscription -> '
+      'id=${subscription?.id} '
+      'status=${subscription?.status} '
+      'autoRenew=${subscription?.autoRenew} '
+      'endDate=${subscription?.endDate?.toIso8601String()} '
+      'updatedAt=${subscription?.updatedAt?.toIso8601String()} '
+      'plan=${subscription?.plan?.id}:${subscription?.plan?.code}',
     );
   }
 

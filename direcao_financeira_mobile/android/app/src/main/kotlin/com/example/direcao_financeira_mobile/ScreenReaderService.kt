@@ -57,6 +57,7 @@ class ScreenReaderService : AccessibilityService() {
     private var lastAcceptedOfferAtElapsed = 0L
     private var lastAcceptedOfferSignature = ""
     private var lastAcceptedMoveSjCoreSignature = ""
+    private var lastAcceptedPassengerRouteSignature = ""
     private var lastAcceptedAppKey: String? = null
     private var lastAcceptedScreenFingerprint = ""
     private var ocrInFlight = false
@@ -252,9 +253,11 @@ class ScreenReaderService : AccessibilityService() {
         val signature = buildOfferSignature(offerData)
         val appKey = resolveOfferAppKey(offerData)
         val moveSjCoreSignature = buildMoveSjCoreSignature(offerData)
+        val passengerRouteSignature = buildPassengerRouteSignature(offerData)
         debugLog("MoveSj processOffer signature=$signature summary=${offerLogSummary(offerData)}")
         if (
             isDuplicateOffer(signature) ||
+                isDuplicatePassengerRouteOffer(passengerRouteSignature) ||
                 (appKey == "MoveSj" && isDuplicateMoveSjCoreOffer(moveSjCoreSignature))
         ) {
             debugLog("MoveSj oferta ignorada por assinatura duplicada.")
@@ -267,6 +270,7 @@ class ScreenReaderService : AccessibilityService() {
         if (appKey == "MoveSj") {
             lastAcceptedMoveSjCoreSignature = moveSjCoreSignature
         }
+        lastAcceptedPassengerRouteSignature = passengerRouteSignature
         lastAcceptedOfferAtElapsed = SystemClock.elapsedRealtime()
         lastAcceptedAppKey = appKey
         lastAcceptedScreenFingerprint = buildOfferScreenFingerprint(offerData)
@@ -409,6 +413,22 @@ class ScreenReaderService : AccessibilityService() {
             duplicateOfferWindowMs
     }
 
+    private fun isDuplicatePassengerRouteOffer(passengerRouteSignature: String): Boolean {
+        if (
+            passengerRouteSignature.isBlank() ||
+                lastAcceptedPassengerRouteSignature.isBlank()
+        ) {
+            return false
+        }
+
+        if (passengerRouteSignature != lastAcceptedPassengerRouteSignature) {
+            return false
+        }
+
+        return SystemClock.elapsedRealtime() - lastAcceptedOfferAtElapsed <
+            duplicateOfferWindowMs
+    }
+
     private fun shouldIgnoreMatchingScreen(
         appKey: String,
         screenFingerprint: String,
@@ -468,6 +488,25 @@ class ScreenReaderService : AccessibilityService() {
             normalizeFingerprintValue(offerData["valor_bruto"]?.toString()),
             normalizeFingerprintValue(offerData["km_total"]?.toString()),
             normalizeFingerprintValue(offerData["minutos_total"]?.toString()),
+            normalizeFingerprintValue(offerData["passenger_name"]?.toString()),
+        ).joinToString("|")
+    }
+
+    private fun buildPassengerRouteSignature(offerData: Map<String, Any>): String {
+        val passengerName = normalizeFingerprintValue(offerData["passenger_name"]?.toString())
+        val originAddress = normalizeFingerprintValue(offerData["origin_address"]?.toString())
+        val destinationAddress =
+            normalizeFingerprintValue(offerData["destination_address"]?.toString())
+
+        if (passengerName.isBlank() || (originAddress.isBlank() && destinationAddress.isBlank())) {
+            return ""
+        }
+
+        return listOf(
+            normalizeFingerprintValue(resolveOfferAppKey(offerData)),
+            passengerName,
+            originAddress,
+            destinationAddress,
         ).joinToString("|")
     }
 

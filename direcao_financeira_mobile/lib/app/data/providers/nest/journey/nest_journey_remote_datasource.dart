@@ -92,9 +92,7 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
       totalShifts: data['totalShifts'] ?? 0,
       totalTime: _formatDuration(data['totalTime'] ?? 0),
       averageTime: _formatDuration(data['avgShiftTime'] ?? 0),
-      idleTime: _formatDuration(data['totalIdleTime'] ?? 0),
       drivenKm: '${(data['totalKm'] ?? 0.0).toStringAsFixed(1)} km',
-      averageKmh: '${(data['avgKmh'] ?? 0.0).toStringAsFixed(1)} km/h',
       rideStats: data['rideStats'] != null
           ? RideStatisticsModel.fromJson(
               Map<String, dynamic>.from(data['rideStats'] as Map),
@@ -189,7 +187,6 @@ class NestJourneyRemoteDataSource implements IJourneyDataSource {
     final payload = {
       'startTime': shift.startTime.toUtc().toIso8601String(),
       'endTime': shift.endTime.toUtc().toIso8601String(),
-      'idleTime': shift.idleTimeSeconds,
       'totalDrivenKm': shift.totalDrivenKm,
       if (shift.remoteShiftId != null) 'remoteShiftId': shift.remoteShiftId,
       if (trackedRoute != null)

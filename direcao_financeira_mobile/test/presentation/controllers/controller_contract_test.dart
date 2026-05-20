@@ -1389,6 +1389,37 @@ void main() {
   );
 
   test(
+    'JourneyController nao desativa semaforo persistido ao tentar ativar novamente',
+    () async {
+      final journeyRepository = _FakeJourneyRepository();
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService()
+        ..persistedTrafficLightActive = true;
+      accessibilityService.isServiceEnabled.value = false;
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await controller.ensureTrafficLightActive();
+
+      expect(controller.isTrafficLightActive.value, isTrue);
+      expect(accessibilityService.persistedTrafficLightActive, isTrue);
+      expect(accessibilityService.lastTrafficLightValue, isNull);
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
     'CreateManualShiftUseCase envia dados do turno manual ao repositorio',
     () async {
       final journeyRepository = _FakeJourneyRepository();
@@ -1465,7 +1496,7 @@ void main() {
   );
 
   test(
-    'JourneyController atualiza Tempo Total e Velocidade Media com turno ativo local',
+    'JourneyController atualiza Tempo Total com turno ativo local',
     () async {
       final now = DateTime.now();
       final journeyRepository = _FakeJourneyRepository()
@@ -1496,9 +1527,8 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
-      expect(controller.totalTime.value, '02:00:00');
+      expect(controller.totalTime.value, '03:00:00');
       expect(controller.drivenKm.value, '11.1 km');
-      expect(controller.averageKmh.value, '5.5 km/h');
 
       journeyRepository.trackingController.add(
         buildTrackingStatus(
@@ -1508,9 +1538,8 @@ void main() {
         ),
       );
       await Future<void>.delayed(Duration.zero);
-      expect(controller.totalTime.value, '02:00:00');
+      expect(controller.totalTime.value, '03:00:00');
       expect(controller.drivenKm.value, '11.9 km');
-      expect(controller.averageKmh.value, '6.0 km/h');
 
       journeyRepository.trackingController.add(
         buildTrackingStatus(
@@ -1520,9 +1549,67 @@ void main() {
         ),
       );
       await Future<void>.delayed(Duration.zero);
-      expect(controller.totalTime.value, '02:00:00');
+      expect(controller.totalTime.value, '03:00:00');
       expect(controller.drivenKm.value, '12.0 km');
-      expect(controller.averageKmh.value, '6.0 km/h');
+
+      controller.onClose();
+      await journeyRepository.dispose();
+    },
+  );
+
+  test(
+    'JourneyController reidrata turno e rastreamento quando app volta ao foreground',
+    () async {
+      final now = DateTime.now();
+      final journeyRepository = _FakeJourneyRepository()
+        ..activeShift = buildActiveShift().copyWith(
+          startTime: now.subtract(const Duration(minutes: 5)),
+          createdAt: now.subtract(const Duration(minutes: 5)),
+          currentDrivenKm: 0,
+          idleTimeSeconds: 0,
+        )
+        ..trackingStatus = buildTrackingStatus(
+          isTrackingActive: true,
+          totalDistanceMeters: 0,
+          idleTimeSeconds: 0,
+        );
+      final rideRepository = _FakeRideRepository();
+      final accessibilityService = _FakeAccessibilityService();
+      final journeyRealtimeBridge = _FakeJourneyRealtimeBridge();
+      final appBubbleService = _FakeAppBubbleService();
+      final controller = _buildJourneyController(
+        journeyRepository: journeyRepository,
+        rideRepository: rideRepository,
+        accessibilityService: accessibilityService,
+        journeyRealtimeBridge: journeyRealtimeBridge,
+        appBubbleService: appBubbleService,
+      );
+
+      controller.onInit();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.currentKm.value, 0);
+
+      journeyRepository
+        ..activeShift = buildActiveShift().copyWith(
+          startTime: now.subtract(const Duration(minutes: 10)),
+          createdAt: now.subtract(const Duration(minutes: 10)),
+          currentDrivenKm: 2,
+          idleTimeSeconds: 0,
+        )
+        ..trackingStatus = buildTrackingStatus(
+          isTrackingActive: true,
+          totalDistanceMeters: 2000,
+          idleTimeSeconds: 0,
+        );
+
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.currentKm.value, 2);
+      expect(controller.drivenKm.value, '12.0 km');
 
       controller.onClose();
       await journeyRepository.dispose();
@@ -1841,10 +1928,8 @@ void main() {
             totalShifts: 1,
             totalTime: '01:00:00',
             averageTime: '01:00:00',
-            idleTime: '00:00:00',
             drivenKm: '10.0 km',
             totalDrivenKmValue: 10,
-            averageKmh: '10.0 km/h',
             rideStats: RideStatisticsEntity(
               totalRides: 1,
               grossEarningsCents: 1373,
@@ -1928,10 +2013,8 @@ void main() {
             totalShifts: 1,
             totalTime: '01:00:00',
             averageTime: '01:00:00',
-            idleTime: '00:00:00',
             drivenKm: '10.0 km',
             totalDrivenKmValue: 10,
-            averageKmh: '10.0 km/h',
             rideStats: RideStatisticsEntity(
               totalRides: 1,
               grossEarningsCents: 6000,

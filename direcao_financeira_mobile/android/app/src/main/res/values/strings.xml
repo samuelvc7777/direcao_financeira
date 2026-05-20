@@ -14,7 +14,7 @@
     <string name="app_bubble_action_enable_recording">Ativar gravacao</string>
     <string name="app_bubble_action_disable_recording">Parar gravacao</string>
     <string name="app_bubble_action_enable_traffic_light">Ativar semaforo</string>
-    <string name="app_bubble_action_disable_traffic_light">Desativar semaforo</string>
+    <string name="app_bubble_action_disable_traffic_light">Semaforo ativo</string>
     <string name="recording_notification_channel_name">Gravacao em andamento</string>
     <string name="recording_notification_channel_description">Mantem camera e microfone ativos enquanto a gravacao estiver ligada.</string>
     <string name="recording_notification_title">Gravacao ativa</string>

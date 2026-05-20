@@ -2,16 +2,12 @@ class JourneyStatisticsDisplayData {
   const JourneyStatisticsDisplayData({
     required this.totalTime,
     required this.averageTime,
-    required this.idleTime,
     required this.drivenKm,
-    required this.averageKmh,
   });
 
   final String totalTime;
   final String averageTime;
-  final String idleTime;
   final String drivenKm;
-  final String averageKmh;
 }
 
 class JourneyStatisticsDisplayComposer {
@@ -19,10 +15,8 @@ class JourneyStatisticsDisplayComposer {
 
   static JourneyStatisticsDisplayData compose({
     required int baseTotalTimeSeconds,
-    required int baseIdleTimeSeconds,
     required double baseDrivenKm,
     required int shiftsCount,
-    required int activeIdleSeconds,
     required int liveElapsedSeconds,
     required double liveDrivenKm,
     required bool includeLiveTime,
@@ -30,7 +24,6 @@ class JourneyStatisticsDisplayComposer {
   }) {
     final totalSeconds =
         baseTotalTimeSeconds + (includeLiveTime ? liveElapsedSeconds : 0);
-    final idleSeconds = baseIdleTimeSeconds + activeIdleSeconds;
     final totalKm = baseDrivenKm + (includeLiveKm ? liveDrivenKm : 0);
 
     return JourneyStatisticsDisplayData(
@@ -38,11 +31,7 @@ class JourneyStatisticsDisplayComposer {
       averageTime: shiftsCount <= 0
           ? '00:00:00'
           : formatHms((totalSeconds / shiftsCount).round()),
-      idleTime: formatHms(idleSeconds),
       drivenKm: '${totalKm.toStringAsFixed(1)} km',
-      averageKmh: totalKm <= 0 || totalSeconds <= 0
-          ? '0.0 km/h'
-          : '${(totalKm / (totalSeconds / 3600)).toStringAsFixed(1)} km/h',
     );
   }
 

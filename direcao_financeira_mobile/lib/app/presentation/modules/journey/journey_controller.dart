@@ -268,9 +268,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final totalShifts = '0'.obs;
   final totalTime = '00:00:00'.obs;
   final averageTime = '00:00:00'.obs;
-  final idleTime = '00:00:00'.obs;
   final drivenKm = '0.0 km'.obs;
-  final averageKmh = '0.0 km/h'.obs;
 
   final totalRides = 0.obs;
   final grossEarningsCents = 0.obs;
@@ -292,7 +290,6 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final activeRecording = Rxn<RecordingEntity>();
   final isRecordingBusy = false.obs;
   int _statisticsTotalTimeBaseSeconds = 0;
-  int _statisticsIdleTimeBaseSeconds = 0;
 
   bool get hasActiveShift => activeShift.value != null;
   bool get isAccessibilityServiceEnabled =>
@@ -484,7 +481,18 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
+    unawaited(_refreshRuntimeStateAfterResume());
+  }
+
+  Future<void> _refreshRuntimeStateAfterResume() async {
     _syncSelectedDateWithTodayIfNeeded();
+
+    final currentShift = activeShift.value;
+    if (currentShift != null) {
+      _syncActiveShiftPresentation(currentShift);
+    }
+
+    await _loadActiveShift(showErrors: false);
   }
 
   String get dateLabel {
@@ -1263,8 +1271,6 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     totalShifts.value = stats.totalShifts.toString();
     _statisticsTotalTimeBaseSeconds =
         JourneyStatisticsDisplayComposer.parseHmsToSeconds(stats.totalTime);
-    _statisticsIdleTimeBaseSeconds =
-        JourneyStatisticsDisplayComposer.parseHmsToSeconds(stats.idleTime);
     totalShiftDrivenKm.value = stats.totalDrivenKmValue > 0
         ? stats.totalDrivenKmValue
         : JourneyStatisticsDisplayComposer.parseKmLabelToDouble(stats.drivenKm);
@@ -1893,12 +1899,8 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   void _syncDisplayedJourneyMetrics() {
     final displayData = JourneyStatisticsDisplayComposer.compose(
       baseTotalTimeSeconds: _statisticsTotalTimeBaseSeconds,
-      baseIdleTimeSeconds: _statisticsIdleTimeBaseSeconds,
       baseDrivenKm: totalShiftDrivenKm.value,
       shiftsCount: int.tryParse(totalShifts.value) ?? 0,
-      activeIdleSeconds: _selectedRangeIncludesActiveShift
-          ? activeShift.value?.idleTimeSeconds ?? 0
-          : 0,
       liveElapsedSeconds: _statisticsLiveElapsedSeconds,
       liveDrivenKm: currentKm.value,
       includeLiveTime: _shouldUseLiveJourneyTime,
@@ -1907,9 +1909,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
 
     totalTime.value = displayData.totalTime;
     averageTime.value = displayData.averageTime;
-    idleTime.value = displayData.idleTime;
     drivenKm.value = displayData.drivenKm;
-    averageKmh.value = displayData.averageKmh;
   }
 
   String _normalizeErrorMessage(String message) {
@@ -2047,14 +2047,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       hasActiveShift && _selectedRangeIncludesActiveShift;
 
   int get _statisticsLiveElapsedSeconds {
-    final activeIdleSeconds = _selectedRangeIncludesActiveShift
-        ? activeShift.value?.idleTimeSeconds ?? 0
-        : 0;
-    final effectiveSeconds = elapsedSeconds.value - activeIdleSeconds;
-    if (effectiveSeconds <= 0) {
+    if (elapsedSeconds.value <= 0) {
       return 0;
     }
-    return effectiveSeconds;
+    return elapsedSeconds.value;
   }
 
   ({DateTime start, DateTime endExclusive}) get _selectedRange {
@@ -2279,6 +2275,32 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  Future<void> ensureTrafficLightActive() async {
+    if (isTrafficLightActive.value ||
+        runtimeCoordinator.accessibilityService.persistedTrafficLightActive) {
+      isTrafficLightActive.value = true;
+      if (runtimeCoordinator.accessibilityService.isServiceEnabled.value) {
+        await runtimeCoordinator.accessibilityService.setTrafficLightActive(
+          true,
+        );
+      }
+      return;
+    }
+
+    if (runtimeCoordinator.accessibilityService.isServiceEnabled.value) {
+      isTrafficLightActive.value = true;
+      await runtimeCoordinator.accessibilityService.setTrafficLightActive(true);
+      return;
+    }
+
+    final shouldOpenSettings = await _showAccessibilityDialog();
+    if (shouldOpenSettings == true) {
+      isWaitingAccessibilityActivation.value = true;
+      await runtimeCoordinator.accessibilityService
+          .requestAccessibilityPermission();
+    }
+  }
+
   void _handleAccessibilityStatusChanged(bool isEnabled) {
     if (isEnabled && isWaitingAccessibilityActivation.value) {
       isTrafficLightActive.value = true;
@@ -2321,7 +2343,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   }
 
   void activateTrafficLight() {
-    toggleTrafficLight();
+    unawaited(ensureTrafficLightActive());
   }
 
   Future<void> toggleAssistant() async {

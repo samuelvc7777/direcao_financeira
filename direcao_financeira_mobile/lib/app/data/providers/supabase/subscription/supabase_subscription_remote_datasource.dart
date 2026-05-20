@@ -134,14 +134,19 @@ class SupabaseSubscriptionRemoteDataSource
         .maybeSingle();
 
     if (existingRow != null) {
+      final existingRowMap = Map<String, dynamic>.from(existingRow);
       final existing = SubscriptionModel.fromJson({
-        ...Map<String, dynamic>.from(existingRow),
+        ...existingRowMap,
         'plan': plan.toJson(),
       });
       final preservedEndDate =
           existing.endDate != null && existing.endDate!.isAfter(now)
           ? existing.endDate!
           : fallbackEndDate;
+      final existingGooglePlayExpiresAt = existingRowMap['googlePlayExpiresAt']
+          ?.toString();
+      final existingGooglePlayOrderId = existingRowMap['googlePlayOrderId']
+          ?.toString();
 
       final updated = await client
           .from(SupabaseTableNames.subscriptions)
@@ -151,11 +156,13 @@ class SupabaseSubscriptionRemoteDataSource
             'status': 'ACTIVE',
             'endDate': preservedEndDate.toIso8601String(),
             'canceledAt': null,
-            'autoRenew': true,
+            'autoRenew': existing.autoRenew,
             'googlePlayProductId': productId,
-            'googlePlayOrderId': purchaseId,
+            'googlePlayOrderId': purchaseId ?? existingGooglePlayOrderId,
             'googlePlayLinkedAt': now.toIso8601String(),
-            'googlePlayExpiresAt': preservedEndDate.toIso8601String(),
+            'googlePlayExpiresAt':
+                existingGooglePlayExpiresAt ??
+                preservedEndDate.toIso8601String(),
             'updatedAt': now.toIso8601String(),
           })
           .eq('id', existing.id)

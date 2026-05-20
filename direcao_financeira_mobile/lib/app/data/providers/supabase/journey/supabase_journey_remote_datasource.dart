@@ -76,7 +76,6 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
 
     final totalShifts = shiftRows.length;
     var totalShiftSeconds = 0;
-    var totalIdleSeconds = 0;
     var totalDrivenKm = 0.0;
 
     for (final shift in shiftRows) {
@@ -84,11 +83,9 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
       final end = shift['endTime'] != null
           ? parseJourneyDateTimeToLocal(shift['endTime'] as String)
           : DateTime.now();
-      final idle = shift['idleTime'] as int? ?? 0;
-      final effectiveSeconds = end.difference(start).inSeconds - idle;
+      final totalSeconds = end.difference(start).inSeconds;
 
-      totalShiftSeconds += effectiveSeconds < 0 ? 0 : effectiveSeconds;
-      totalIdleSeconds += idle;
+      totalShiftSeconds += totalSeconds < 0 ? 0 : totalSeconds;
       totalDrivenKm += (shift['totalDrivenKm'] as num?)?.toDouble() ?? 0.0;
     }
 
@@ -108,18 +105,12 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
     final averageSeconds = totalShifts == 0
         ? 0
         : (totalShiftSeconds / totalShifts).round();
-    final averageKmh = totalShiftSeconds == 0
-        ? 0.0
-        : totalDrivenKm / (totalShiftSeconds / 3600);
-
     return JourneyStatisticsModel(
       totalShifts: totalShifts,
       totalTime: _formatDuration(totalShiftSeconds),
       averageTime: _formatDuration(averageSeconds),
-      idleTime: _formatDuration(totalIdleSeconds),
       drivenKm: '${totalDrivenKm.toStringAsFixed(1)} km',
       totalDrivenKmValue: totalDrivenKm,
-      averageKmh: '${averageKmh.toStringAsFixed(1)} km/h',
       rideStats: RideStatisticsModel(
         totalRides: totalRides,
         grossEarningsCents: grossEarningsCents,
@@ -197,9 +188,7 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
         date: _formatDateOnly(start),
         startTime: _formatTimeOnly(start),
         endTime: _formatTimeOnly(end),
-        duration: _formatDuration(
-          end.difference(start).inSeconds - (row['idleTime'] as int? ?? 0),
-        ),
+        duration: _formatDuration(end.difference(start).inSeconds),
         drivenKm: trackedDistanceKm > 0
             ? trackedDistanceKm.toStringAsFixed(1)
             : totalDrivenKm > 0
@@ -227,20 +216,15 @@ class SupabaseJourneyRemoteDataSource implements IJourneyDataSource {
     final userId = await userScope.getCurrentUserId();
     final updatedAt = shift.endTime.toUtc().toIso8601String();
     final totalSeconds = shift.endTime.difference(shift.startTime).inSeconds;
-    final effectiveSeconds = totalSeconds - shift.idleTimeSeconds;
-    final averageKmh = effectiveSeconds <= 0
-        ? 0.0
-        : shift.totalDrivenKm / (effectiveSeconds / 3600);
+    final safeTotalSeconds = totalSeconds < 0 ? 0 : totalSeconds;
 
     final payload = {
       'userId': userId,
       'startTime': shift.startTime.toUtc().toIso8601String(),
       'endTime': shift.endTime.toUtc().toIso8601String(),
-      'totalTime': effectiveSeconds < 0 ? 0 : effectiveSeconds,
-      'idleTime': shift.idleTimeSeconds,
-      'averageTime': effectiveSeconds < 0 ? 0 : effectiveSeconds,
+      'totalTime': safeTotalSeconds,
+      'averageTime': safeTotalSeconds,
       'totalDrivenKm': shift.totalDrivenKm,
-      'averageKmh': averageKmh,
       'createdAt': shift.createdAt.toUtc().toIso8601String(),
       'updatedAt': updatedAt,
     };

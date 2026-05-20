@@ -77,7 +77,7 @@ class AccessibilityController extends GetxController
           : <String, dynamic>{};
       final costsSettings = await _loadCostsGainsSettings();
 
-      final settings = {
+      final settings = <String, dynamic>{
         'position': settingsMap['position'] ?? storage.read('tl_position') ?? 0,
         'theme': settingsMap['theme'] ?? storage.read('tl_theme') ?? 1,
         'font_size':
@@ -106,10 +106,13 @@ class AccessibilityController extends GetxController
             .toDouble(),
         'passenger_rating_customized':
             settingsMap['passengerRatingCustomized'] ?? false,
-        'fuel_price_per_liter_cents':
-            costsSettings?.fuelPricePerLiterCents ?? 0,
-        'km_per_liter': costsSettings?.kmPerLiter ?? 0.0,
       };
+
+      if (costsSettings != null) {
+        settings['fuel_price_per_liter_cents'] =
+            costsSettings.fuelPricePerLiterCents;
+        settings['km_per_liter'] = costsSettings.kmPerLiter;
+      }
       await _platform.invokeMethod('updateSettings', settings);
     } catch (e) {
       developer.log('Erro ao sincronizar configuracoes com o nativo: $e');
