@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../presentation/modules/journey/journey_binding.dart';
+import '../../presentation/modules/initial/initial_controller.dart';
 import '../../routes/app_pages.dart';
 import '../../presentation/modules/journey/journey_controller.dart';
 
@@ -80,21 +81,41 @@ class AppBubbleActionController extends GetxController {
   }
 
   Future<void> _openJourney({required int initialTabIndex}) async {
-    await Get.offAllNamed(
+    JourneyBinding().dependencies();
+
+    if (Get.isRegistered<InitialController>()) {
+      Get.until(
+        (route) => route.settings.name == AppRoutes.initial || route.isFirst,
+      );
+      Get.find<InitialController>().changeTab(2);
+      await _activateJourneyShortcut(initialTabIndex);
+      return;
+    }
+
+    Get.offAllNamed<dynamic>(
       AppRoutes.initial,
       arguments: {'initialIndex': 2, 'journeyInitialTabIndex': initialTabIndex},
     );
+
+    await _activateJourneyShortcut(initialTabIndex);
+  }
+
+  Future<void> _activateJourneyShortcut(int initialTabIndex) async {
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+
+    for (var attempt = 0; attempt < 8; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      if (Get.isRegistered<JourneyController>()) {
+        final journeyController = Get.find<JourneyController>();
+        journeyController.selectJourneyTab(initialTabIndex);
+        await journeyController.refreshRuntimeStateAfterForegroundOpen();
+        return;
+      }
+    }
   }
 
   Future<void> _toggleTrafficLight() async {
-    JourneyBinding().dependencies();
-
-    await Get.offAllNamed(
-      AppRoutes.initial,
-      arguments: const {'initialIndex': 2, 'journeyInitialTabIndex': 0},
-    );
-
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    await _openJourney(initialTabIndex: 0);
 
     if (!Get.isRegistered<JourneyController>()) {
       return;
@@ -104,14 +125,7 @@ class AppBubbleActionController extends GetxController {
   }
 
   Future<void> _toggleRecording() async {
-    JourneyBinding().dependencies();
-
-    await Get.offAllNamed(
-      AppRoutes.initial,
-      arguments: const {'initialIndex': 2, 'journeyInitialTabIndex': 2},
-    );
-
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    await _openJourney(initialTabIndex: 2);
 
     if (!Get.isRegistered<JourneyController>()) {
       return;

@@ -1,6 +1,5 @@
 package com.example.direcao_financeira_mobile.parsers
 
-import android.view.accessibility.AccessibilityNodeInfo
 import java.text.Normalizer
 import kotlin.math.abs
 
@@ -42,52 +41,6 @@ class MoveSjParser {
     ) {
         val centerX: Int get() = (left + right) / 2
         val centerY: Int get() = (top + bottom) / 2
-    }
-
-    fun isOfferScreen(rootNode: AccessibilityNodeInfo): Boolean {
-        return isOfferScreenFromLines(collectVisibleTexts(rootNode))
-    }
-
-    fun buildScreenFingerprint(rootNode: AccessibilityNodeInfo): String {
-        val lines = collectVisibleTexts(rootNode)
-        val priceText = resolveBestPriceText(lines) ?: ""
-        val parsedOffer = extractOfferDetails(lines)
-
-        return listOf(
-            "MoveSj",
-            normalizeFingerprintValue(priceText),
-            normalizeFingerprintValue(parsedOffer.metrics.totalKm.toString()),
-            normalizeFingerprintValue(parsedOffer.metrics.totalMinutes.toString()),
-            normalizeFingerprintValue(parsedOffer.passengerName),
-            normalizeFingerprintValue(parsedOffer.originAddress),
-            normalizeFingerprintValue(parsedOffer.destinationAddress),
-        ).joinToString("|")
-    }
-
-    fun parseOffer(rootNode: AccessibilityNodeInfo): Map<String, Any> {
-        val lines = collectVisibleTexts(rootNode)
-        val ratingNode = findNodeByRegex(rootNode, ratingRegex)
-        return parseOfferFromLines(
-            lines = lines,
-            priceText = resolveBestPriceText(lines) ?: "R$ 0,00",
-            ratingText = ratingNode?.text?.toString(),
-        )
-    }
-
-    fun buildDebugSnapshot(rootNode: AccessibilityNodeInfo): Map<String, Any> {
-        val rawLines = collectNonEmptyTexts(rootNode)
-        val normalizedLines = normalizeVisibleTexts(rawLines)
-        val parsedOffer = extractOfferDetails(normalizedLines)
-
-        return linkedMapOf(
-            "raw_lines" to rawLines,
-            "normalized_lines" to normalizedLines,
-            "passenger_name" to parsedOffer.passengerName.orEmpty(),
-            "origin_address" to parsedOffer.originAddress.orEmpty(),
-            "destination_address" to parsedOffer.destinationAddress.orEmpty(),
-            "km_total" to parsedOffer.metrics.totalKm,
-            "minutos_total" to parsedOffer.metrics.totalMinutes,
-        )
     }
 
     fun parseOcrOffer(
@@ -431,10 +384,6 @@ class MoveSjParser {
             line.centerX < pageWidth * 0.45f &&
                 (ratingRegex.containsMatchIn(line.text) || ratingValueRegex.matches(line.text.trim()))
         }?.text
-    }
-
-    private fun collectVisibleTexts(rootNode: AccessibilityNodeInfo): List<String> {
-        return normalizeVisibleTexts(collectNonEmptyTexts(rootNode))
     }
 
     private fun normalizeVisibleTexts(lines: List<String>): List<String> {
@@ -811,59 +760,6 @@ class MoveSjParser {
             ?: Int.MAX_VALUE
     }
 
-    private fun findNodeByRegex(
-        node: AccessibilityNodeInfo,
-        regex: Regex,
-    ): AccessibilityNodeInfo? {
-        val nodeText = node.text?.toString() ?: ""
-        if (regex.containsMatchIn(nodeText)) {
-            return node
-        }
-
-        for (i in 0 until node.childCount) {
-            val found = findNodeByRegex(node.getChild(i) ?: continue, regex)
-            if (found != null) {
-                return found
-            }
-        }
-
-        return null
-    }
-
-    private fun findAllNodesByRegex(
-        node: AccessibilityNodeInfo,
-        regex: Regex,
-    ): List<AccessibilityNodeInfo> {
-        val result = mutableListOf<AccessibilityNodeInfo>()
-        val nodeText = node.text?.toString() ?: ""
-        if (regex.containsMatchIn(nodeText)) {
-            result.add(node)
-        }
-
-        for (i in 0 until node.childCount) {
-            result.addAll(findAllNodesByRegex(node.getChild(i) ?: continue, regex))
-        }
-
-        return result
-    }
-
-    private fun collectNonEmptyTexts(
-        node: AccessibilityNodeInfo,
-        result: MutableList<String> = mutableListOf(),
-    ): List<String> {
-        val text = node.text?.toString()?.trim()
-        if (!text.isNullOrEmpty()) {
-            result.add(text)
-        }
-
-        for (index in 0 until node.childCount) {
-            val child = node.getChild(index) ?: continue
-            collectNonEmptyTexts(child, result)
-        }
-
-        return result
-    }
-
     private fun normalizedText(value: String?): String {
         if (value.isNullOrBlank()) {
             return ""
@@ -907,10 +803,6 @@ class MoveSjParser {
         val total = (hours * 60) + minutes
 
         return total.takeIf { it > 0 }
-    }
-
-    private fun normalizeFingerprintValue(value: String?): String {
-        return normalizedText(value).replace(" ", "")
     }
 
     private fun roundKm(value: Double): Double {

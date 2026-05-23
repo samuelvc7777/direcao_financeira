@@ -91,8 +91,14 @@ TransactionModel buildTransaction({
   int id = 1,
   TransactionType type = TransactionType.expense,
   TransactionStatus status = TransactionStatus.cleared,
+  AssetType assetType = AssetType.bankAccount,
   DateTime? date,
   String description = 'Posto Shell',
+  int? bankAccountId = 1,
+  int? creditCardId,
+  String? installmentGroupId,
+  int? installmentNumber,
+  int? installmentCount,
   String? recurrenceGroupId,
   int? recurrenceNumber,
   int? recurrenceCount,
@@ -101,12 +107,16 @@ TransactionModel buildTransaction({
     id: id,
     type: type,
     status: status,
-    assetType: AssetType.bankAccount,
+    assetType: assetType,
     amountCents: 2500,
     categoryId: 1,
     description: description,
     transactionDate: date ?? DateTime(2026, 1, 10),
-    bankAccountId: 1,
+    bankAccountId: bankAccountId,
+    creditCardId: creditCardId,
+    installmentGroupId: installmentGroupId,
+    installmentNumber: installmentNumber,
+    installmentCount: installmentCount,
     categoryName: 'Combustivel',
     recurrenceGroupId: recurrenceGroupId,
     recurrenceNumber: recurrenceNumber,
@@ -142,14 +152,26 @@ SubscriptionModel buildSubscription({
   );
 }
 
-StoreProductEntity buildStoreProduct({String productId = 'premium_monthly'}) {
-  return const StoreProductEntity(
-    productId: 'premium_monthly',
+StoreProductEntity buildStoreProduct({
+  String productId = 'premium_monthly',
+  String priceLabel = 'R\$ 25,00',
+  String? recurringPriceLabel,
+  double rawPrice = 25,
+  int? trialDays,
+  String? trialLabel,
+  String? offerToken,
+}) {
+  return StoreProductEntity(
+    productId: productId,
     title: 'Premium',
     description: 'Plano premium',
-    priceLabel: 'R\$ 25,00',
-    rawPrice: 25,
+    priceLabel: priceLabel,
+    recurringPriceLabel: recurringPriceLabel,
+    rawPrice: rawPrice,
     currencyCode: 'BRL',
+    trialDays: trialDays,
+    trialLabel: trialLabel,
+    offerToken: offerToken,
   );
 }
 

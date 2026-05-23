@@ -13,6 +13,7 @@ import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'transactions_controller.dart';
 import 'widgets/transaction_type_selector_sheet.dart';
+import 'widgets/transactions_card_recurring_section.dart';
 import 'widgets/transactions_day_group_section.dart';
 import 'widgets/transactions_empty_state.dart';
 import 'widgets/transactions_filter_tabs.dart';
@@ -61,7 +62,13 @@ class TransactionsView extends GetView<TransactionsController> {
           symbol: 'R\$ ',
           decimalDigits: 0,
         );
-        final groups = controller.groupedVisibleTransactions;
+        final cardRecurringGroups =
+            controller.groupedCardRecurringVisibleTransactions;
+        final normalGroups = controller.groupedNormalVisibleTransactions;
+        final hasVisibleTransactions =
+            cardRecurringGroups.isNotEmpty || normalGroups.isNotEmpty;
+        final isCardRecurringSectionExpanded =
+            controller.isCardRecurringSectionExpanded.value;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -112,7 +119,7 @@ class TransactionsView extends GetView<TransactionsController> {
                       SizedBox(
                         height: Responsive.vp(context, 3).clamp(20.0, 24.0),
                       ),
-                      if (groups.isEmpty)
+                      if (!hasVisibleTransactions)
                         TransactionsEmptyState(
                           monthLabel: controller.selectedMonthSubtitle,
                           hasTransactionsLoaded:
@@ -120,14 +127,39 @@ class TransactionsView extends GetView<TransactionsController> {
                         )
                       else
                         Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (cardRecurringGroups.isNotEmpty) ...[
+                              TransactionsCardRecurringSection(
+                                groups: cardRecurringGroups,
+                                transactionCount: controller
+                                    .cardRecurringVisibleTransactions
+                                    .length,
+                                isExpanded: isCardRecurringSectionExpanded,
+                                amountFormat: currencyFormat,
+                                compactAmountFormat: compactCurrencyFormat,
+                                onToggleExpanded:
+                                    controller.toggleCardRecurringSection,
+                                onQuickStatusChange:
+                                    _onQuickStatusChangeTransaction,
+                                onEdit: _onEditTransaction,
+                                onDelete: _onDeleteTransaction,
+                              ),
+                              if (normalGroups.isNotEmpty)
+                                SizedBox(
+                                  height: Responsive.vp(
+                                    context,
+                                    2.6,
+                                  ).clamp(18.0, 22.0),
+                                ),
+                            ],
                             for (
                               var index = 0;
-                              index < groups.length;
+                              index < normalGroups.length;
                               index++
                             ) ...[
                               TransactionsDayGroupSection(
-                                group: groups[index],
+                                group: normalGroups[index],
                                 amountFormat: currencyFormat,
                                 compactAmountFormat: compactCurrencyFormat,
                                 onQuickStatusChange:
@@ -135,7 +167,7 @@ class TransactionsView extends GetView<TransactionsController> {
                                 onEdit: _onEditTransaction,
                                 onDelete: _onDeleteTransaction,
                               ),
-                              if (index != groups.length - 1)
+                              if (index != normalGroups.length - 1)
                                 SizedBox(
                                   height: Responsive.vp(
                                     context,

@@ -42,7 +42,7 @@ class TrafficLightSettingsController extends GetxController {
   final passengerRatingGood = 5.0.obs;
   final passengerRatingCustomized = false.obs;
 
-  final fontSize = 15.0.obs;
+  final fontSize = 12.0.obs;
   final opacity = 100.0.obs;
   final cardDuration = 10.0.obs;
   final colorBlindMode = false.obs;
@@ -269,10 +269,7 @@ class TrafficLightSettingsController extends GetxController {
     Future<void>.microtask(() {
       if (Get.key.currentState == null) return;
 
-      Get.offAllNamed(
-        AppRoutes.initial,
-        arguments: const {'initialIndex': 3},
-      );
+      Get.offAllNamed(AppRoutes.initial, arguments: const {'initialIndex': 3});
     });
   }
 }

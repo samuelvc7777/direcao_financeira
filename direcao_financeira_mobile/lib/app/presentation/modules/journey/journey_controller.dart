@@ -284,6 +284,7 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
   final shiftsList = <ShiftEntity>[].obs;
 
   final selectedDate = DateTime.now().obs;
+  final selectedJourneyTabIndex = 0.obs;
   final isTrafficLightActive = false.obs;
   final isAssistantActive = false.obs;
   final isAssistantBusy = false.obs;
@@ -481,10 +482,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
-    unawaited(_refreshRuntimeStateAfterResume());
+    unawaited(refreshRuntimeStateAfterForegroundOpen());
   }
 
-  Future<void> _refreshRuntimeStateAfterResume() async {
+  Future<void> refreshRuntimeStateAfterForegroundOpen() async {
     _syncSelectedDateWithTodayIfNeeded();
 
     final currentShift = activeShift.value;
@@ -493,6 +494,10 @@ class JourneyController extends GetxController with WidgetsBindingObserver {
     }
 
     await _loadActiveShift(showErrors: false);
+  }
+
+  void selectJourneyTab(int index) {
+    selectedJourneyTabIndex.value = index.clamp(0, 2).toInt();
   }
 
   String get dateLabel {

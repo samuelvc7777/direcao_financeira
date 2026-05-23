@@ -17,16 +17,21 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
   RideLocalDataSourceImpl({required this.storage});
 
   final GetStorage storage;
+  Future<void> _writeQueue = Future.value();
 
   static const _pendingRidesKey = 'journey_pending_rides';
 
   @override
   Future<RideModel> savePendingRide(DetectedRideDraftEntity ride) async {
-    try {
+    return _enqueueWrite(() async {
       final pendingRides = await _readPendingRideEntries();
       final createdAt = ride.detectedAt?.toLocal() ?? DateTime.now();
+      final localId = _buildUniqueLocalId(
+        createdAt: createdAt,
+        entries: pendingRides,
+      );
       final model = RideModel.fromDetectedRideDraft(
-        localId: -createdAt.microsecondsSinceEpoch,
+        localId: localId,
         createdAt: createdAt,
         draft: ride,
       );
@@ -36,16 +41,25 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
       );
       await _writePendingRideEntries(pendingRides);
       return model;
-    } catch (e) {
-      throw LocalDataSourceException(
-        'Erro ao salvar corrida pendente localmente: $e',
-      );
-    }
+    }, fallbackMessage: 'Erro ao salvar corrida pendente localmente');
+  }
+
+  Future<T> _enqueueWrite<T>(
+    Future<T> Function() action, {
+    required String fallbackMessage,
+  }) {
+    final operation = _writeQueue.then((_) => action());
+    _writeQueue = operation.then<void>((_) {}, onError: (_) {});
+
+    return operation.catchError((Object e) {
+      throw LocalDataSourceException('$fallbackMessage: $e');
+    });
   }
 
   @override
   Future<List<RideModel>> getPendingRides() async {
     try {
+      await _writeQueue;
       final entries = await _readPendingRideEntries();
       return entries.map((entry) => entry.model).toList();
     } catch (e) {
@@ -57,6 +71,7 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
 
   @override
   Future<RideModel?> getPendingRideById(int localId) async {
+    await _writeQueue;
     final entries = await _readPendingRideEntries();
     for (final entry in entries) {
       if (entry.model.id == localId) {
@@ -68,17 +83,13 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
 
   @override
   Future<void> removePendingRide(int localId) async {
-    try {
+    return _enqueueWrite(() async {
       final entries = await _readPendingRideEntries();
       final updated = entries
           .where((entry) => entry.model.id != localId)
           .toList();
       await _writePendingRideEntries(updated);
-    } catch (e) {
-      throw LocalDataSourceException(
-        'Erro ao remover corrida pendente local: $e',
-      );
-    }
+    }, fallbackMessage: 'Erro ao remover corrida pendente local');
   }
 
   Future<List<_PendingRideStorageEntry>> _readPendingRideEntries() async {
@@ -108,7 +119,10 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
   Future<void> _writePendingRideEntries(
     List<_PendingRideStorageEntry> entries,
   ) async {
-    await storage.write(_pendingRidesKey, _serializePendingRideEntries(entries));
+    await storage.write(
+      _pendingRidesKey,
+      _serializePendingRideEntries(entries),
+    );
   }
 
   List<Map<String, dynamic>> _serializePendingRideEntries(
@@ -117,6 +131,20 @@ class RideLocalDataSourceImpl implements IRideLocalDataSource {
     return entries
         .map((entry) => entry.model.toJson(createdAt: entry.createdAt))
         .toList();
+  }
+
+  int _buildUniqueLocalId({
+    required DateTime createdAt,
+    required List<_PendingRideStorageEntry> entries,
+  }) {
+    final usedIds = entries.map((entry) => entry.model.id).toSet();
+    var candidate = -createdAt.microsecondsSinceEpoch;
+
+    while (usedIds.contains(candidate)) {
+      candidate -= 1;
+    }
+
+    return candidate;
   }
 }
 

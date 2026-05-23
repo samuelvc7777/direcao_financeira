@@ -267,8 +267,24 @@ class SubscriptionController extends GetxController {
   }
 
   String planPriceLabel(PlanEntity plan) {
-    return storeProductForPlan(plan)?.priceLabel ??
+    final product = storeProductForPlan(plan);
+    return product?.recurringPriceLabel ??
+        product?.priceLabel ??
         formatPrice(plan.priceCents);
+  }
+
+  String planBillingLabel(PlanEntity plan) {
+    final price = planPriceLabel(plan);
+    final trialLabel = storeProductForPlan(plan)?.trialLabel;
+    if (trialLabel == null) {
+      return '$price / ${plan.durationDays} dias';
+    }
+
+    return 'Depois $price / ${plan.durationDays} dias';
+  }
+
+  String? planTrialLabel(PlanEntity plan) {
+    return storeProductForPlan(plan)?.trialLabel;
   }
 
   bool hasStoreProductForPlan(PlanEntity plan) {
@@ -302,8 +318,12 @@ class SubscriptionController extends GetxController {
       return 'ALTERAR PLANO';
     }
 
-    return isCurrentPlan(plan)
-        ? 'RENOVAR NA PLAY STORE'
+    if (isCurrentPlan(plan)) {
+      return 'RENOVAR NA PLAY STORE';
+    }
+
+    return storeProductForPlan(plan)?.hasFreeTrial == true
+        ? 'COMECAR TESTE GRATIS'
         : 'ASSINAR NA PLAY STORE';
   }
 
@@ -416,9 +436,7 @@ class SubscriptionController extends GetxController {
         );
       },
       (products) {
-        storeProductsById.assignAll({
-          for (final product in products) product.productId: product,
-        });
+        storeProductsById.assignAll(_selectPreferredStoreProducts(products));
         debugPrint(
           '[SubscriptionController] _loadStoreCatalog -> produtos retornados=${storeProductsById.keys.toList()}',
         );
@@ -446,6 +464,32 @@ class SubscriptionController extends GetxController {
       },
     );
     isStoreCatalogLoading.value = false;
+  }
+
+  Map<String, StoreProductEntity> _selectPreferredStoreProducts(
+    List<StoreProductEntity> products,
+  ) {
+    final preferredById = <String, StoreProductEntity>{};
+    for (final product in products) {
+      final current = preferredById[product.productId];
+      if (current == null || _isBetterStoreProduct(product, current)) {
+        preferredById[product.productId] = product;
+      }
+    }
+    return preferredById;
+  }
+
+  bool _isBetterStoreProduct(
+    StoreProductEntity candidate,
+    StoreProductEntity current,
+  ) {
+    final candidateTrialDays = candidate.trialDays ?? 0;
+    final currentTrialDays = current.trialDays ?? 0;
+    if (candidateTrialDays != currentTrialDays) {
+      return candidateTrialDays > currentTrialDays;
+    }
+
+    return candidate.rawPrice < current.rawPrice;
   }
 
   void _listenToPurchaseUpdates() {

@@ -555,6 +555,7 @@ class _PlanOptionCard extends StatelessWidget {
     final cs = context.theme.colorScheme;
     final color = _planColor(plan);
     final hasStoreProduct = controller.hasStoreProductForPlan(plan);
+    final trialLabel = controller.planTrialLabel(plan);
 
     return Material(
       color: Colors.transparent,
@@ -613,8 +614,12 @@ class _PlanOptionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
+              if (trialLabel != null) ...[
+                _InlineStatus(label: trialLabel, color: AppColors.emerald),
+                const SizedBox(height: 10),
+              ],
               Text(
-                '${controller.planPriceLabel(plan)} / ${plan.durationDays} dias',
+                controller.planBillingLabel(plan),
                 style: TextStyle(
                   color: color,
                   fontSize: 16,

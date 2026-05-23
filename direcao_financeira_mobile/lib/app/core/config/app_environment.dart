@@ -24,7 +24,6 @@ class AppEnvironment {
     required this.supabaseUrl,
     required this.supabaseAnonKey,
     required this.enableRealtime,
-    this.openRouteServiceApiKey = '',
     this.googleMapsApiKey = '',
   });
 
@@ -33,7 +32,6 @@ class AppEnvironment {
   final String supabaseUrl;
   final String supabaseAnonKey;
   final bool enableRealtime;
-  final String openRouteServiceApiKey;
   final String googleMapsApiKey;
 
   factory AppEnvironment.fromDartDefines() {
@@ -63,9 +61,6 @@ class AppEnvironment {
             defaultValue: 'true',
           ) ==
           'true',
-      openRouteServiceApiKey: const String.fromEnvironment(
-        'OPENROUTESERVICE_API_KEY',
-      ),
       googleMapsApiKey: const String.fromEnvironment(
         'GOOGLE_MAPS_API_KEY',
         defaultValue: 'AIzaSyAB51isR9aIJCirO0YowxRujWA9S2VKokk',

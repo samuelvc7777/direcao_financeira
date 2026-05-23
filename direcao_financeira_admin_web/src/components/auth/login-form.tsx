@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import { ModeToggle } from '../mode-toggle';
 import { useRouter } from 'next/navigation';
-import { fetchApi } from '@/lib/api/client';
+import { fetchApi, hasValidSession } from '@/lib/api/client';
 
 export function LoginForm() {
   const router = useRouter();
@@ -18,11 +18,24 @@ export function LoginForm() {
 
   // Redireciona se já estiver logado
   React.useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      router.push('/');
+    let mounted = true;
+
+    async function redirectIfAuthenticated() {
+      try {
+        const hasSession = await hasValidSession();
+        if (mounted && hasSession) {
+          router.push('/');
+        }
+      } catch {
+        localStorage.removeItem('token');
+      }
     }
+
+    void redirectIfAuthenticated();
+
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

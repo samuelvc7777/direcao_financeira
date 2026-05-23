@@ -65,6 +65,9 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGUMENTS", "Runtime state data is null", null)
                     }
                 }
+                "consumePendingDetectedRides" -> {
+                    result.success(ScreenReaderService.consumePendingDetectedRides(this))
+                }
                 else -> {
                     result.notImplemented()
                 }

@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
@@ -200,9 +197,9 @@ class ShiftRouteContent extends GetView<ShiftRouteController> {
   }
 }
 
-// ── Smart Map Canvas (Garante que a linha passe pelas ruas da malha) ─────────────────────────
+// ── Smart Map Canvas ─────────────────────────
 
-class _MapCanvas extends StatefulWidget {
+class _MapCanvas extends StatelessWidget {
   final List<LatLng> rawPoints;
   final LatLng center;
   final bool isFullScreen;
@@ -214,88 +211,11 @@ class _MapCanvas extends StatefulWidget {
   });
 
   @override
-  State<_MapCanvas> createState() => _MapCanvasState();
-}
-
-class _MapCanvasState extends State<_MapCanvas> {
-  List<LatLng> _displayPoints = [];
-  bool _isLoadingRoute = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _displayPoints = widget.rawPoints.toList();
-    _fetchRoadSnappedRoute();
-  }
-
-  // Utiliza a OSRM API grátis para traçar a linha realística (curvas, formato da rua)
-  Future<void> _fetchRoadSnappedRoute() async {
-    if (widget.rawPoints.length < 2) {
-      setState(() => _isLoadingRoute = false);
-      return;
-    }
-
-    try {
-      // OSRM não suporta muitas coordenadas de uma vez, vamos amostrar no máximo 25 pontos guia
-      final sampled = <LatLng>[];
-      int step = (widget.rawPoints.length / 25).ceil();
-      if (step < 1) step = 1;
-
-      for (int i = 0; i < widget.rawPoints.length; i += step) {
-        sampled.add(widget.rawPoints[i]);
-      }
-      if (sampled.last != widget.rawPoints.last) {
-        sampled.add(widget.rawPoints.last);
-      }
-
-      final coords = sampled
-          .map((p) => '${p.longitude},${p.latitude}')
-          .join(';');
-      final url = Uri.parse(
-        'https://router.project-osrm.org/route/v1/driving/$coords?geometries=geojson&overview=full',
-      );
-
-      final request = await HttpClient().getUrl(url);
-      final response = await request.close();
-
-      if (response.statusCode == 200) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        final data = json.decode(responseBody);
-
-        final routes = data['routes'] as List?;
-        if (routes != null && routes.isNotEmpty) {
-          final geometry = routes.first['geometry'];
-          final coordinates = geometry['coordinates'] as List;
-
-          final snappedPoints = coordinates
-              .map((c) => LatLng(c[1] as double, c[0] as double))
-              .toList();
-
-          if (mounted) {
-            setState(() {
-              _displayPoints = snappedPoints;
-              _isLoadingRoute = false;
-            });
-            return;
-          }
-        }
-      }
-    } catch (_) {
-      // Em caso de falha de conexão (offline), cai no catch e usa os pontos retos.
-    }
-
-    // Fallback: usar pontos em linha reta mesmo
-    if (mounted) {
-      setState(() => _isLoadingRoute = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         FlutterMap(
-          options: MapOptions(initialCenter: widget.center, initialZoom: 14.5),
+          options: MapOptions(initialCenter: center, initialZoom: 14.5),
           children: [
             TileLayer(
               urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
@@ -304,7 +224,7 @@ class _MapCanvasState extends State<_MapCanvas> {
             PolylineLayer(
               polylines: [
                 Polyline(
-                  points: _displayPoints,
+                  points: rawPoints,
                   strokeWidth: 6,
                   color: AppColors.royalBlue,
                   borderStrokeWidth: 2,
@@ -317,7 +237,7 @@ class _MapCanvasState extends State<_MapCanvas> {
             MarkerLayer(
               markers: [
                 Marker(
-                  point: widget.rawPoints.first,
+                  point: rawPoints.first,
                   width: 60,
                   height: 60,
                   child: const _ModernMarker(
@@ -326,7 +246,7 @@ class _MapCanvasState extends State<_MapCanvas> {
                   ),
                 ),
                 Marker(
-                  point: widget.rawPoints.last,
+                  point: rawPoints.last,
                   width: 60,
                   height: 60,
                   child: const _ModernMarker(
@@ -338,75 +258,23 @@ class _MapCanvasState extends State<_MapCanvas> {
             ),
           ],
         ),
-
-        // Indicador de "Desenhando rua" (opcional)
-        if (_isLoadingRoute && !widget.isFullScreen)
-          Positioned(
-            bottom: 16,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.royalBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Ajustando ao traçado...',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Botões de interface (FullScreen ou Close)
         Positioned(
-          top: widget.isFullScreen
-              ? MediaQuery.of(context).padding.top + 16
-              : 16,
-          right: widget.isFullScreen ? null : 16,
-          left: widget.isFullScreen ? 16 : null,
+          top: isFullScreen ? MediaQuery.of(context).padding.top + 16 : 16,
+          right: isFullScreen ? null : 16,
+          left: isFullScreen ? 16 : null,
           child: Material(
             color: AppColors.midnight.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () {
-                if (widget.isFullScreen) {
+                if (isFullScreen) {
                   Get.back();
                 } else {
                   Get.to(
                     () => _FullScreenMapPage(
-                      rawPoints: widget.rawPoints,
-                      center: widget.center,
+                      rawPoints: rawPoints,
+                      center: center,
                     ),
                     transition: Transition.fadeIn,
                   );
@@ -415,9 +283,7 @@ class _MapCanvasState extends State<_MapCanvas> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Icon(
-                  widget.isFullScreen
-                      ? Icons.close_rounded
-                      : Icons.fullscreen_rounded,
+                  isFullScreen ? Icons.close_rounded : Icons.fullscreen_rounded,
                   color: Colors.white,
                   size: 26,
                 ),
@@ -429,8 +295,6 @@ class _MapCanvasState extends State<_MapCanvas> {
     );
   }
 }
-
-// ── Widget FullScreenMapPage ─────────────────────────
 
 class _FullScreenMapPage extends StatelessWidget {
   final List<LatLng> rawPoints;

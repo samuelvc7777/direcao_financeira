@@ -268,17 +268,13 @@ class NinetyNineOcrParser {
             lines.firstOrNull {
                 val normalized = normalize(it)
                 normalized.contains("negocia") ||
-                    normalized.contains("entrega") ||
-                    normalized.contains("moto") ||
-                    normalized.contains("carro")
+                    normalized.contains("entrega")
             } ?: return null
 
         return line.split("•", "·").map { it.trim() }.firstOrNull {
             val normalized = normalize(it)
             normalized.contains("negocia") ||
-                normalized.contains("entrega") ||
-                normalized.contains("moto") ||
-                normalized.contains("carro")
+                normalized.contains("entrega")
         }
     }
 

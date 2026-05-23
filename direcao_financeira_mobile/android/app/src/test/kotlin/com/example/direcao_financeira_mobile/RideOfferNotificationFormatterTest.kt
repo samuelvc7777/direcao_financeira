@@ -24,13 +24,15 @@ class RideOfferNotificationFormatterTest {
                 detectedTimeText = "14:35",
             )
 
-        assertEquals("Corrida detectada - 99", content.title)
-        assertTrue(content.bigText.contains("Valor: R$ 23,50"))
-        assertTrue(content.bigText.contains("Cliente: Samuel"))
-        assertTrue(content.bigText.contains("Ganhos por km: R$ 4,70/km"))
-        assertTrue(content.bigText.contains("Hora: 14:35"))
-        assertTrue(content.bigText.contains("Origem: Rua A, 10"))
-        assertTrue(content.bigText.contains("Destino: Rua B, 20"))
+        assertEquals("Nova corrida - 99", content.title)
+        assertEquals("R$ 23,50 em 99", content.expandedTitle)
+        assertEquals("Detectada as 14:35", content.summaryText)
+        assertEquals("R$ 23,50 | 5,0 km em 18 min | R$ 4,70/km", content.contentText)
+        assertTrue(content.inboxLines.contains("Cliente: Samuel"))
+        assertTrue(content.inboxLines.contains("Rota: 5,0 km em 18 min"))
+        assertTrue(content.inboxLines.contains("Ganho/km: R$ 4,70/km"))
+        assertTrue(content.inboxLines.contains("Origem: Rua A, 10"))
+        assertTrue(content.inboxLines.contains("Destino: Rua B, 20"))
         assertTrue(content.hasOriginAction)
         assertTrue(content.hasDestinationAction)
     }
@@ -51,9 +53,9 @@ class RideOfferNotificationFormatterTest {
                 detectedTimeText = "09:10",
             )
 
-        assertTrue(content.bigText.contains("Cliente: Cliente nao informado"))
-        assertTrue(content.bigText.contains("Origem: Origem nao informada"))
-        assertTrue(content.bigText.contains("Destino: Destino nao informado"))
+        assertTrue(content.inboxLines.contains("Cliente: Cliente nao informado"))
+        assertTrue(content.inboxLines.contains("Origem: Origem nao informada"))
+        assertTrue(content.inboxLines.contains("Destino: Destino nao informado"))
         assertFalse(content.hasOriginAction)
         assertFalse(content.hasDestinationAction)
     }
@@ -71,7 +73,7 @@ class RideOfferNotificationFormatterTest {
                 detectedTimeText = "11:20",
             )
 
-        assertTrue(content.bigText.contains("Ganhos por km: R$ 0,00/km"))
+        assertTrue(content.inboxLines.contains("Ganho/km: R$ 0,00/km"))
     }
 
     @Test
@@ -87,7 +89,7 @@ class RideOfferNotificationFormatterTest {
                 detectedTimeText = "16:45",
             )
 
-        assertTrue(content.bigText.contains("Valor: R$ 23,50"))
-        assertTrue(content.bigText.contains("Ganhos por km: R$ 11,75/km"))
+        assertEquals("R$ 23,50 em 99", content.expandedTitle)
+        assertTrue(content.inboxLines.contains("Ganho/km: R$ 11,75/km"))
     }
 }

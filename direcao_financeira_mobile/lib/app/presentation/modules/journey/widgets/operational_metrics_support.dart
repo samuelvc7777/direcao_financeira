@@ -125,15 +125,11 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
         final margem = summary.margin;
         final isPositivo = summary.isPositive;
         final mainColor = isPositivo ? AppColors.emerald : AppColors.rose;
-        final gradientColors = isPositivo
-            ? [
-                AppColors.emerald.withValues(alpha: 0.15),
-                AppColors.emerald.withValues(alpha: 0.02),
-              ]
-            : [
-                AppColors.rose.withValues(alpha: 0.15),
-                AppColors.rose.withValues(alpha: 0.02),
-              ];
+        final grossColor = AppColors.emerald;
+        final grossGradientColors = [
+          grossColor.withValues(alpha: 0.15),
+          grossColor.withValues(alpha: 0.02),
+        ];
 
         return Column(
           children: [
@@ -141,7 +137,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: gradientColors,
+                  colors: grossGradientColors,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -150,7 +146,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                 ),
                 border: Border(
                   bottom: BorderSide(
-                    color: mainColor.withValues(alpha: 0.15),
+                    color: grossColor.withValues(alpha: 0.15),
                     width: 1,
                   ),
                 ),
@@ -167,15 +163,13 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                             Container(
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: mainColor.withValues(alpha: 0.12),
+                                color: grossColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Icon(
-                                isPositivo
-                                    ? Icons.savings_rounded
-                                    : Icons.money_off_rounded,
+                                Icons.trending_up_rounded,
                                 size: 12,
-                                color: mainColor,
+                                color: grossColor,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -204,7 +198,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: mainColor.withValues(
+                          color: grossColor.withValues(
                             alpha: isDark ? 0.12 : 0.10,
                           ),
                           borderRadius: BorderRadius.circular(16),
@@ -232,7 +226,7 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                             _formatCurrencyPtBr(ganhos),
                             maxLines: 1,
                             style: TextStyle(
-                              color: mainColor,
+                              color: colorScheme.onSurface,
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,
@@ -287,10 +281,13 @@ class _OperationalSummaryWidget extends GetView<JourneyController> {
                   children: [
                     Expanded(
                       child: _TopSummaryMetric(
-                        icon: Icons.trending_up_rounded,
-                        iconColor: AppColors.emerald,
+                        icon: isPositivo
+                            ? Icons.savings_rounded
+                            : Icons.money_off_rounded,
+                        iconColor: mainColor,
                         title: 'Lucro Líquido',
                         value: _formatCurrencyPtBr(lucro),
+                        valueColor: mainColor,
                       ),
                     ),
                     Container(
@@ -443,12 +440,14 @@ class _TopSummaryMetric extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.value,
+    this.valueColor,
   });
 
   final IconData icon;
   final Color iconColor;
   final String title;
   final String value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -482,7 +481,7 @@ class _TopSummaryMetric extends StatelessWidget {
           child: Text(
             value,
             style: TextStyle(
-              color: colorScheme.onSurface,
+              color: valueColor ?? colorScheme.onSurface,
               fontWeight: FontWeight.w700,
               fontSize: 12.5,
             ),

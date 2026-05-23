@@ -31,50 +31,7 @@ class AddressAutocompleteService {
       return const [];
     }
 
-    final freeSuggestions = await _searchNominatim(query);
-    if (freeSuggestions.isNotEmpty) {
-      return freeSuggestions;
-    }
-
     return _searchGooglePlaces(query);
-  }
-
-  Future<List<AddressSuggestion>> _searchNominatim(String query) async {
-    try {
-      final response = await _dio.get<List<dynamic>>(
-        'https://nominatim.openstreetmap.org/search',
-        queryParameters: {
-          'format': 'json',
-          'limit': '5',
-          'addressdetails': '1',
-          'countrycodes': 'br',
-          'accept-language': 'pt-BR,pt;q=0.9',
-          'q': _withLocalContext(query),
-        },
-      );
-
-      final data = response.data;
-      if (data == null) {
-        return const [];
-      }
-
-      return data
-          .whereType<Map>()
-          .map((item) => item['display_name']?.toString().trim() ?? '')
-          .where((description) => description.isNotEmpty)
-          .toSet()
-          .map(
-            (description) => AddressSuggestion(
-              description: description,
-              provider: 'gratuito',
-            ),
-          )
-          .toList();
-    } on DioException {
-      return const [];
-    } catch (_) {
-      return const [];
-    }
   }
 
   Future<List<AddressSuggestion>> _searchGooglePlaces(String query) async {

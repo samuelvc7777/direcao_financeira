@@ -9,6 +9,15 @@ type RequestOptions = RequestInit & {
   body?: BodyInit | null;
 };
 
+function clearStoredAuth() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
+
 function getSupabaseClient() {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase nao configurado. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
@@ -27,12 +36,29 @@ function getSupabaseClient() {
   return browserClient;
 }
 
-function getToken() {
-  if (typeof window === "undefined") {
-    return "";
+async function getAccessToken() {
+  const supabase = getSupabaseClient();
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) {
+    clearStoredAuth();
+    throw new Error(error.message);
   }
 
-  return localStorage.getItem("token") ?? "";
+  const token = session?.access_token ?? "";
+
+  if (typeof window !== "undefined") {
+    if (token) {
+      localStorage.setItem("token", token);
+    } else {
+      localStorage.removeItem("token");
+    }
+  }
+
+  return token;
 }
 
 async function parseResponse(response: Response) {
@@ -47,7 +73,7 @@ async function parseResponse(response: Response) {
 }
 
 async function requestApi(endpoint: string, options: RequestOptions = {}) {
-  const token = getToken();
+  const token = await getAccessToken();
   const response = await fetch(`/api${endpoint}`, {
     ...options,
     headers: {
@@ -62,9 +88,15 @@ async function requestApi(endpoint: string, options: RequestOptions = {}) {
 
 export async function signOut() {
   const { error } = await getSupabaseClient().auth.signOut();
+  clearStoredAuth();
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function hasValidSession() {
+  const token = await getAccessToken();
+  return Boolean(token);
 }
 
 export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
@@ -81,9 +113,7 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
     }
 
     const token = data.session?.access_token ?? "";
-    if (typeof window !== "undefined") {
-      localStorage.setItem("token", token);
-    }
+    await getAccessToken();
 
     const user = await requestApi("/auth/me");
     return {

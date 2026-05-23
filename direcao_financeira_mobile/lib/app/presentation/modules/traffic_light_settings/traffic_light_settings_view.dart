@@ -403,7 +403,10 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
                         padding: EdgeInsets.only(
                           right: name == activeIndicators.last
                               ? 0
-                              : Responsive.sp(context, 8),
+                              : Responsive.sp(
+                                  context,
+                                  activeIndicators.length > 3 ? 4 : 8,
+                                ),
                         ),
                         child: _buildMockMetric(
                           context,
@@ -529,7 +532,7 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
         ),
         SizedBox(height: Responsive.vp(context, 0.35)),
         Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
@@ -541,18 +544,25 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
               ),
             ),
             SizedBox(width: Responsive.sp(context, 6)),
-            Flexible(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: theme.primaryTextColor,
-                  fontSize: Responsive.sp(
-                    context,
-                    _scaledFont(baseFontSize, 0.74),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      color: theme.primaryTextColor,
+                      fontSize: Responsive.sp(
+                        context,
+                        _scaledFont(baseFontSize, 0.74),
+                      ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),

@@ -55,6 +55,13 @@ class DisplayedTransactionEntry {
 
   DateTime get transactionDate => transaction.transactionDate;
 
+  bool get isCardOrRecurring {
+    return transaction.assetType == AssetType.creditCard ||
+        pairedTransaction?.assetType == AssetType.creditCard ||
+        transaction.recurrenceGroupId != null ||
+        pairedTransaction?.recurrenceGroupId != null;
+  }
+
   bool get affectsBalance =>
       transaction.status == TransactionStatus.cleared &&
       (pairedTransaction?.status ?? TransactionStatus.cleared) ==
@@ -121,6 +128,7 @@ class TransactionsController extends GetxController {
   final activeCards = <CreditCardEntity>[].obs;
   final selectedFilter = TransactionsFilter.all.obs;
   final selectedMonth = DateTime(DateTime.now().year, DateTime.now().month).obs;
+  final isCardRecurringSectionExpanded = false.obs;
   Worker? _dashboardRefreshWorker;
 
   @override
@@ -238,6 +246,16 @@ class TransactionsController extends GetxController {
   List<DisplayedTransactionEntry> get displayedMonthTransactions =>
       _buildDisplayedTransactions(monthTransactions);
 
+  List<DisplayedTransactionEntry> get cardRecurringVisibleTransactions =>
+      visibleTransactions
+          .where((transaction) => transaction.isCardOrRecurring)
+          .toList();
+
+  List<DisplayedTransactionEntry> get normalVisibleTransactions =>
+      visibleTransactions
+          .where((transaction) => !transaction.isCardOrRecurring)
+          .toList();
+
   int get totalIncomeCents => displayedMonthTransactions
       .where(
         (transaction) =>
@@ -278,10 +296,22 @@ class TransactionsController extends GetxController {
     'pt_BR',
   ).format(selectedMonth.value).toUpperCase();
 
+  List<TransactionsDayGroup> get groupedCardRecurringVisibleTransactions =>
+      _groupTransactionsByDay(cardRecurringVisibleTransactions);
+
+  List<TransactionsDayGroup> get groupedNormalVisibleTransactions =>
+      _groupTransactionsByDay(normalVisibleTransactions);
+
   List<TransactionsDayGroup> get groupedVisibleTransactions {
+    return _groupTransactionsByDay(visibleTransactions);
+  }
+
+  List<TransactionsDayGroup> _groupTransactionsByDay(
+    List<DisplayedTransactionEntry> source,
+  ) {
     final buckets = <DateTime, List<DisplayedTransactionEntry>>{};
 
-    for (final transaction in visibleTransactions) {
+    for (final transaction in source) {
       final day = DateTime(
         transaction.transactionDate.year,
         transaction.transactionDate.month,
@@ -312,6 +342,12 @@ class TransactionsController extends GetxController {
 
   void changeFilter(TransactionsFilter filter) {
     selectedFilter.value = filter;
+    isCardRecurringSectionExpanded.value = false;
+  }
+
+  void toggleCardRecurringSection() {
+    isCardRecurringSectionExpanded.value =
+        !isCardRecurringSectionExpanded.value;
   }
 
   Future<void> goToPreviousMonth() async {
@@ -319,6 +355,7 @@ class TransactionsController extends GetxController {
       selectedMonth.value.year,
       selectedMonth.value.month - 1,
     );
+    isCardRecurringSectionExpanded.value = false;
     await loadData(silent: true);
   }
 
@@ -327,6 +364,7 @@ class TransactionsController extends GetxController {
       selectedMonth.value.year,
       selectedMonth.value.month + 1,
     );
+    isCardRecurringSectionExpanded.value = false;
     await loadData(silent: true);
   }
 

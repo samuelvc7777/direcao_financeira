@@ -8,7 +8,9 @@ data class RideOfferNotificationContent(
     val notificationId: Int,
     val title: String,
     val contentText: String,
-    val bigText: String,
+    val expandedTitle: String,
+    val summaryText: String,
+    val inboxLines: List<String>,
     val originAddress: String?,
     val destinationAddress: String?,
 ) {
@@ -20,6 +22,8 @@ data class RideOfferNotificationContent(
 }
 
 object RideOfferNotificationFormatter {
+    private val brazilianLocale = Locale.forLanguageTag("pt-BR")
+
     fun format(
         data: Map<String, Any>,
         detectedTimeText: String = currentTimeText(),
@@ -29,39 +33,45 @@ object RideOfferNotificationFormatter {
             ?: "App"
         val grossValue = parseCurrencyToDouble(data["valor_bruto"])
         val totalKm = parseDistanceKm(data["km_total"])
+        val totalMinutes = parseTotalMinutes(data["minutos_total"])
         val passengerName = resolveText(data["passenger_name"]) ?: "Cliente nao informado"
         val originAddress = resolveMapAddress(data["origin_address"])
         val destinationAddress = resolveMapAddress(data["destination_address"])
         val valueText = formatCurrency(grossValue)
         val gainPerKmText = formatCurrency(if (totalKm > 0.0) grossValue / totalKm else 0.0) + "/km"
+        val distanceText = if (totalKm > 0.0) formatDistance(totalKm) else "Distancia nao informada"
+        val durationText = if (totalMinutes > 0) "${totalMinutes} min" else "Tempo nao informado"
 
         val displayOrigin = originAddress ?: "Origem nao informada"
         val displayDestination = destinationAddress ?: "Destino nao informado"
-        val title = "Corrida detectada - $appName"
-        val contentText = "$valueText | $passengerName | $gainPerKmText"
-        val bigText =
+        val title = "Nova corrida - $appName"
+        val expandedTitle = "$valueText em $appName"
+        val summaryText = "Detectada as $detectedTimeText"
+        val routeText = "$distanceText em $durationText"
+        val contentText = "$valueText | $routeText | $gainPerKmText"
+        val inboxLines =
             listOf(
-                "App: $appName",
-                "Valor: $valueText",
                 "Cliente: $passengerName",
-                "Ganhos por km: $gainPerKmText",
-                "Hora: $detectedTimeText",
+                "Rota: $routeText",
+                "Ganho/km: $gainPerKmText",
                 "Origem: $displayOrigin",
                 "Destino: $displayDestination",
-            ).joinToString("\n")
+            )
 
         return RideOfferNotificationContent(
             notificationId = buildNotificationId(data),
             title = title,
             contentText = contentText,
-            bigText = bigText,
+            expandedTitle = expandedTitle,
+            summaryText = summaryText,
+            inboxLines = inboxLines,
             originAddress = originAddress,
             destinationAddress = destinationAddress,
         )
     }
 
     private fun currentTimeText(): String {
-        return SimpleDateFormat("HH:mm", Locale("pt", "BR")).format(Date())
+        return SimpleDateFormat("HH:mm", brazilianLocale).format(Date())
     }
 
     private fun buildNotificationId(data: Map<String, Any>): Int {
@@ -90,7 +100,7 @@ object RideOfferNotificationFormatter {
 
     private fun resolveMapAddress(rawValue: Any?): String? {
         val text = resolveText(rawValue) ?: return null
-        val normalized = text.lowercase(Locale("pt", "BR"))
+        val normalized = text.lowercase(brazilianLocale)
         if (normalized == "origem nao informada" || normalized == "destino nao informado") {
             return null
         }
@@ -104,6 +114,15 @@ object RideOfferNotificationFormatter {
 
         val text = rawValue?.toString()?.trim()?.replace(",", ".") ?: return 0.0
         return text.toDoubleOrNull() ?: 0.0
+    }
+
+    private fun parseTotalMinutes(rawValue: Any?): Int {
+        if (rawValue is Number) {
+            return rawValue.toInt()
+        }
+
+        val text = rawValue?.toString()?.trim() ?: return 0
+        return text.toIntOrNull() ?: 0
     }
 
     private fun parseCurrencyToDouble(rawValue: Any?): Double {
@@ -128,6 +147,10 @@ object RideOfferNotificationFormatter {
     }
 
     private fun formatCurrency(value: Double): String {
-        return "R$ " + String.format(Locale("pt", "BR"), "%.2f", value)
+        return "R$ " + String.format(brazilianLocale, "%.2f", value)
+    }
+
+    private fun formatDistance(value: Double): String {
+        return String.format(brazilianLocale, "%.1f km", value)
     }
 }

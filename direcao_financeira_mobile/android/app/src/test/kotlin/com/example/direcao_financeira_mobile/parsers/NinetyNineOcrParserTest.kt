@@ -60,4 +60,34 @@ class NinetyNineOcrParserTest {
             offerData?.get("destination_address"),
         )
     }
+
+    @Test
+    fun `nao trata endereco com carros como tipo de corrida da 99`() {
+        val lines =
+            listOf(
+                "Pagamento no app",
+                "R$16,40",
+                "R$2,78/km",
+                "5,00 · 4 corridas",
+                "Perfil Essencial",
+                "6min (2,3km)",
+                "R. Imigrante Marcos Davim, 267 - Nascente do Sol (Colônia do Marçal)",
+                "8min (3,6km)",
+                "Localiza Aluguel de Carros, Avenida Leite de Castro, 737 - Fábricas",
+            )
+
+        val rawText = lines.joinToString("\n")
+        val offerData = parser.parseOffer(rawText, lines)
+
+        assertNotNull(offerData)
+        assertEquals(
+            "R. Imigrante Marcos Davim, 267 - Nascente do Sol (Colônia do Marçal)",
+            offerData?.get("origin_address"),
+        )
+        assertEquals(
+            "Localiza Aluguel de Carros, Avenida Leite de Castro, 737 - Fábricas",
+            offerData?.get("destination_address"),
+        )
+        assertEquals("", offerData?.get("tipo_corrida"))
+    }
 }

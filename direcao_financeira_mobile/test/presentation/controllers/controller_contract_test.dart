@@ -1273,6 +1273,78 @@ void main() {
   );
 
   test(
+    'TransactionsController separa cartao e recorrentes das transacoes normais',
+    () async {
+      final transactionRepository = _FakeTransactionRepository()
+        ..transactions = [
+          buildTransaction(id: 1, date: DateTime(2026, 1, 10, 9)),
+          buildTransaction(
+            id: 2,
+            assetType: AssetType.creditCard,
+            bankAccountId: null,
+            creditCardId: 1,
+            date: DateTime(2026, 1, 12, 9),
+          ),
+          buildTransaction(
+            id: 3,
+            recurrenceGroupId: 'rec-1',
+            recurrenceNumber: 1,
+            recurrenceCount: 6,
+            date: DateTime(2026, 1, 11, 9),
+          ),
+        ];
+      final controller = TransactionsController(
+        createTransactionUseCase: CreateTransactionUseCase(
+          transactionRepository,
+        ),
+        updateTransactionUseCase: UpdateTransactionUseCase(
+          transactionRepository,
+        ),
+        deleteTransactionUseCase: DeleteTransactionUseCase(
+          transactionRepository,
+        ),
+        getTransactionsUseCase: GetTransactionsUseCase(transactionRepository),
+        getCategoriesUseCase: GetCategoriesUseCase(_FakeCategoryRepository()),
+        getBankAccountsUseCase: GetBankAccountsUseCase(
+          _FakeBankAccountRepository(),
+        ),
+        getCreditCardsUseCase: GetCreditCardsUseCase(
+          _FakeCreditCardRepository(),
+        ),
+        dashboardRefreshNotifier: DefaultDashboardRefreshNotifier(),
+      );
+
+      controller.selectedMonth.value = DateTime(2026, 1);
+      await controller.loadData();
+
+      expect(controller.isCardRecurringSectionExpanded.value, isFalse);
+      expect(
+        controller.cardRecurringVisibleTransactions.map(
+          (entry) => entry.transaction.id,
+        ),
+        [2, 3],
+      );
+      expect(
+        controller.normalVisibleTransactions.map(
+          (entry) => entry.transaction.id,
+        ),
+        [1],
+      );
+      expect(controller.groupedCardRecurringVisibleTransactions.length, 2);
+      expect(
+        controller.groupedNormalVisibleTransactions.single.transactions,
+        hasLength(1),
+      );
+
+      controller.toggleCardRecurringSection();
+      expect(controller.isCardRecurringSectionExpanded.value, isTrue);
+
+      controller.changeFilter(TransactionsFilter.expense);
+      expect(controller.isCardRecurringSectionExpanded.value, isFalse);
+    },
+  );
+
+  test(
     'SubscriptionController carrega assinatura, planos e catalogo da loja',
     () async {
       final repository = _FakeSubscriptionRepository()
@@ -1313,6 +1385,56 @@ void main() {
         isTrue,
       );
       expect(controller.canPurchaseSelectedPlan, isTrue);
+    },
+  );
+
+  test(
+    'SubscriptionController prioriza oferta com teste gratis e ajusta labels',
+    () async {
+      final repository = _FakeSubscriptionRepository()
+        ..plans = [buildPlan()]
+        ..products = [
+          buildStoreProduct(offerToken: 'base-offer'),
+          buildStoreProduct(
+            priceLabel: 'R\$ 0,00',
+            recurringPriceLabel: 'R\$ 25,00',
+            rawPrice: 0,
+            trialDays: 7,
+            trialLabel: '7 dias gratis',
+            offerToken: 'trial-offer',
+          ),
+        ];
+      final controller = SubscriptionController(
+        getMySubscriptionUseCase: GetMySubscriptionUseCase(repository),
+        getSubscriptionHistoryUseCase: GetSubscriptionHistoryUseCase(
+          repository,
+        ),
+        getAvailablePlansUseCase: GetAvailablePlansUseCase(repository),
+        changePlanUseCase: ChangePlanUseCase(repository),
+        syncStorePurchaseUseCase: SyncStorePurchaseUseCase(repository),
+        cancelSubscriptionUseCase: CancelSubscriptionUseCase(repository),
+        renewSubscriptionUseCase: RenewSubscriptionUseCase(repository),
+        syncStoredUserSubscriptionUseCase: SyncStoredUserSubscriptionUseCase(
+          repository,
+        ),
+        isStoreAvailableUseCase: IsStoreAvailableUseCase(repository),
+        getStoreProductsUseCase: GetStoreProductsUseCase(repository),
+        buyStoreProductUseCase: BuyStoreProductUseCase(repository),
+        restorePurchasesUseCase: RestorePurchasesUseCase(repository),
+        completePurchaseUseCase: CompletePurchaseUseCase(repository),
+        watchStorePurchaseUpdatesUseCase: WatchStorePurchaseUpdatesUseCase(
+          repository,
+        ),
+      );
+
+      await controller.loadData();
+
+      final plan = controller.selectedPlan!;
+      expect(controller.storeProductForPlan(plan)?.offerToken, 'trial-offer');
+      expect(controller.planTrialLabel(plan), '7 dias gratis');
+      expect(controller.planPriceLabel(plan), 'R\$ 25,00');
+      expect(controller.planBillingLabel(plan), 'Depois R\$ 25,00 / 30 dias');
+      expect(controller.ctaLabelForSelectedPlan(), 'COMECAR TESTE GRATIS');
     },
   );
 
@@ -1558,7 +1680,7 @@ void main() {
   );
 
   test(
-    'JourneyController reidrata turno e rastreamento quando app volta ao foreground',
+    'JourneyController reidrata turno e rastreamento quando aberto por fluxo externo',
     () async {
       final now = DateTime.now();
       final journeyRepository = _FakeJourneyRepository()
@@ -1604,7 +1726,7 @@ void main() {
           idleTimeSeconds: 0,
         );
 
-      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await controller.refreshRuntimeStateAfterForegroundOpen();
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 

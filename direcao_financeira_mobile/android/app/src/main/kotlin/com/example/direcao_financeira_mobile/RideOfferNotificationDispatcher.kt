@@ -17,6 +17,8 @@ import androidx.core.content.ContextCompat
 class RideOfferNotificationDispatcher(
     private val context: Context,
 ) {
+    private var lastNotificationId: Int? = null
+
     fun show(data: Map<String, Any>): Boolean {
         if (!canPostNotifications()) {
             debugLog("ride_offer_notification_permission_denied")
@@ -31,7 +33,15 @@ class RideOfferNotificationDispatcher(
                 .setSmallIcon(android.R.drawable.ic_dialog_map)
                 .setContentTitle(content.title)
                 .setContentText(content.contentText)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(content.bigText))
+                .setSubText(content.summaryText)
+                .setStyle(
+                    NotificationCompat.InboxStyle()
+                        .setBigContentTitle(content.expandedTitle)
+                        .setSummaryText(content.summaryText)
+                        .also { style ->
+                            content.inboxLines.forEach(style::addLine)
+                        },
+                )
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setAutoCancel(true)
@@ -42,7 +52,7 @@ class RideOfferNotificationDispatcher(
         if (content.hasOriginAction) {
             builder.addAction(
                 android.R.drawable.ic_dialog_map,
-                "Origem",
+                "Abrir origem",
                 buildMapsPendingIntent(
                     address = content.originAddress!!,
                     requestCode = content.notificationId + 1,
@@ -53,7 +63,7 @@ class RideOfferNotificationDispatcher(
         if (content.hasDestinationAction) {
             builder.addAction(
                 android.R.drawable.ic_dialog_map,
-                "Destino",
+                "Abrir destino",
                 buildMapsPendingIntent(
                     address = content.destinationAddress!!,
                     requestCode = content.notificationId + 2,
@@ -65,10 +75,23 @@ class RideOfferNotificationDispatcher(
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(content.notificationId, builder.build())
+            lastNotificationId = content.notificationId
             true
         }.getOrElse { error ->
             debugLog("ride_offer_notification_failure message=${error.message}")
             false
+        }
+    }
+
+    fun dismissLast() {
+        val notificationId = lastNotificationId ?: return
+        runCatching {
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(notificationId)
+            lastNotificationId = null
+        }.onFailure { error ->
+            debugLog("ride_offer_notification_cancel_failure message=${error.message}")
         }
     }
 

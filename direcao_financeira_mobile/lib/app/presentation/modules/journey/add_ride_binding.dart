@@ -17,8 +17,6 @@ class AddRideBinding extends Bindings {
         ),
         routeEstimator: RideRouteEstimator(
           googleMapsApiKey: Get.find<AppEnvironment>().googleMapsApiKey,
-          openRouteServiceApiKey:
-              Get.find<AppEnvironment>().openRouteServiceApiKey,
         ),
       ),
     );

@@ -77,7 +77,7 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Leitura MoveSJ com rota gratuita via OpenStreetMap/OSRM',
+                                    'Leitura MoveSJ com rota calculada pelo Google Maps',
                                     style: TextStyle(
                                       color: colorScheme.onSurfaceVariant,
                                       fontSize: Responsive.sp(

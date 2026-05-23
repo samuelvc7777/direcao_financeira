@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
@@ -41,6 +42,7 @@ class AccessibilityController extends GetxController
     checkServiceStatus();
     syncSettingsWithNative();
     syncRuntimeStateWithNative();
+    unawaited(_consumePendingDetectedRides());
   }
 
   @override
@@ -53,6 +55,7 @@ class AccessibilityController extends GetxController
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       refreshServiceStatus();
+      unawaited(_consumePendingDetectedRides());
     }
   }
 
@@ -60,12 +63,35 @@ class AccessibilityController extends GetxController
     _platform.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onRaceDetected':
-          _handleRaceDetected(call.arguments);
-          break;
+          await _handleRaceDetected(call.arguments);
+          return true;
         default:
           _debugLog('Metodo nao implementado: ${call.method}');
+          return null;
       }
     });
+  }
+
+  Future<void> _consumePendingDetectedRides() async {
+    try {
+      final rawItems = await _platform.invokeMethod<List<dynamic>>(
+        'consumePendingDetectedRides',
+      );
+      if (rawItems == null || rawItems.isEmpty) {
+        return;
+      }
+
+      for (final item in rawItems) {
+        if (item is! Map) {
+          continue;
+        }
+        await _handleRaceDetected(Map<String, dynamic>.from(item));
+      }
+    } on MissingPluginException {
+      // Em testes e plataformas sem o canal nativo, nao ha fila pendente.
+    } catch (error) {
+      developer.log('Erro ao consumir corridas pendentes nativas: $error');
+    }
   }
 
   @override
@@ -81,7 +107,7 @@ class AccessibilityController extends GetxController
         'position': settingsMap['position'] ?? storage.read('tl_position') ?? 0,
         'theme': settingsMap['theme'] ?? storage.read('tl_theme') ?? 1,
         'font_size':
-            settingsMap['fontSize'] ?? storage.read('tl_font_size') ?? 15.0,
+            settingsMap['fontSize'] ?? storage.read('tl_font_size') ?? 12.0,
         'opacity':
             settingsMap['opacity'] ?? storage.read('tl_opacity') ?? 100.0,
         'duration':
@@ -308,7 +334,7 @@ class AccessibilityController extends GetxController
 
     return DetectedRideDraftEntity(
       platformName: platformName,
-      detectedAt: DateTime.now(),
+      detectedAt: _resolveDetectedAt(data),
       paymentMethod: _mapPaymentMethod(data['forma_pagamento']),
       grossValueCents: grossValueCents,
       netProfitCents: 0,
@@ -327,6 +353,22 @@ class AccessibilityController extends GetxController
       destinationAddress: _resolveTextField(data['destination_address']),
       rideType: _resolveTextField(data['tipo_corrida']),
     );
+  }
+
+  DateTime _resolveDetectedAt(Map<String, dynamic> data) {
+    final epochMs = data['detected_at_epoch_ms'];
+    if (epochMs is int) {
+      return DateTime.fromMillisecondsSinceEpoch(epochMs).toLocal();
+    }
+    if (epochMs is num) {
+      return DateTime.fromMillisecondsSinceEpoch(epochMs.round()).toLocal();
+    }
+
+    final isoValue =
+        _resolveTextField(data['detected_at']) ??
+        _resolveTextField(data['created_at']);
+    final parsed = DateTime.tryParse(isoValue ?? '');
+    return parsed?.toLocal() ?? DateTime.now();
   }
 
   int _parseCurrencyToCents(dynamic rawValue) {

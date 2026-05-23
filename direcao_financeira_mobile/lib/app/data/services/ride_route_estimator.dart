@@ -13,68 +13,27 @@ class RideRouteEstimate {
 }
 
 class RideRouteEstimator {
-  RideRouteEstimator({
-    Dio? dio,
-    String? googleMapsApiKey,
-    String? openRouteServiceApiKey,
-  }) : _dio =
-           dio ??
-           Dio(
-             BaseOptions(
-               connectTimeout: const Duration(seconds: 8),
-               receiveTimeout: const Duration(seconds: 5),
-               headers: const {
-                 'User-Agent': 'DirecaoFinanceira/1.0 ride import',
-               },
-             ),
-           ),
-       _googleMapsApiKey = googleMapsApiKey?.trim() ?? '',
-       _openRouteServiceApiKey = openRouteServiceApiKey?.trim() ?? '';
+  RideRouteEstimator({Dio? dio, String? googleMapsApiKey})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 5),
+              headers: const {
+                'User-Agent': 'DirecaoFinanceira/1.0 ride import',
+              },
+            ),
+          ),
+      _googleMapsApiKey = googleMapsApiKey?.trim() ?? '';
 
   final Dio _dio;
   final String _googleMapsApiKey;
-  final String _openRouteServiceApiKey;
 
   Future<RideRouteEstimate?> estimate({
     required String originAddress,
     required String destinationAddress,
   }) async {
-    _GeoPoint? origin;
-    _GeoPoint? destination;
-    try {
-      final points = await Future.wait([
-        _geocode(originAddress),
-        _geocode(destinationAddress),
-      ]);
-      origin = points[0];
-      destination = points[1];
-    } catch (_) {
-      origin = null;
-      destination = null;
-    }
-    if (origin == null || destination == null) {
-      return _estimateWithGoogleDirections(
-        originAddress: originAddress,
-        destinationAddress: destinationAddress,
-      );
-    }
-
-    final openRouteServiceEstimate = await _estimateWithOpenRouteService(
-      origin: origin,
-      destination: destination,
-    );
-    if (openRouteServiceEstimate != null) {
-      return openRouteServiceEstimate;
-    }
-
-    final osrmEstimate = await _estimateWithOsrm(
-      origin: origin,
-      destination: destination,
-    );
-    if (osrmEstimate != null) {
-      return osrmEstimate;
-    }
-
     return _estimateWithGoogleDirections(
       originAddress: originAddress,
       destinationAddress: destinationAddress,
@@ -138,117 +97,6 @@ class RideRouteEstimator {
     return null;
   }
 
-  Future<RideRouteEstimate?> _estimateWithOpenRouteService({
-    required _GeoPoint origin,
-    required _GeoPoint destination,
-  }) async {
-    if (_openRouteServiceApiKey.isEmpty) {
-      return null;
-    }
-
-    Response<Map<String, dynamic>> response;
-    try {
-      response = await _dio.post<Map<String, dynamic>>(
-        'https://api.openrouteservice.org/v2/directions/driving-car',
-        options: Options(headers: {'Authorization': _openRouteServiceApiKey}),
-        data: {
-          'coordinates': [
-            [origin.longitude, origin.latitude],
-            [destination.longitude, destination.latitude],
-          ],
-        },
-      );
-    } on DioException {
-      return null;
-    } catch (_) {
-      return null;
-    }
-    final routes = response.data?['routes'];
-    if (routes is! List || routes.isEmpty || routes.first is! Map) {
-      return null;
-    }
-
-    final route = Map<String, dynamic>.from(routes.first as Map);
-    final summary = route['summary'];
-    if (summary is! Map) {
-      return null;
-    }
-
-    return _estimateFromMetersAndSeconds(
-      distanceMeters: (summary['distance'] as num?)?.toDouble(),
-      durationSeconds: (summary['duration'] as num?)?.toDouble(),
-      provider: 'OpenRouteService',
-    );
-  }
-
-  Future<RideRouteEstimate?> _estimateWithOsrm({
-    required _GeoPoint origin,
-    required _GeoPoint destination,
-  }) async {
-    final url =
-        'https://router.project-osrm.org/route/v1/driving/'
-        '${origin.longitude},${origin.latitude};'
-        '${destination.longitude},${destination.latitude}';
-    final response = await _dio.get<Map<String, dynamic>>(
-      url,
-      queryParameters: const {'overview': 'false'},
-    );
-    final routes = response.data?['routes'];
-    if (routes is! List || routes.isEmpty || routes.first is! Map) {
-      return null;
-    }
-
-    final route = Map<String, dynamic>.from(routes.first as Map);
-    final distanceMeters = (route['distance'] as num?)?.toDouble();
-    final durationSeconds = (route['duration'] as num?)?.toDouble();
-    if (distanceMeters == null || durationSeconds == null) {
-      return null;
-    }
-
-    return _estimateFromMetersAndSeconds(
-      distanceMeters: distanceMeters,
-      durationSeconds: durationSeconds,
-      provider: 'OSRM gratuito',
-    );
-  }
-
-  Future<_GeoPoint?> _geocode(String address) async {
-    for (final query in _geocodeQueries(address)) {
-      Response<List<dynamic>> response;
-      try {
-        response = await _dio.get<List<dynamic>>(
-          'https://nominatim.openstreetmap.org/search',
-          queryParameters: {
-            'format': 'json',
-            'limit': '1',
-            'addressdetails': '1',
-            'countrycodes': 'br',
-            'accept-language': 'pt-BR,pt;q=0.9',
-            'q': query,
-          },
-        );
-      } on DioException {
-        continue;
-      } catch (_) {
-        continue;
-      }
-
-      final data = response.data;
-      if (data == null || data.isEmpty || data.first is! Map) {
-        continue;
-      }
-
-      final first = Map<String, dynamic>.from(data.first as Map);
-      final latitude = double.tryParse(first['lat']?.toString() ?? '');
-      final longitude = double.tryParse(first['lon']?.toString() ?? '');
-      if (latitude != null && longitude != null) {
-        return _GeoPoint(latitude: latitude, longitude: longitude);
-      }
-    }
-
-    return null;
-  }
-
   RideRouteEstimate? _estimateFromMetersAndSeconds({
     required double? distanceMeters,
     required double? durationSeconds,
@@ -263,36 +111,6 @@ class RideRouteEstimator {
       durationMinutes: (durationSeconds / 60).round().clamp(1, 9999),
       provider: provider,
     );
-  }
-
-  List<String> _geocodeQueries(String address) {
-    final cleaned = _normalizeAddress(address);
-    final streetCandidate = _extractStreetCandidate(cleaned);
-    final establishmentCandidate = cleaned.split(RegExp(r'\s+-\s+')).first;
-    final withoutParentheses = cleaned
-        .replaceAll(RegExp(r'\([^)]*\)'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    final withoutReferences = withoutParentheses
-        .replaceAll(
-          RegExp(
-            r'\b(proximo|em frente|ao lado|fundos|entrada)\b.*',
-            caseSensitive: false,
-          ),
-          '',
-        )
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    final queries = <String>[
-      streetCandidate,
-      '$streetCandidate, Sao Joao del Rei, MG, Brasil',
-      establishmentCandidate,
-      '$establishmentCandidate, Sao Joao del Rei, MG, Brasil',
-      withoutReferences,
-      '$withoutReferences, Sao Joao del Rei, MG, Brasil',
-    ];
-
-    return queries.where((query) => query.isNotEmpty).toSet().toList();
   }
 
   String _googleAddressQuery(String address) {
@@ -360,11 +178,4 @@ class RideRouteEstimator {
         .replaceAll(RegExp(r'\bSao\b', caseSensitive: false), 'Sao')
         .trim();
   }
-}
-
-class _GeoPoint {
-  const _GeoPoint({required this.latitude, required this.longitude});
-
-  final double latitude;
-  final double longitude;
 }
