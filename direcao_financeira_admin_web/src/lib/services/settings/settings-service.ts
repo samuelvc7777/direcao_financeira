@@ -12,6 +12,12 @@ export interface SettingsUser {
   companyPhone?: string | null;
 }
 
+export interface CompanySettings {
+  id: number;
+  supportPhone?: string | null;
+  googleApiKey?: string | null;
+}
+
 export interface SettingsPreferences {
   theme: "system" | "light" | "dark";
   locale: "pt-BR" | "en-US";
@@ -31,6 +37,27 @@ export async function saveCompanyPhone(userId: string, companyPhone: string): Pr
     return successFeedback("Numero da empresa atualizado com sucesso.");
   } catch (error) {
     return errorFeedback(error instanceof Error ? error.message : "Erro ao salvar numero da empresa.");
+  }
+}
+
+export async function loadCompanySettings(): Promise<CompanySettings> {
+  return (await fetchApi("/admin/company-settings")) as CompanySettings;
+}
+
+export async function saveGoogleApiKey(googleApiKey: string): Promise<ActionFeedback> {
+  const trimmed = googleApiKey.trim();
+  if (!trimmed) {
+    return errorFeedback("Informe uma API Google valida.");
+  }
+
+  try {
+    await fetchApi("/admin/company-settings", {
+      method: "PATCH",
+      body: JSON.stringify({ googleApiKey: trimmed }),
+    });
+    return successFeedback("API Google salva com sucesso.");
+  } catch (error) {
+    return errorFeedback(error instanceof Error ? error.message : "Erro ao salvar API Google.");
   }
 }
 

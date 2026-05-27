@@ -14,8 +14,9 @@ import { NotificationSettingsCard } from "@/components/settings/preferences/noti
 import { IntegrationsSettingsCard } from "@/components/settings/operations/integrations-settings-card";
 import { SystemSettingsCard } from "@/components/settings/operations/system-settings-card";
 import { SupportSettingsCard } from "@/components/settings/operations/support-settings-card";
+import { GoogleApiSettingsCard } from "@/components/settings/operations/google-api-settings-card";
 import { idleFeedback, loadingFeedback } from "@/lib/services/settings/settings-feedback";
-import { loadCurrentUser, loadPreferences, saveCompanyPhone, savePreferences, type SettingsPreferences, type SettingsUser } from "@/lib/services/settings/settings-service";
+import { loadCompanySettings, loadCurrentUser, loadPreferences, saveCompanyPhone, saveGoogleApiKey, savePreferences, type SettingsPreferences, type SettingsUser } from "@/lib/services/settings/settings-service";
 import type { ActionFeedback } from "@/lib/services/settings/types";
 
 function toWhatsappUrl(phone: string) {
@@ -28,16 +29,24 @@ export default function SettingsPage() {
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyPhone, setCompanyPhone] = useState("");
+  const [googleApiKey, setGoogleApiKey] = useState("");
   const [preferences, setPreferences] = useState<SettingsPreferences>({ theme: "system", locale: "pt-BR", billingNotifications: true });
   const [profileFeedback, setProfileFeedback] = useState<ActionFeedback>(idleFeedback());
+  const [googleApiFeedback, setGoogleApiFeedback] = useState<ActionFeedback>(idleFeedback());
   const [preferencesFeedback, setPreferencesFeedback] = useState<ActionFeedback>(idleFeedback());
+  const [savingGoogleApi, setSavingGoogleApi] = useState(false);
 
   useEffect(() => {
     async function run() {
       try {
-        const [me, localPrefs] = await Promise.all([loadCurrentUser(), Promise.resolve(loadPreferences())]);
+        const [me, localPrefs, companySettings] = await Promise.all([
+          loadCurrentUser(),
+          Promise.resolve(loadPreferences()),
+          loadCompanySettings(),
+        ]);
         setUser(me);
         setCompanyPhone(me.companyPhone ?? "");
+        setGoogleApiKey(companySettings.googleApiKey ?? "");
         setPreferences(localPrefs);
       } finally {
         setLoading(false);
@@ -51,6 +60,15 @@ export default function SettingsPage() {
     setProfileFeedback(loadingFeedback());
     const result = await saveCompanyPhone(user.id, companyPhone);
     setProfileFeedback(result);
+  }
+
+  async function handleSaveGoogleApiKey() {
+    if (savingGoogleApi) return;
+    setSavingGoogleApi(true);
+    setGoogleApiFeedback(loadingFeedback());
+    const result = await saveGoogleApiKey(googleApiKey);
+    setGoogleApiFeedback(result);
+    setSavingGoogleApi(false);
   }
 
   function handleSavePreferences() {
@@ -96,6 +114,13 @@ export default function SettingsPage() {
         </SettingsSectionCard>
 
         <SettingsSectionCard title="Integracoes, sistema e suporte" description="Operacao do ambiente e canais de ajuda.">
+          <GoogleApiSettingsCard
+            value={googleApiKey}
+            onChange={setGoogleApiKey}
+            onSave={handleSaveGoogleApiKey}
+            feedback={googleApiFeedback}
+            saving={savingGoogleApi}
+          />
           <div className="grid gap-4 md:grid-cols-3">
             <IntegrationsSettingsCard />
             <SystemSettingsCard />

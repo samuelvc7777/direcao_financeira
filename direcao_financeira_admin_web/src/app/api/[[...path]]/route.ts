@@ -9,6 +9,7 @@ import {
   deletePlan,
   deleteUser,
   getDashboard,
+  getCompanySettings,
   getUserById,
   listHelpVideos,
   listPlans,
@@ -17,6 +18,7 @@ import {
   requireAdminFromToken,
   updateHelpVideo,
   updatePlan,
+  updateCompanySettings,
   updateUser,
 } from "@/lib/api/server";
 import type { HelpVideo } from "@/lib/subscriptions";
@@ -68,6 +70,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (endpoint === "/admin/help-videos") {
       return NextResponse.json(await listHelpVideos());
+    }
+    if (endpoint === "/admin/company-settings") {
+      return NextResponse.json(await getCompanySettings());
     }
 
     const userMatch = endpoint.match(/^\/user\/(\d+)$/);
@@ -140,6 +145,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const helpVideoMatch = endpoint.match(/^\/admin\/help-videos\/(\d+)$/);
     if (helpVideoMatch) {
       return NextResponse.json(await updateHelpVideo(Number(helpVideoMatch[1]), payload as Partial<HelpVideo>));
+    }
+    if (endpoint === "/admin/company-settings") {
+      const rawGoogleApiKey = String(payload.googleApiKey ?? "");
+      const googleApiKey = rawGoogleApiKey.trim();
+      if (!googleApiKey) {
+        throw new Error("Informe uma API Google valida.");
+      }
+
+      return NextResponse.json(
+        await updateCompanySettings({
+          googleApiKey,
+        }),
+      );
     }
 
     return jsonError(new Error(`Endpoint nao mapeado: PATCH ${endpoint}`), 404);

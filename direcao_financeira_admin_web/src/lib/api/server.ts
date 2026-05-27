@@ -52,6 +52,7 @@ const TABLES = {
   plans: "Plan",
   subscriptions: "Subscription",
   helpVideos: "videos",
+  company: "Company",
 } as const;
 
 function createServerSupabase() {
@@ -71,6 +72,10 @@ function assertNoError(error: { message: string } | null) {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+function isMissingGoogleApiKeyColumn(error: { message: string } | null) {
+  return Boolean(error?.message.includes("Company.googleApiKey"));
 }
 
 function isAdminRole(role: string) {
@@ -587,4 +592,74 @@ export async function getDashboard(): Promise<DashboardData> {
       createdAt: user.createdAt,
     })),
   };
+}
+
+export type CompanySettings = {
+  id: number;
+  supportPhone: string | null;
+  googleApiKey: string | null;
+  updatedAt?: string;
+};
+
+export async function getCompanySettings() {
+  const supabase = createServerSupabase();
+
+  const baseResult = await supabase
+    .from(TABLES.company)
+    .select("id,supportPhone,updatedAt")
+    .eq("id", 1)
+    .maybeSingle();
+
+  assertNoError(baseResult.error);
+
+  if (!baseResult.data) {
+    return {
+      id: 1,
+      supportPhone: null,
+      googleApiKey: null,
+    } satisfies CompanySettings;
+  }
+
+  const googleApiResult = await supabase
+    .from(TABLES.company)
+    .select("googleApiKey")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (isMissingGoogleApiKeyColumn(googleApiResult.error)) {
+    return {
+      ...(baseResult.data as Omit<CompanySettings, "googleApiKey">),
+      googleApiKey: null,
+    };
+  }
+
+  assertNoError(googleApiResult.error);
+
+  return {
+    ...(baseResult.data as Omit<CompanySettings, "googleApiKey">),
+    googleApiKey: (googleApiResult.data as Pick<CompanySettings, "googleApiKey"> | null)?.googleApiKey ?? null,
+  };
+}
+
+export async function updateCompanySettings(payload: Partial<CompanySettings>) {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from(TABLES.company)
+    .upsert(
+      {
+        id: 1,
+        googleApiKey: payload.googleApiKey,
+        updatedAt: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    )
+    .select("id,supportPhone,googleApiKey,updatedAt")
+    .single();
+
+  if (isMissingGoogleApiKeyColumn(error)) {
+    throw new Error("A coluna Company.googleApiKey ainda nao existe no Supabase. Aplique a migration em supabase/migrations/20260527172000_add_google_api_key_to_company.sql.");
+  }
+
+  assertNoError(error);
+  return data as CompanySettings;
 }
