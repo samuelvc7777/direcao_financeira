@@ -1,7 +1,6 @@
 import 'package:direcao_financeira_mobile/app/core/preferences/app_preferences.dart';
 import 'package:direcao_financeira_mobile/app/core/recording/recording_settings.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/recording_settings/recording_settings_binding.dart';
-import 'package:direcao_financeira_mobile/app/presentation/modules/recording_settings/recording_settings_controller.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/recording_settings/recording_settings_view.dart';
 import 'package:direcao_financeira_mobile/app/routes/app_pages.dart';
 import 'package:flutter/material.dart';

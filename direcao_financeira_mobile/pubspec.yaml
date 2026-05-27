@@ -49,11 +49,13 @@ dependencies:
   currency_text_input_formatter: ^2.3.0
   socket_io_client: ^3.1.4
   geolocator:
+  geolocator_android:
   flutter_background_service:
   flutter_background_service_android:
   flutter_local_notifications:
   timezone:
   sqflite:
+  sqflite_android:
   path:
   flutter_map:
   latlong2:

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide RealtimeClient;
@@ -9,6 +11,7 @@ import '../../data/datasources/credit_card_datasource.dart';
 import '../../data/datasources/costs_gains_settings_datasource.dart';
 import '../../data/datasources/help_video_datasource.dart';
 import '../../data/datasources/goal_datasource.dart';
+import '../../data/datasources/google_api_config_datasource.dart';
 import '../../data/datasources/i_journey_datasource.dart';
 import '../../data/datasources/i_ride_datasource.dart';
 import '../../data/datasources/invoice_notification_local_datasource.dart';
@@ -50,6 +53,7 @@ import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/credit_card_repository.dart';
 import '../../data/repositories/costs_gains_repository.dart';
 import '../../data/repositories/goal_repository.dart';
+import '../../data/repositories/google_api_config_repository.dart';
 import '../../data/repositories/help_repository.dart';
 import '../../data/repositories/invoice_notification_repository.dart';
 import '../../data/repositories/journey_repository_impl.dart';
@@ -64,6 +68,7 @@ import '../../domain/repositories/i_category_repository.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
 import '../../domain/repositories/i_costs_gains_repository.dart';
 import '../../domain/repositories/i_goal_repository.dart';
+import '../../domain/repositories/i_google_api_config_repository.dart';
 import '../../domain/repositories/i_help_repository.dart';
 import '../../domain/repositories/i_invoice_notification_repository.dart';
 import '../../domain/repositories/i_journey_repository.dart';
@@ -80,6 +85,7 @@ import '../../domain/usecases/recording_use_cases.dart';
 import '../../domain/services/app_clock.dart';
 import '../../domain/services/invoice_notification_candidate_builder.dart';
 import '../../domain/services/invoice_notification_dedupe_service.dart';
+import '../../domain/services/resolved_google_api_key_service.dart';
 import '../config/app_environment.dart';
 import '../network/api_error_mapper.dart';
 import '../network/api_request_logger.dart';
@@ -231,6 +237,7 @@ class ProviderBinding extends Bindings {
       RecordingNativeDataSourceImpl(),
       permanent: true,
     );
+    _registerGoogleApiConfigDependencies();
     _registerHelpDependencies();
 
     Get.put<IAuthRepository>(
@@ -434,6 +441,7 @@ class ProviderBinding extends Bindings {
       RecordingNativeDataSourceImpl(),
       permanent: true,
     );
+    _registerGoogleApiConfigDependencies(supabaseClient: supabaseClient);
     _registerHelpDependencies(supabaseClient: supabaseClient);
     Get.put<ICostsGainsSettingsDataSource>(
       SupabaseCostsGainsRemoteDataSource(client: supabaseClient),
@@ -683,6 +691,35 @@ class ProviderBinding extends Bindings {
         ),
         permanent: true,
       );
+    }
+  }
+
+  void _registerGoogleApiConfigDependencies({SupabaseClient? supabaseClient}) {
+    if (!Get.isRegistered<IGoogleApiConfigDataSource>()) {
+      Get.put<IGoogleApiConfigDataSource>(
+        SupabaseGoogleApiConfigDataSource(client: supabaseClient),
+        permanent: true,
+      );
+    }
+
+    if (!Get.isRegistered<IGoogleApiConfigRepository>()) {
+      Get.put<IGoogleApiConfigRepository>(
+        GoogleApiConfigRepository(
+          dataSource: Get.find<IGoogleApiConfigDataSource>(),
+          apiErrorMapper: Get.find<ApiErrorMapper>(),
+          apiRequestLogger: Get.find<ApiRequestLogger>(),
+        ),
+        permanent: true,
+      );
+    }
+
+    if (!Get.isRegistered<ResolvedGoogleApiKeyService>()) {
+      final service = ResolvedGoogleApiKeyService(
+        repository: Get.find<IGoogleApiConfigRepository>(),
+        fallbackGoogleMapsApiKey: environment.googleMapsApiKey,
+      );
+      Get.put<ResolvedGoogleApiKeyService>(service, permanent: true);
+      unawaited(service.resolve(forceRefresh: true));
     }
   }
 
