@@ -4,7 +4,10 @@ import 'package:dartz/dartz.dart';
 import 'package:direcao_financeira_mobile/app/core/accessibility/accessibility_controller.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/costs_gains_settings_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/google_api_config_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_costs_gains_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/repositories/i_google_api_config_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/services/resolved_google_api_key_service.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/costs_gains_settings_use_cases.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +35,17 @@ class _FakeCostsGainsRepository implements ICostsGainsRepository {
     CostsGainsSettingsEntity entity,
   ) async {
     return Right(entity);
+  }
+}
+
+class _FakeGoogleApiConfigRepository implements IGoogleApiConfigRepository {
+  _FakeGoogleApiConfigRepository(this.config);
+
+  final GoogleApiConfigEntity? config;
+
+  @override
+  Future<Either<Failure, GoogleApiConfigEntity?>> getConfig() async {
+    return Right(config);
   }
 }
 
@@ -130,4 +144,48 @@ void main() {
     expect(nativeSettingsPayloads.single['fuel_price_per_liter_cents'], 579);
     expect(nativeSettingsPayloads.single['km_per_liter'], 10.5);
   });
+
+  test('syncSettingsWithNative envia google_maps_api_key remota', () async {
+    Get.put<ResolvedGoogleApiKeyService>(
+      ResolvedGoogleApiKeyService(
+        repository: _FakeGoogleApiConfigRepository(
+          const GoogleApiConfigEntity(googleApiKey: ' remote-key '),
+        ),
+        fallbackGoogleMapsApiKey: 'fallback-key',
+      ),
+    );
+    final controller = AccessibilityController(
+      storage: GetStorage(storageName),
+    );
+
+    await controller.syncSettingsWithNative();
+
+    expect(nativeSettingsPayloads, hasLength(1));
+    expect(nativeSettingsPayloads.single['google_maps_api_key'], 'remote-key');
+  });
+
+  test(
+    'syncSettingsWithNative envia fallback local quando remoto ausente',
+    () async {
+      Get.put<ResolvedGoogleApiKeyService>(
+        ResolvedGoogleApiKeyService(
+          repository: _FakeGoogleApiConfigRepository(
+            const GoogleApiConfigEntity(googleApiKey: '   '),
+          ),
+          fallbackGoogleMapsApiKey: ' fallback-key ',
+        ),
+      );
+      final controller = AccessibilityController(
+        storage: GetStorage(storageName),
+      );
+
+      await controller.syncSettingsWithNative();
+
+      expect(nativeSettingsPayloads, hasLength(1));
+      expect(
+        nativeSettingsPayloads.single['google_maps_api_key'],
+        'fallback-key',
+      );
+    },
+  );
 }

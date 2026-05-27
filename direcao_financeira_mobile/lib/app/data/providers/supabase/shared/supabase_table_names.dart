@@ -16,4 +16,5 @@ class SupabaseTableNames {
   static const costsGainsSettings = 'CostsGainsSettings';
   static const goals = 'Goal';
   static const videos = 'videos';
+  static const company = 'Company';
 }

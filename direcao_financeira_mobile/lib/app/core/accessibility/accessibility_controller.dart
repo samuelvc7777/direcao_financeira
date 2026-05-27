@@ -10,6 +10,7 @@ import 'package:get_storage/get_storage.dart';
 import '../config/app_environment.dart';
 import '../../domain/entities/detected_ride_draft_entity.dart';
 import '../../domain/entities/costs_gains_settings_entity.dart';
+import '../../domain/services/resolved_google_api_key_service.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
 import '../../domain/usecases/costs_gains_settings_use_cases.dart';
 import '../../presentation/modules/journey/journey_controller.dart';
@@ -140,11 +141,26 @@ class AccessibilityController extends GetxController
             costsSettings.fuelPricePerLiterCents;
         settings['km_per_liter'] = costsSettings.kmPerLiter;
       }
-      settings['google_maps_api_key'] = Get.find<AppEnvironment>().googleMapsApiKey;
+      settings['google_maps_api_key'] = await _loadResolvedGoogleMapsApiKey();
       await _platform.invokeMethod('updateSettings', settings);
     } catch (e) {
       developer.log('Erro ao sincronizar configuracoes com o nativo: $e');
     }
+  }
+
+  Future<String> _loadResolvedGoogleMapsApiKey() async {
+    if (Get.isRegistered<ResolvedGoogleApiKeyService>()) {
+      final resolved = await Get.find<ResolvedGoogleApiKeyService>().resolve(
+        forceRefresh: true,
+      );
+      return resolved.value;
+    }
+
+    if (Get.isRegistered<AppEnvironment>()) {
+      return Get.find<AppEnvironment>().googleMapsApiKey.trim();
+    }
+
+    return '';
   }
 
   Future<CostsGainsSettingsEntity?> _loadCostsGainsSettings() async {

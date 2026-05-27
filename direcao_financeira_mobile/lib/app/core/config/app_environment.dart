@@ -84,6 +84,7 @@ class AppEnvironment {
             defaultValue: 'true',
           ) ==
           'true',
+      // Fallback local usado quando a configuracao remota Company.googleApiKey nao estiver disponivel.
       googleMapsApiKey: const String.fromEnvironment(
         'GOOGLE_MAPS_API_KEY',
         defaultValue: 'AIzaSyAB51isR9aIJCirO0YowxRujWA9S2VKokk',
