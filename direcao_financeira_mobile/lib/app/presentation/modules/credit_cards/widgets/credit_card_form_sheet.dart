@@ -9,11 +9,7 @@ import '../../../widgets/scale_button.dart';
 import '../credit_cards_controller.dart';
 
 class CreditCardFormSheet extends StatefulWidget {
-  const CreditCardFormSheet({
-    super.key,
-    this.card,
-    required this.controller,
-  });
+  const CreditCardFormSheet({super.key, this.card, required this.controller});
 
   final CreditCardEntity? card;
   final CreditCardsController controller;
@@ -64,8 +60,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
     _dueDayController = TextEditingController(
       text: widget.card?.dueDay.toString() ?? '',
     );
-    _selectedColor =
-        widget.card?.color ?? widget.controller.colorOptions[5];
+    _selectedColor = widget.card?.color ?? widget.controller.colorOptions[5];
   }
 
   @override
@@ -95,8 +90,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: colorScheme.surface,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
@@ -146,10 +140,9 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
                                 hint: 'Ex.: Inter Black',
                                 icon: Icons.credit_card_rounded,
                                 accentColor: _accentColor,
-                                validator: (v) =>
-                                    v?.trim().isEmpty ?? true
-                                        ? 'Informe o nome.'
-                                        : null,
+                                validator: (v) => v?.trim().isEmpty ?? true
+                                    ? 'Informe o nome.'
+                                    : null,
                                 onChanged: (_) => setState(() {}),
                                 textCapitalization: TextCapitalization.words,
                               ),
@@ -160,10 +153,9 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
                                 hint: 'Visa, Mastercard',
                                 icon: Icons.branding_watermark_rounded,
                                 accentColor: _accentColor,
-                                validator: (v) =>
-                                    v?.trim().isEmpty ?? true
-                                        ? 'Informe.'
-                                        : null,
+                                validator: (v) => v?.trim().isEmpty ?? true
+                                    ? 'Informe.'
+                                    : null,
                                 onChanged: (_) => setState(() {}),
                                 textCapitalization: TextCapitalization.words,
                               ),
@@ -191,10 +183,9 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
                                     symbol: 'R\$',
                                   ),
                                 ],
-                                validator: (v) =>
-                                    v?.trim().isEmpty ?? true
-                                        ? 'Informe o limite.'
-                                        : null,
+                                validator: (v) => v?.trim().isEmpty ?? true
+                                    ? 'Informe o limite.'
+                                    : null,
                               ),
                               const SizedBox(height: 14),
                               Row(
@@ -319,8 +310,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final rawLimit =
-        _limitController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final rawLimit = _limitController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final limitCents = int.tryParse(rawLimit) ?? 0;
     final lastFourDigits = widget.card?.lastFourDigits ?? '0000';
 
@@ -391,10 +381,7 @@ class _SheetHeader extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      accentColor,
-                      accentColor.withValues(alpha: 0.7),
-                    ],
+                    colors: [accentColor, accentColor.withValues(alpha: 0.7)],
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -449,10 +436,7 @@ class _SheetHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Container(
-            height: 1,
-            color: onSurface.withValues(alpha: 0.06),
-          ),
+          Container(height: 1, color: onSurface.withValues(alpha: 0.06)),
         ],
       ),
     );
@@ -514,21 +498,24 @@ class _CreditCardPreview extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(5),
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.amber.shade300,
-                      Colors.amber.shade600,
-                    ],
+                    colors: [Colors.amber.shade300, Colors.amber.shade600],
                   ),
                 ),
               ),
               const Spacer(),
-              Text(
-                displayBrand.toUpperCase(),
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  displayBrand.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
                 ),
               ),
             ],
@@ -536,49 +523,21 @@ class _CreditCardPreview extends StatelessWidget {
 
           const Spacer(),
 
-          // Número do cartão
-          Row(
-            children: [
-              Text(
-                '••••',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.45),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 3,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Text(
-                '••••',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.45),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 3,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Text(
-                '••••',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.45),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 3,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Text(
-                'â€¢â€¢â€¢â€¢',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.45),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 3,
-                ),
-              ),
-            ],
+          // Numero do cartao
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                _CardNumberBlock(),
+                const SizedBox(width: 14),
+                _CardNumberBlock(),
+                const SizedBox(width: 14),
+                _CardNumberBlock(),
+                const SizedBox(width: 14),
+                _CardNumberBlock(),
+              ],
+            ),
           ),
 
           const SizedBox(height: 14),
@@ -630,6 +589,23 @@ class _CreditCardPreview extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 // GRUPO DE CAMPOS
 // ─────────────────────────────────────────────────────────
+
+class _CardNumberBlock extends StatelessWidget {
+  const _CardNumberBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '****',
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.45),
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 3,
+      ),
+    );
+  }
+}
 
 class _FieldGroup extends StatelessWidget {
   const _FieldGroup({
@@ -733,16 +709,20 @@ class _StyledTextField extends StatelessWidget {
           color: onSurface.withValues(alpha: 0.25),
           fontSize: 14,
         ),
-        prefixIcon: Icon(icon, color: accentColor.withValues(alpha: 0.7), size: 20),
+        prefixIcon: Icon(
+          icon,
+          color: accentColor.withValues(alpha: 0.7),
+          size: 20,
+        ),
         filled: true,
         fillColor: onSurface.withValues(alpha: 0.03),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-            color: onSurface.withValues(alpha: 0.08),
-          ),
+          borderSide: BorderSide(color: onSurface.withValues(alpha: 0.08)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -813,11 +793,7 @@ class _ColorPalette extends StatelessWidget {
                   : [],
             ),
             child: isSelected
-                ? const Icon(
-                    Icons.check_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  )
+                ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
                 : null,
           ),
         );
@@ -913,9 +889,7 @@ class _ToggleStatusButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: statusColor.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: statusColor.withValues(alpha: 0.25),
-          ),
+          border: Border.all(color: statusColor.withValues(alpha: 0.25)),
         ),
         child: Icon(
           isActive ? Icons.pause_rounded : Icons.play_arrow_rounded,

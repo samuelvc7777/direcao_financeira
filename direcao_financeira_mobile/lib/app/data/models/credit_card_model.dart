@@ -22,20 +22,25 @@ class CreditCardModel extends CreditCardEntity {
   });
 
   factory CreditCardModel.fromJson(Map<String, dynamic> json) {
+    final limitCents = _intFromJson(json['limitCents']);
+
     return CreditCardModel(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      brand: json['brand'] as String,
+      id: _intFromJson(json['id']),
+      name: _stringFromJson(json['name'], fallback: 'Cartao'),
+      brand: _stringFromJson(json['brand'], fallback: 'Cartao'),
       color: (json['color'] as String?) ?? '#8B5CF6',
-      limitCents: json['limitCents'] as int,
-      availableLimitCents: json['availableLimitCents'] as int,
-      closingDay: json['closingDay'] as int,
-      dueDay: json['dueDay'] as int,
-      lastFourDigits: json['lastFourDigits'] as String,
+      limitCents: limitCents,
+      availableLimitCents: _intFromJson(
+        json['availableLimitCents'],
+        fallback: limitCents,
+      ),
+      closingDay: _intFromJson(json['closingDay'], fallback: 1),
+      dueDay: _intFromJson(json['dueDay'], fallback: 1),
+      lastFourDigits: _stringFromJson(json['lastFourDigits'], fallback: '0000'),
       isActive: json['isActive'] as bool? ?? true,
-      openInvoiceCents: json['openInvoiceCents'] as int? ?? 0,
-      closedInvoiceCents: json['closedInvoiceCents'] as int? ?? 0,
-      payableInvoiceCents: json['payableInvoiceCents'] as int? ?? 0,
+      openInvoiceCents: _intFromJson(json['openInvoiceCents']),
+      closedInvoiceCents: _intFromJson(json['closedInvoiceCents']),
+      payableInvoiceCents: _intFromJson(json['payableInvoiceCents']),
       openInvoiceClosingDate: json['openInvoiceClosingDate'] == null
           ? null
           : DateTime.tryParse(json['openInvoiceClosingDate'].toString()),
@@ -67,5 +72,23 @@ class CreditCardModel extends CreditCardEntity {
       'isInvoiceDueToday': isInvoiceDueToday,
       'isInvoiceOverdue': isInvoiceOverdue,
     };
+  }
+
+  static int _intFromJson(Object? value, {int fallback = 0}) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.round();
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static String _stringFromJson(Object? value, {required String fallback}) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? fallback : text;
   }
 }

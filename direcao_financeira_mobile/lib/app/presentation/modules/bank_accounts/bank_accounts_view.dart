@@ -210,12 +210,6 @@ class _HeroSliverAppBar extends StatelessWidget {
         icon: Icon(Icons.arrow_back_ios_new_rounded, color: onSurface),
         onPressed: () => Get.back(),
       ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.tune_rounded, color: onSurface.withValues(alpha: 0.6)),
-          onPressed: () {},
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -256,7 +250,9 @@ class _HeroSliverAppBar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.accountsAccent.withValues(alpha: 0.35),
+                              color: AppColors.accountsAccent.withValues(
+                                alpha: 0.35,
+                              ),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -537,9 +533,7 @@ class _AccountCard extends StatelessWidget {
                             Text(
                               formatter.format(account.currentBalance),
                               style: TextStyle(
-                                color: isNegative
-                                    ? AppColors.rose
-                                    : onSurface,
+                                color: isNegative ? AppColors.rose : onSurface,
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
                                 height: 1,
@@ -740,10 +734,7 @@ class _StatusPill extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
           Text(
@@ -765,10 +756,7 @@ class _StatusPill extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
