@@ -27,6 +27,7 @@ object SettingsManager {
     private const val KEY_PASSENGER_RATING_CUSTOMIZED = "passenger_rating_customized"
     private const val KEY_FUEL_PRICE_PER_LITER_CENTS = "fuel_price_per_liter_cents"
     private const val KEY_KM_PER_LITER = "km_per_liter"
+    private const val KEY_GOOGLE_MAPS_API_KEY = "google_maps_api_key"
     private const val KEY_TRAFFIC_LIGHT_ACTIVE = "traffic_light_active"
     private const val KEY_JOURNEY_ACTIVE = "journey_active"
 
@@ -50,6 +51,8 @@ object SettingsManager {
         "99" to true,
         "inDrive" to true,
         "MoveSj" to true,
+        "MeLevaSJ" to false,
+        "GooglePhotos" to false,
     )
     var gainPerKmBad: Double = 1.57
     var gainPerKmGood: Double = 2.60
@@ -60,6 +63,7 @@ object SettingsManager {
     var passengerRatingCustomized: Boolean = false
     var fuelPricePerLiterCents: Int = 0
     var kmPerLiter: Double = 0.0
+    var googleMapsApiKey: String = ""
     var trafficLightActive: Boolean = false
     var journeyActive: Boolean = false
 
@@ -102,6 +106,7 @@ object SettingsManager {
             prefs.getBoolean(KEY_PASSENGER_RATING_CUSTOMIZED, passengerRatingCustomized)
         fuelPricePerLiterCents = prefs.getInt(KEY_FUEL_PRICE_PER_LITER_CENTS, fuelPricePerLiterCents)
         kmPerLiter = prefs.getFloat(KEY_KM_PER_LITER, kmPerLiter.toFloat()).toDouble()
+        googleMapsApiKey = prefs.getString(KEY_GOOGLE_MAPS_API_KEY, googleMapsApiKey) ?: googleMapsApiKey
         trafficLightActive = prefs.getBoolean(KEY_TRAFFIC_LIGHT_ACTIVE, false)
         journeyActive = prefs.getBoolean(KEY_JOURNEY_ACTIVE, false)
     }
@@ -152,6 +157,7 @@ object SettingsManager {
         fuelPricePerLiterCents =
             (data["fuel_price_per_liter_cents"] as? Number)?.toInt() ?: fuelPricePerLiterCents
         kmPerLiter = (data["km_per_liter"] as? Number)?.toDouble() ?: kmPerLiter
+        googleMapsApiKey = (data["google_maps_api_key"] as? String)?.trim() ?: googleMapsApiKey
 
         persist(context)
     }
@@ -224,6 +230,7 @@ object SettingsManager {
             .putBoolean(KEY_PASSENGER_RATING_CUSTOMIZED, passengerRatingCustomized)
             .putInt(KEY_FUEL_PRICE_PER_LITER_CENTS, fuelPricePerLiterCents)
             .putFloat(KEY_KM_PER_LITER, kmPerLiter.toFloat())
+            .putString(KEY_GOOGLE_MAPS_API_KEY, googleMapsApiKey)
             .putBoolean(KEY_TRAFFIC_LIGHT_ACTIVE, trafficLightActive)
             .putBoolean(KEY_JOURNEY_ACTIVE, journeyActive)
             .apply()

@@ -140,10 +140,9 @@ class TransactionsView extends GetView<TransactionsController> {
                                 compactAmountFormat: compactCurrencyFormat,
                                 onToggleExpanded:
                                     controller.toggleCardRecurringSection,
-                                onQuickStatusChange:
-                                    _onQuickStatusChangeTransaction,
-                                onEdit: _onEditTransaction,
-                                onDelete: _onDeleteTransaction,
+                                onTransactionTap: (transaction) => unawaited(
+                                  _showTransactionActions(context, transaction),
+                                ),
                               ),
                               if (normalGroups.isNotEmpty)
                                 SizedBox(
@@ -162,10 +161,9 @@ class TransactionsView extends GetView<TransactionsController> {
                                 group: normalGroups[index],
                                 amountFormat: currencyFormat,
                                 compactAmountFormat: compactCurrencyFormat,
-                                onQuickStatusChange:
-                                    _onQuickStatusChangeTransaction,
-                                onEdit: _onEditTransaction,
-                                onDelete: _onDeleteTransaction,
+                                onTransactionTap: (transaction) => unawaited(
+                                  _showTransactionActions(context, transaction),
+                                ),
                               ),
                               if (index != normalGroups.length - 1)
                                 SizedBox(
@@ -204,15 +202,28 @@ class TransactionsView extends GetView<TransactionsController> {
     }
   }
 
-  void _onQuickStatusChangeTransaction(TransactionEntity transaction) {
-    unawaited(
-      controller.updateTransaction(
-        transaction.id,
-        status: TransactionStatus.cleared,
-        scope: TransactionMutationScope.current,
-        closeAfterSuccess: false,
-      ),
+  Future<void> _showTransactionActions(
+    BuildContext context,
+    TransactionEntity transaction,
+  ) async {
+    final action = await showModalBottomSheet<_TransactionAction>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TransactionActionsSheet(transaction: transaction),
     );
+
+    switch (action) {
+      case _TransactionAction.edit:
+        _onEditTransaction(transaction);
+        return;
+      case _TransactionAction.delete:
+        _onDeleteTransaction(transaction);
+        return;
+      case _TransactionAction.cancel:
+      case null:
+        return;
+    }
   }
 
   void _onDeleteTransaction(TransactionEntity transaction) {
@@ -296,6 +307,243 @@ class TransactionsView extends GetView<TransactionsController> {
             child: Text(isGrouped ? 'Apenas esta' : 'Excluir'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _TransactionAction { edit, delete, cancel }
+
+class _TransactionActionsSheet extends StatelessWidget {
+  const _TransactionActionsSheet({required this.transaction});
+
+  final TransactionEntity transaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    final isGrouped =
+        transaction.installmentGroupId != null ||
+        transaction.recurrenceGroupId != null;
+    final canEditOrDelete = !transaction.isInternalInvoicePayment;
+    final statusColor = transaction.type == TransactionType.expense
+        ? AppColors.rose
+        : AppColors.emerald;
+    final statusLabel = transaction.type == TransactionType.expense
+        ? 'Saída'
+        : 'Entrada';
+    final title = transaction.categoryName?.trim().isNotEmpty == true
+        ? transaction.categoryName!.trim()
+        : transaction.description.trim();
+    final amountLabel = NumberFormat.currency(
+      locale: 'pt_BR',
+      symbol: 'R\$ ',
+    ).format(transaction.displayedAmount);
+
+    return SafeArea(
+      top: false,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 720),
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      transaction.type == TransactionType.expense
+                          ? Icons.trending_down_rounded
+                          : Icons.trending_up_rounded,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$statusLabel - $amountLabel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              if (canEditOrDelete) ...[
+                _TransactionActionTile(
+                  icon: Icons.edit_outlined,
+                  title: 'Editar transação',
+                  subtitle: 'Abrir a tela para ajustar os dados',
+                  color: AppColors.amber,
+                  onTap: () =>
+                      Navigator.of(context).pop(_TransactionAction.edit),
+                ),
+                const SizedBox(height: 10),
+                _TransactionActionTile(
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Excluir transação',
+                  subtitle: isGrouped
+                      ? 'Você ainda escolhe se remove só esta ocorrência'
+                      : 'Remover este lançamento da lista',
+                  color: AppColors.rose,
+                  onTap: () =>
+                      Navigator.of(context).pop(_TransactionAction.delete),
+                ),
+              ] else
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.62,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    'Lançamento interno. Não há ações de edição ou exclusão.',
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              _TransactionActionTile(
+                icon: Icons.close_rounded,
+                title: 'Cancelar',
+                subtitle: 'Fechar este menu',
+                color: colorScheme.onSurfaceVariant,
+                isEmphasis: false,
+                onTap: () =>
+                    Navigator.of(context).pop(_TransactionAction.cancel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionActionTile extends StatelessWidget {
+  const _TransactionActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.isEmphasis = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isEmphasis;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(
+        alpha: isEmphasis ? 0.62 : 0.42,
+      ),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

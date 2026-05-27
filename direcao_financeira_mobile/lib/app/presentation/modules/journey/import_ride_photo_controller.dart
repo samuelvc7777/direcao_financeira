@@ -12,6 +12,7 @@ import '../../../data/services/ride_route_estimator.dart';
 import '../../../domain/entities/detected_ride_draft_entity.dart';
 import '../../../domain/entities/ride_entity.dart';
 import '../../../domain/entities/ride_screenshot_import_entity.dart';
+import '../../../domain/services/auto_ride_screenshot_parser.dart';
 import '../../../domain/services/movesj_history_screenshot_parser.dart';
 import '../../../domain/usecases/create_detected_ride_usecase.dart';
 import '../../../domain/usecases/get_rides_usecase.dart';
@@ -31,7 +32,7 @@ class ImportRidePhotoController extends GetxController {
   final CreateFinishedRideUseCase createFinishedRideUseCase;
   final UpdateFinishedRideUseCase updateFinishedRideUseCase;
   final GetRidesUseCase getRidesUseCase;
-  final MoveSjHistoryScreenshotParser parser;
+  final AutoRideScreenshotParser parser;
   final AddressAutocompleteService addressAutocompleteService;
   final RideRouteEstimator routeEstimator;
   final ImagePicker _imagePicker;
@@ -44,6 +45,7 @@ class ImportRidePhotoController extends GetxController {
   final pickupDistanceKmController = TextEditingController(text: '1,0');
   final pickupDurationMinutesController = TextEditingController(text: '5');
   final passengerController = TextEditingController();
+  final passengerRatingController = TextEditingController();
 
   final selectedImagePath = RxnString();
   final selectedPaymentOption = Rxn<RidePaymentOption>();
@@ -278,7 +280,7 @@ class ImportRidePhotoController extends GetxController {
     isSaving.value = true;
     try {
       final ride = DetectedRideDraftEntity(
-        platformName: 'MoveSJ',
+        platformName: parsedRide.value?.platformName ?? 'MoveSJ',
         detectedAt: parsedDateTime.value ?? DateTime.now(),
         paymentMethod: selectedPaymentOption.value!.code,
         grossValueCents: grossValueCents,
@@ -296,6 +298,7 @@ class ImportRidePhotoController extends GetxController {
         passengerName: passengerController.text.trim().isEmpty
             ? null
             : passengerController.text.trim(),
+        passengerRating: _parseOptionalRating(passengerRatingController.text),
         originAddress: originController.text.trim(),
         destinationAddress: destinationController.text.trim(),
       );
@@ -348,6 +351,9 @@ class ImportRidePhotoController extends GetxController {
   void _applyParsedRide(RideScreenshotImportEntity parsed) {
     parsedDateTime.value = parsed.detectedAt;
     passengerController.text = parsed.passengerName ?? '';
+    passengerRatingController.text = parsed.passengerRating == null
+        ? ''
+        : _formatRating(parsed.passengerRating!);
     originController.text = parsed.originAddress ?? '';
     destinationController.text = parsed.destinationAddress ?? '';
     amountController.text = parsed.grossValueCents == null
@@ -360,6 +366,7 @@ class ImportRidePhotoController extends GetxController {
     passengerController.text = ride.passenger == 'Nao informado'
         ? ''
         : ride.passenger;
+    passengerRatingController.text = '';
     originController.text = ride.origin == 'Origem nao informada'
         ? ''
         : ride.origin;
@@ -458,6 +465,22 @@ class ImportRidePhotoController extends GetxController {
     return double.tryParse(normalized)?.round() ?? 0;
   }
 
+  double? _parseOptionalRating(String input) {
+    final normalized = input.trim().replaceAll(',', '.');
+    if (normalized.isEmpty) {
+      return null;
+    }
+    final value = double.tryParse(normalized);
+    if (value == null || value < 0 || value > 5) {
+      return null;
+    }
+    return value;
+  }
+
+  String _formatRating(double value) {
+    return value.toStringAsFixed(1).replaceAll('.', ',');
+  }
+
   double _totalKmForSave() {
     return _parseDecimal(distanceKmController.text) +
         _parseDecimal(pickupDistanceKmController.text);
@@ -510,6 +533,7 @@ class ImportRidePhotoController extends GetxController {
     pickupDistanceKmController.dispose();
     pickupDurationMinutesController.dispose();
     passengerController.dispose();
+    passengerRatingController.dispose();
     super.onClose();
   }
 }

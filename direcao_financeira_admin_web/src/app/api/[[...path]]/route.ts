@@ -3,18 +3,23 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   cancelSubscription,
   changePlan,
+  createHelpVideo,
   createPlan,
+  deleteHelpVideo,
   deletePlan,
   deleteUser,
   getDashboard,
   getUserById,
+  listHelpVideos,
   listPlans,
   listUsers,
   renewSubscription,
   requireAdminFromToken,
+  updateHelpVideo,
   updatePlan,
   updateUser,
 } from "@/lib/api/server";
+import type { HelpVideo } from "@/lib/subscriptions";
 
 type RouteContext = {
   params: Promise<{
@@ -61,6 +66,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json(await listPlans());
     }
 
+    if (endpoint === "/admin/help-videos") {
+      return NextResponse.json(await listHelpVideos());
+    }
+
     const userMatch = endpoint.match(/^\/user\/(\d+)$/);
     if (userMatch) {
       return NextResponse.json(await getUserById(Number(userMatch[1])));
@@ -82,6 +91,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (endpoint === "/admin/plans") {
       return NextResponse.json(await createPlan(payload));
+    }
+
+    if (endpoint === "/admin/help-videos") {
+      return NextResponse.json(await createHelpVideo(payload as Partial<HelpVideo>));
     }
 
     const subscriptionMatch = endpoint.match(/^\/admin\/users\/(\d+)\/subscription\/(change-plan|cancel|renew)$/);
@@ -124,6 +137,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json(await updatePlan(Number(planMatch[1]), payload));
     }
 
+    const helpVideoMatch = endpoint.match(/^\/admin\/help-videos\/(\d+)$/);
+    if (helpVideoMatch) {
+      return NextResponse.json(await updateHelpVideo(Number(helpVideoMatch[1]), payload as Partial<HelpVideo>));
+    }
+
     return jsonError(new Error(`Endpoint nao mapeado: PATCH ${endpoint}`), 404);
   } catch (error) {
     return jsonError(error, 400);
@@ -145,6 +163,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const planMatch = endpoint.match(/^\/admin\/plans\/(\d+)$/);
     if (planMatch) {
       return NextResponse.json(await deletePlan(Number(planMatch[1])));
+    }
+
+    const helpVideoMatch = endpoint.match(/^\/admin\/help-videos\/(\d+)$/);
+    if (helpVideoMatch) {
+      return NextResponse.json(await deleteHelpVideo(Number(helpVideoMatch[1])));
     }
 
     return jsonError(new Error(`Endpoint nao mapeado: DELETE ${endpoint}`), 404);

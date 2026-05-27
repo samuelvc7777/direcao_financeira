@@ -10,12 +10,14 @@ import '../../../core/update/play_store_update_service.dart';
 import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/entities/category_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
+import '../../../domain/entities/goal_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/services/invoice_payment_validator.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
+import '../../../domain/usecases/goal_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import '../../../routes/app_pages.dart';
 import 'home_expense_chart_item.dart';
@@ -31,6 +33,7 @@ class HomeController extends GetxController {
     required this.createCategoryUseCase,
     required this.getTransactionsUseCase,
     required this.createInvoicePaymentUseCase,
+    this.loadGoalsUseCase,
     required this.invoicePaymentValidator,
     required this.dashboardRefreshNotifier,
     required this.homeTabNavigation,
@@ -46,6 +49,7 @@ class HomeController extends GetxController {
   final CreateCategoryUseCase createCategoryUseCase;
   final GetTransactionsUseCase getTransactionsUseCase;
   final CreateInvoicePaymentUseCase createInvoicePaymentUseCase;
+  final LoadGoalsUseCase? loadGoalsUseCase;
   final InvoicePaymentValidator invoicePaymentValidator;
   final DashboardRefreshNotifier dashboardRefreshNotifier;
   final HomeTabNavigation homeTabNavigation;
@@ -64,14 +68,7 @@ class HomeController extends GetxController {
   final isUpdateAvailable = false.obs;
   final isCheckingUpdate = false.obs;
 
-  final metas = <Map<String, dynamic>>[
-    {
-      'nome': 'Pagar contas',
-      'atual': 0.00,
-      'meta': 10000.00,
-      'percentual': 0.0,
-    },
-  ].obs;
+  final goals = <GoalEntity>[].obs;
 
   final currentTabIndex = 0.obs;
   Worker? _dashboardRefreshWorker;
@@ -143,10 +140,12 @@ class HomeController extends GetxController {
       final bankAccountsFuture = loadBankAccountsUseCase();
       final creditCardsFuture = loadCreditCardsUseCase();
       final transactionsFuture = getTransactionsUseCase(month);
+      final goalsFuture = loadGoalsUseCase?.call();
 
       final bankResult = await bankAccountsFuture;
       final cardResult = await creditCardsFuture;
       final transactionResult = await transactionsFuture;
+      final goalsResult = goalsFuture == null ? null : await goalsFuture;
 
       if (loadToken != _dashboardLoadToken) {
         return;
@@ -181,6 +180,13 @@ class HomeController extends GetxController {
             _buildExpenseChartItems(visibleTransactions),
           );
         },
+      );
+
+      goalsResult?.fold(
+        (failure) => debugPrint(
+          '[HomeController] Erro ao carregar metas: ${failure.message}',
+        ),
+        (data) => goals.assignAll(data.where((goal) => !goal.isArchived)),
       );
     } catch (error, stackTrace) {
       debugPrint('[HomeController] Erro inesperado no dashboard: $error');
@@ -389,6 +395,8 @@ class HomeController extends GetxController {
   }
 
   void openSubscription() => Get.toNamed(AppRoutes.subscription);
+
+  void openGoals() => Get.toNamed(AppRoutes.goals);
 
   Future<void> logout() async {
     await logoutUseCase();

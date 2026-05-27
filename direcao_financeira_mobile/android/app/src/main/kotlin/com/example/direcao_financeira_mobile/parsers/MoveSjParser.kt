@@ -114,7 +114,7 @@ class MoveSjParser {
             "passenger_name" to (parsedOffer.passengerName ?: ""),
             "origin_address" to (parsedOffer.originAddress ?: ""),
             "destination_address" to (parsedOffer.destinationAddress ?: ""),
-        ).also { addStopRideMetadata(it, parsedOffer) }
+        )
     }
 
     internal fun parseOfferFromOcrLines(
@@ -135,7 +135,6 @@ class MoveSjParser {
             "origin_address" to (parsedOffer.originAddress ?: ""),
             "destination_address" to (parsedOffer.destinationAddress ?: ""),
         ).also {
-            addStopRideMetadata(it, parsedOffer)
             if (it["km_total"] == 0.0 || it["minutos_total"] == 0) {
                 val fallback = extractOfferDetails(textLines)
                 it["km_total"] = fallback.metrics.totalKm
@@ -554,30 +553,11 @@ class MoveSjParser {
                 addresses.size >= 3 -> addresses.lastOrNull()
                 else -> addresses.getOrNull(1)
             }
-        val stopAddresses =
-            if (addresses.size >= 3) {
-                addresses.subList(1, addresses.lastIndex)
-            } else {
-                emptyList()
-            }
-
         return MoveSjRouteAddresses(
             originAddress = originAddress,
             destinationAddress = destinationAddress,
-            stopAddresses = stopAddresses,
+            stopAddresses = emptyList(),
         )
-    }
-
-    private fun addStopRideMetadata(
-        data: MutableMap<String, Any>,
-        parsedOffer: MoveSjParsedOffer,
-    ) {
-        if (parsedOffer.stopAddresses.isEmpty()) {
-            return
-        }
-
-        data["tipo_corrida"] = "Corrida com parada"
-        data["stop_addresses"] = parsedOffer.stopAddresses
     }
 
     private fun extractAddressBlockBelowRouteLine(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -11,6 +13,7 @@ import '../../../domain/services/invoice_payment_validator.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
+import '../../../domain/usecases/invoice_notification_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 
 class CreditCardsController extends GetxController {
@@ -25,6 +28,7 @@ class CreditCardsController extends GetxController {
     required this.createCategoryUseCase,
     required this.createInvoicePaymentUseCase,
     required this.invoicePaymentValidator,
+    this.rescheduleInvoiceNotificationsUseCase,
     required this.dashboardRefreshNotifier,
   });
 
@@ -38,6 +42,8 @@ class CreditCardsController extends GetxController {
   final CreateCategoryUseCase createCategoryUseCase;
   final CreateInvoicePaymentUseCase createInvoicePaymentUseCase;
   final InvoicePaymentValidator invoicePaymentValidator;
+  final RescheduleInvoiceNotificationsUseCase?
+  rescheduleInvoiceNotificationsUseCase;
   final DashboardRefreshNotifier dashboardRefreshNotifier;
 
   final isLoading = true.obs;
@@ -83,10 +89,10 @@ class CreditCardsController extends GetxController {
     final cardsResult = await loadCreditCardsUseCase();
     final accountsResult = await loadBankAccountsUseCase();
 
-    cardsResult.fold(
-      (failure) => errorMessage.value = failure.message,
-      (data) => creditCards.assignAll(data),
-    );
+    cardsResult.fold((failure) => errorMessage.value = failure.message, (data) {
+      creditCards.assignAll(data);
+      _rescheduleInvoiceNotifications(data);
+    });
     accountsResult.fold(
       (failure) => debugPrint(
         '[CreditCardsController] Erro ao carregar contas: ${failure.message}',
@@ -95,6 +101,14 @@ class CreditCardsController extends GetxController {
     );
 
     isLoading.value = false;
+  }
+
+  void _rescheduleInvoiceNotifications(List<CreditCardEntity> cards) {
+    final useCase = rescheduleInvoiceNotificationsUseCase;
+    if (useCase == null) {
+      return;
+    }
+    unawaited(useCase(cards));
   }
 
   bool isProcessingInvoicePayment(int cardId) =>

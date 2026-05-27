@@ -26,7 +26,7 @@ class _FakeTrafficLightRepository implements ITrafficLightRepository {
       'inDrive': true,
       'MoveSj': false,
     },
-    fontSize: 15,
+    fontSize: 12,
     opacity: 100,
     cardDuration: 10,
     colorBlindMode: false,
@@ -122,6 +122,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      expect(controller.fontSize.value, 12);
       await controller.saveSettings();
       await tester.pump();
       await tester.pumpAndSettle();

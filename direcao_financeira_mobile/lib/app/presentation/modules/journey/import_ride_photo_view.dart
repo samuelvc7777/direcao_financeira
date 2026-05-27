@@ -24,7 +24,7 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
       backgroundColor: context.theme.scaffoldBackgroundColor,
       appBar: const CustomAppBar(
         title: 'Importar print',
-        subtitle: 'Historico MoveSJ',
+        subtitle: 'Historico MoveSJ e Me Leva SJ',
         leadingIcon: Icons.photo_camera_back_rounded,
       ),
       body: SafeArea(
@@ -77,7 +77,7 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Leitura MoveSJ com rota calculada pelo Google Maps',
+                                    'Leitura automatica de MoveSJ e Me Leva SJ com rota calculada pelo Google Maps',
                                     style: TextStyle(
                                       color: colorScheme.onSurfaceVariant,
                                       fontSize: Responsive.sp(
@@ -198,6 +198,22 @@ class ImportRidePhotoView extends GetView<ImportRidePhotoController> {
                           hint: 'Nome lido do print',
                           icon: Icons.person_outline_rounded,
                           textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 14),
+                        CustomTextField(
+                          controller: controller.passengerRatingController,
+                          label: 'Nota do passageiro',
+                          hint: 'Ex: 5,0',
+                          icon: Icons.star_outline_rounded,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9,.]'),
+                            ),
+                          ],
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 14),

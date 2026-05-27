@@ -41,7 +41,7 @@ class TrafficLightMonitoredAppsSection
               children: controller.monitoredApps.entries
                   .map(
                     (entry) => _AppChip(
-                      label: entry.key,
+                      label: controller.displayMonitoredAppLabel(entry.key),
                       isSelected: entry.value,
                       onTap: () => controller.toggleMonitoredApp(entry.key),
                     ),

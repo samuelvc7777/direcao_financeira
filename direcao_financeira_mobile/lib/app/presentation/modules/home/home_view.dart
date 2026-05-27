@@ -71,7 +71,7 @@ class HomeView extends GetView<HomeController> {
                         RecentTransactionsSection(
                           onViewAllTransactions: controller.openTransactionsTab,
                         ),
-                        const GoalsSection(),
+                        GoalsSection(),
                       ],
                     ),
                   ),

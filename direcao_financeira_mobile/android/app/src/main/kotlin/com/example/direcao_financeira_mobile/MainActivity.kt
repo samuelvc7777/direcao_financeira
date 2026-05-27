@@ -15,12 +15,14 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.util.TimeZone
 
 class MainActivity : FlutterActivity() {
     private val accessibilityChannelName = "com.direcao_financeira/accessibility"
     private val appBubbleChannelName = "com.direcao_financeira/app_bubble"
     private val appBubbleActionsChannelName = "com.direcao_financeira/app_bubble_actions"
     private val locationPermissionsChannelName = "com.direcao_financeira/location_permissions"
+    private val invoiceNotificationsChannelName = "com.direcao_financeira/invoice_notifications"
     private val recordingChannelName = "com.direcao_financeira/recording"
     private var backgroundLocationPermissionResult: MethodChannel.Result? = null
     private var recordingPermissionResult: MethodChannel.Result? = null
@@ -113,6 +115,15 @@ class MainActivity : FlutterActivity() {
                     "openBackgroundLocationPermissionSettings" -> {
                         openBackgroundLocationPermissionSettings(result)
                     }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, invoiceNotificationsChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getLocalTimeZoneName" -> result.success(TimeZone.getDefault().id)
+                    "openNotificationSettings" -> result.success(openNotificationSettings())
                     else -> result.notImplemented()
                 }
             }
@@ -326,6 +337,27 @@ class MainActivity : FlutterActivity() {
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 Uri.parse("package:$packageName"),
             ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+        return runCatching {
+            startActivity(intent)
+            true
+        }.getOrDefault(false)
+    }
+
+    private fun openNotificationSettings(): Boolean {
+        val intent =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                }
+            } else {
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:$packageName"),
+                )
+            }.apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
 

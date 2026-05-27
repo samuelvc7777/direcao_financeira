@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Settings,
   ShieldCheck,
@@ -13,7 +13,18 @@ import {
   Save,
   Clock3,
   LockKeyhole,
+  Phone,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
+
+import { fetchApi } from '@/lib/api/client';
+import type { User } from '@/lib/subscriptions';
+
+type CompanyPhoneFeedback = {
+  type: 'success' | 'error';
+  message: string;
+};
 
 export default function SettingsPage() {
   const [preferences, setPreferences] = useState({
@@ -24,6 +35,11 @@ export default function SettingsPage() {
     autoRefreshDashboard: true,
     maintenanceMode: false,
   });
+  const [currentAdmin, setCurrentAdmin] = useState<User | null>(null);
+  const [companyPhone, setCompanyPhone] = useState('');
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(true);
+  const [isSavingCompanyPhone, setIsSavingCompanyPhone] = useState(false);
+  const [companyPhoneFeedback, setCompanyPhoneFeedback] = useState<CompanyPhoneFeedback | null>(null);
 
   const summaryItems = useMemo(
     () => [
@@ -84,6 +100,78 @@ export default function SettingsPage() {
       key: 'maintenanceMode',
     },
   ] as const;
+
+  const loadCurrentAdmin = useCallback(async () => {
+    setIsLoadingAdmin(true);
+    try {
+      const response = (await fetchApi('/auth/me')) as User;
+      setCurrentAdmin(response);
+      setCompanyPhone(response.companyPhone ?? '');
+    } catch (error) {
+      console.error('Erro ao carregar admin atual:', error);
+      setCurrentAdmin(null);
+    } finally {
+      setIsLoadingAdmin(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCurrentAdmin();
+  }, [loadCurrentAdmin]);
+
+  const handleSaveCompanyPhone = async () => {
+    if (!currentAdmin) {
+      setCompanyPhoneFeedback({
+        type: 'error',
+        message: 'Nao foi possivel identificar o usuario atual.',
+      });
+      return;
+    }
+
+    if (currentAdmin.role !== 'ADMIN') {
+      setCompanyPhoneFeedback({
+        type: 'error',
+        message: 'Apenas contas ADMIN podem alterar o numero da empresa.',
+      });
+      return;
+    }
+
+    setIsSavingCompanyPhone(true);
+    setCompanyPhoneFeedback(null);
+
+    try {
+      const cleanedPhone = companyPhone.trim();
+
+      await fetchApi(`/user/${currentAdmin.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          companyPhone: cleanedPhone || null,
+        }),
+      });
+
+      setCompanyPhone(cleanedPhone);
+      setCompanyPhoneFeedback({
+        type: 'success',
+        message: 'Numero da empresa atualizado com sucesso.',
+      });
+      await loadCurrentAdmin();
+    } catch (error) {
+      setCompanyPhoneFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Erro ao salvar o numero da empresa.',
+      });
+    } finally {
+      setIsSavingCompanyPhone(false);
+    }
+  };
+
+  if (isLoadingAdmin) {
+    return (
+      <div className="p-6 sm:p-8 lg:p-10 flex h-[70vh] items-center justify-center">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 sm:p-8 lg:p-10 space-y-8 animate-fade-in-up">
@@ -211,6 +299,66 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="bg-[var(--card)] rounded-[2rem] border border-[var(--border)] shadow-sm p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl text-indigo-600 dark:text-indigo-400">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Número da empresa</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Esse número é usado no WhatsApp da ajuda do app.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone da empresa</label>
+              <div className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-slate-50 dark:bg-slate-950 px-4 py-3.5">
+                <Phone className="w-5 h-5 text-slate-400 shrink-0" />
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="(00) 00000-0000"
+                  value={companyPhone}
+                  onChange={(e) => setCompanyPhone(e.target.value)}
+                  disabled={currentAdmin?.role !== 'ADMIN'}
+                  className="w-full bg-transparent outline-none text-sm font-medium text-slate-900 dark:text-white disabled:cursor-not-allowed disabled:text-slate-400"
+                />
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {currentAdmin?.role === 'ADMIN'
+                  ? 'Somente contas ADMIN podem editar este campo.'
+                  : 'Campo bloqueado para esta conta.'}
+              </p>
+            </div>
+
+            {companyPhoneFeedback && (
+              <div
+                className={`flex items-start gap-3 p-4 rounded-2xl border ${
+                  companyPhoneFeedback.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20 text-red-600 dark:text-red-400'
+                }`}
+              >
+                {companyPhoneFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                )}
+                <p className="text-sm font-medium">{companyPhoneFeedback.message}</p>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSaveCompanyPhone}
+              disabled={isSavingCompanyPhone || currentAdmin?.role !== 'ADMIN'}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-bold text-white bg-cyan-600 rounded-2xl hover:bg-cyan-700 shadow-xl shadow-cyan-500/20 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSavingCompanyPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar número da empresa
+            </button>
           </div>
 
           <div className="bg-[var(--card)] rounded-[2rem] border border-[var(--border)] shadow-sm p-6 space-y-5">

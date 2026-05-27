@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -7,10 +8,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/app_bubble/app_bubble_service.dart';
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../core/notifications/notification_permission_service.dart';
 import '../../../core/preferences/app_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/subscription_entity.dart';
+import '../../../domain/entities/user_entity.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
+import '../../../domain/usecases/invoice_notification_use_cases.dart';
+import '../../../domain/usecases/subscription_use_cases.dart';
 import '../costs_gains_settings/costs_gains_flow_coordinator.dart';
 import '../../../routes/app_pages.dart';
 
@@ -21,8 +26,15 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
     required this.getStoredUserUseCase,
     required this.logoutUseCase,
     required this.updateProfilePhotoUseCase,
+    this.getMySubscriptionUseCase,
+    this.syncStoredUserSubscriptionUseCase,
+    this.setInvoiceNotificationsEnabledUseCase,
+    NotificationPermissionService? notificationPermissionService,
     ImagePicker? imagePicker,
-  }) : _imagePicker = imagePicker ?? ImagePicker();
+  }) : _notificationPermissionService =
+           notificationPermissionService ??
+           const NotificationPermissionService(),
+       _imagePicker = imagePicker ?? ImagePicker();
 
   static const _appBubbleEnabledKey = 'appBubbleEnabled';
 
@@ -31,6 +43,11 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
   final GetStoredUserUseCase getStoredUserUseCase;
   final LogoutUseCase logoutUseCase;
   final UpdateProfilePhotoUseCase updateProfilePhotoUseCase;
+  final GetMySubscriptionUseCase? getMySubscriptionUseCase;
+  final SyncStoredUserSubscriptionUseCase? syncStoredUserSubscriptionUseCase;
+  final SetInvoiceNotificationsEnabledUseCase?
+  setInvoiceNotificationsEnabledUseCase;
+  final NotificationPermissionService _notificationPermissionService;
   final ImagePicker _imagePicker;
   var _pendingAppBubbleActivation = false;
 
@@ -40,6 +57,10 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
       (preferences.readBool(_appBubbleEnabledKey) ?? false).obs;
   final isAppBubblePermissionGranted = false.obs;
   final isAppBubbleBusy = false.obs;
+  final areNotificationsEnabled = true.obs;
+  late final RxBool invoiceNotificationsEnabled =
+      (preferences.readBool(invoiceNotificationsEnabledPreferenceKey) ?? true)
+          .obs;
   final userName = 'Samuel Vitor'.obs;
   final userEmail = 'samuelvitorcarvalho717@gmail.com'.obs;
   final profilePhotoBase64 = RxnString();
@@ -47,6 +68,7 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
   final planStatus = 'Ativo'.obs;
   final remainingDays = 361.obs;
   final planProgress = 0.99.obs;
+  final isSubscriptionRefreshing = false.obs;
   final isProfilePhotoSaving = false.obs;
 
   final sections = <SettingsSection>[
@@ -120,14 +142,26 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
         ),
       ],
     ),
+    SettingsSection(
+      title: 'Suporte',
+      items: const [
+        SettingsItemData(
+          title: 'Ajuda',
+          subtitle: 'Videos de uso e atendimento pelo WhatsApp',
+          icon: Icons.play_lesson_rounded,
+          accentColor: AppColors.electricCyan,
+        ),
+      ],
+    ),
   ].obs;
 
   @override
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    _loadUser();
+    unawaited(_loadUser());
     _loadAppBubbleState();
+    unawaited(refreshNotificationPermission());
   }
 
   @override
@@ -140,6 +174,7 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       refreshAppBubblePermission();
+      unawaited(refreshNotificationPermission());
     }
   }
 
@@ -166,20 +201,65 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void _loadUser() {
+  Future<void> _loadUser() async {
+    isSubscriptionRefreshing.value = true;
     final result = getStoredUserUseCase();
     result.fold(
       (failure) => debugPrint(
         '[SettingsController] Erro ao carregar usuario: ${failure.message}',
       ),
       (user) {
-        if (user == null) return;
+        if (user == null) {
+          planName.value = 'Sem plano ativo';
+          planStatus.value = 'Inativo';
+          remainingDays.value = 0;
+          planProgress.value = 0;
+          return;
+        }
+
         userName.value = user.name;
         userEmail.value = user.email;
         profilePhotoBase64.value = user.profilePhotoBase64;
         _loadSubscription(user.activeSubscription);
       },
     );
+
+    final currentUserResult = getStoredUserUseCase();
+    final currentUser = currentUserResult.fold<UserEntity?>(
+      (_) => null,
+      (user) => user,
+    );
+    final shouldRefreshSubscription =
+        currentUser?.activeSubscription == null ||
+        currentUser?.activeSubscription?.status.toUpperCase() != 'ACTIVE';
+
+    if (!shouldRefreshSubscription ||
+        getMySubscriptionUseCase == null ||
+        syncStoredUserSubscriptionUseCase == null) {
+      isSubscriptionRefreshing.value = false;
+      return;
+    }
+
+    planName.value = 'Sincronizando assinatura';
+    planStatus.value = 'Carregando...';
+    remainingDays.value = 0;
+    planProgress.value = 0;
+
+    final liveResult = await getMySubscriptionUseCase!();
+    await liveResult.fold<Future<void>>(
+      (_) async {
+        _loadSubscription(currentUser?.activeSubscription);
+      },
+      (liveSubscription) async {
+        await syncStoredUserSubscriptionUseCase!(
+          activeSubscription: liveSubscription,
+          subscriptions: currentUser?.subscriptions,
+        );
+        _loadSubscription(liveSubscription);
+      },
+    );
+
+    isSubscriptionRefreshing.value = false;
   }
 
   Future<void> pickProfilePhoto() async {
@@ -355,6 +435,63 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
     await appBubbleService.openOverlayPermissionSettings();
   }
 
+  Future<void> refreshNotificationPermission() async {
+    areNotificationsEnabled.value = await _notificationPermissionService
+        .areAndroidNotificationsEnabled();
+  }
+
+  Future<void> toggleInvoiceNotifications(bool enabled) async {
+    if (enabled) {
+      await _notificationPermissionService
+          .requestAndroidNotificationPermissionIfNeeded();
+      await refreshNotificationPermission();
+      if (!areNotificationsEnabled.value) {
+        await _notificationPermissionService.openAndroidNotificationSettings();
+        _showInfo(
+          'Permissao de notificacao',
+          'Ative as notificacoes do app nas configuracoes do Android.',
+        );
+        return;
+      }
+    }
+
+    invoiceNotificationsEnabled.value = enabled;
+    await _setInvoiceNotificationsEnabled(enabled);
+
+    _showInfo(
+      'Notificacoes de faturas',
+      enabled
+          ? 'Avisos de fechamento, vencimento e atraso ativados.'
+          : 'Avisos de faturas desativados.',
+    );
+  }
+
+  Future<void> openInvoiceNotificationPermissionSettings() async {
+    await refreshNotificationPermission();
+    if (areNotificationsEnabled.value) {
+      _showInfo(
+        'Permissao liberada',
+        'O Android ja permite notificacoes deste app.',
+      );
+      return;
+    }
+
+    await _notificationPermissionService.openAndroidNotificationSettings();
+  }
+
+  Future<void> _setInvoiceNotificationsEnabled(bool enabled) async {
+    final useCase = setInvoiceNotificationsEnabledUseCase;
+    if (useCase != null) {
+      await useCase(enabled);
+      return;
+    }
+
+    await preferences.writeBool(
+      invoiceNotificationsEnabledPreferenceKey,
+      enabled,
+    );
+  }
+
   void openSettingItem(SettingsItemData item) {
     if (item.title == 'Categorias') {
       Get.toNamed(AppRoutes.categories);
@@ -383,6 +520,16 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
 
     if (item.title == 'Configurar custo e ganhos') {
       CostsGainsFlowCoordinator.openEntry();
+      return;
+    }
+
+    if (item.title == 'Configurar Metas') {
+      Get.toNamed(AppRoutes.goals);
+      return;
+    }
+
+    if (item.title == 'Ajuda') {
+      Get.toNamed(AppRoutes.help);
       return;
     }
 

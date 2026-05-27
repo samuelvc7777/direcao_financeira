@@ -440,7 +440,7 @@ class _PreviewCard extends GetView<TrafficLightSettingsController> {
                     maxWidth: Responsive.hp(context, isSidePosition ? 16 : 12),
                   ),
                   child: Text(
-                    monitoredApp.toUpperCase(),
+                    controller.displayMonitoredAppLabel(monitoredApp).toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

@@ -9,6 +9,7 @@ import '../../../domain/services/invoice_payment_validator.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
+import '../../../domain/usecases/invoice_notification_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import 'credit_cards_controller.dart';
 
@@ -86,6 +87,10 @@ class CreditCardsBinding extends Bindings {
           createCategoryUseCase: Get.find<CreateCategoryUseCase>(),
           createInvoicePaymentUseCase: Get.find<CreateInvoicePaymentUseCase>(),
           invoicePaymentValidator: Get.find<InvoicePaymentValidator>(),
+          rescheduleInvoiceNotificationsUseCase:
+              Get.isRegistered<RescheduleInvoiceNotificationsUseCase>()
+              ? Get.find<RescheduleInvoiceNotificationsUseCase>()
+              : null,
           dashboardRefreshNotifier: Get.find<DashboardRefreshNotifier>(),
         ),
       );

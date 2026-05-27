@@ -69,6 +69,8 @@ class SettingsView extends GetView<SettingsController> {
                         ),
                         const SizedBox(height: 4),
                         SettingsSwitchTile(controller: controller),
+                        const SizedBox(height: 16),
+                        _NotificationPermissionCard(controller: controller),
                         const SizedBox(height: 24),
                         _LogoutCard(controller: controller),
                       ],
@@ -81,6 +83,95 @@ class SettingsView extends GetView<SettingsController> {
         },
       ),
     );
+  }
+}
+
+class _NotificationPermissionCard extends StatelessWidget {
+  const _NotificationPermissionCard({required this.controller});
+
+  final SettingsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+
+    return Obx(() {
+      final appEnabled = controller.invoiceNotificationsEnabled.value;
+      final permissionEnabled = controller.areNotificationsEnabled.value;
+      return InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => controller.toggleInvoiceNotifications(!appEnabled),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color:
+                      (appEnabled && permissionEnabled
+                              ? AppColors.emerald
+                              : AppColors.amber)
+                          .withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  appEnabled && permissionEnabled
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_off_rounded,
+                  color: appEnabled && permissionEnabled
+                      ? AppColors.emerald
+                      : AppColors.amber,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Notificacoes de faturas',
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      !appEnabled
+                          ? 'Desativadas apenas para faturas.'
+                          : permissionEnabled
+                          ? 'Ativas para fechamento, vencimento e atraso.'
+                          : 'Permissao bloqueada no Android.',
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withValues(alpha: 0.64),
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                value: appEnabled,
+                onChanged: controller.toggleInvoiceNotifications,
+                activeThumbColor: AppColors.emerald,
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
 

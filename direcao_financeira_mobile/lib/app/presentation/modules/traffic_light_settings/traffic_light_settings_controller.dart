@@ -33,6 +33,8 @@ class TrafficLightSettingsController extends GetxController {
     '99': true,
     'inDrive': true,
     'MoveSj': false,
+    'MeLevaSJ': false,
+    'GooglePhotos': false,
   }.obs;
   final gainPerKmBad = 1.57.obs;
   final gainPerKmGood = 2.60.obs;
@@ -140,6 +142,19 @@ class TrafficLightSettingsController extends GetxController {
 
   void toggleMonitoredApp(String name) {
     monitoredApps[name] = !(monitoredApps[name] ?? false);
+  }
+
+  String displayMonitoredAppLabel(String name) {
+    switch (name) {
+      case 'GooglePhotos':
+        return 'Google Fotos';
+      case 'MeLevaSJ':
+        return 'Me Leva SJ';
+      case 'MoveSj':
+        return 'MoveSJ';
+      default:
+        return name;
+    }
   }
 
   void incrementGainPerKmBad() => _changeValue(gainPerKmBad, 0.1);

@@ -39,6 +39,7 @@ export default function UserEditPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     isActive: true,
     role: 'USER' as 'ADMIN' | 'USER',
   });
@@ -71,6 +72,7 @@ export default function UserEditPage() {
       setFormData({
         name: mappedUser.name,
         email: mappedUser.email,
+        phone: mappedUser.phone ?? '',
         isActive: mappedUser.isActive,
         role: mappedUser.roleLabel.name as 'ADMIN' | 'USER',
       });
@@ -96,6 +98,7 @@ export default function UserEditPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          phone: formData.phone.trim() || null,
           isActive: formData.isActive,
           role: formData.role,
         }),
@@ -279,6 +282,17 @@ export default function UserEditPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone Celular</label>
+              <input
+                type="tel"
+                inputMode="tel"
+                placeholder="(00) 00000-0000"
+                className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Cargo (Role)</label>
               <select className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-950 border border-[var(--border)] rounded-2xl outline-none appearance-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as 'ADMIN' | 'USER' })}>

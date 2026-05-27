@@ -191,7 +191,7 @@ class MoveSjParserTest {
     }
 
     @Test
-    fun `corrida com parada da movesj usa ultimo pino verde como destino`() {
+    fun `corrida com parada da movesj usa ultimo pino verde como destino sem salvar paradas`() {
         val offerData =
             parser.parseOfferFromLines(
                 lines =
@@ -224,11 +224,8 @@ class MoveSjParserTest {
             "Av. Min. Gabriel Passos, 1846 - Santa Cruz De Minas, Santa Cruz de Minas - MG, 36328-000, Brasil",
             offerData["destination_address"],
         )
-        assertEquals("Corrida com parada", offerData["tipo_corrida"])
-        assertEquals(
-            listOf("Av. Josue de Queiros, 1119 - Matozinhos, Sao Joao del Rei - MG, 36305-144, Brasil"),
-            offerData["stop_addresses"],
-        )
+        assertFalse(offerData.containsKey("tipo_corrida"))
+        assertFalse(offerData.containsKey("stop_addresses"))
     }
 
     @Test

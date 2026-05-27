@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../config/app_environment.dart';
 import '../../domain/entities/detected_ride_draft_entity.dart';
 import '../../domain/entities/costs_gains_settings_entity.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
@@ -139,6 +140,7 @@ class AccessibilityController extends GetxController
             costsSettings.fuelPricePerLiterCents;
         settings['km_per_liter'] = costsSettings.kmPerLiter;
       }
+      settings['google_maps_api_key'] = Get.find<AppEnvironment>().googleMapsApiKey;
       await _platform.invokeMethod('updateSettings', settings);
     } catch (e) {
       developer.log('Erro ao sincronizar configuracoes com o nativo: $e');
@@ -232,7 +234,14 @@ class AccessibilityController extends GetxController
       );
     }
 
-    return {'Uber': true, '99': true, 'inDrive': true, 'MoveSj': true};
+    return {
+      'Uber': true,
+      '99': true,
+      'inDrive': true,
+      'MoveSj': true,
+      'MeLevaSJ': false,
+      'GooglePhotos': false,
+    };
   }
 
   Future<void> _handleRaceDetected(dynamic arguments) async {

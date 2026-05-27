@@ -1,12 +1,18 @@
 import 'dart:typed_data';
 
-import 'package:direcao_financeira_mobile/app/core/app_bubble/app_bubble_service.dart';
 import 'package:dartz/dartz.dart';
+import 'package:direcao_financeira_mobile/app/core/app_bubble/app_bubble_service.dart';
 import 'package:direcao_financeira_mobile/app/core/errors/failures.dart';
 import 'package:direcao_financeira_mobile/app/core/preferences/app_preferences.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/plan_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/store_product_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/store_purchase_event_entity.dart';
+import 'package:direcao_financeira_mobile/app/domain/entities/subscription_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/user_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_auth_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/repositories/i_subscription_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/auth_session_use_cases.dart';
+import 'package:direcao_financeira_mobile/app/domain/usecases/subscription_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/settings/settings_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,6 +93,118 @@ class _FakeAuthRepository implements IAuthRepository {
   Future<Either<Failure, void>> saveUser(UserEntity user) {
     throw UnimplementedError();
   }
+}
+
+class _FakeSubscriptionRepository implements ISubscriptionRepository {
+  SubscriptionEntity? activeSubscription;
+  bool syncStoredUserCalled = false;
+
+  @override
+  Stream<StorePurchaseEventEntity> get purchaseUpdates => const Stream.empty();
+
+  @override
+  Future<Either<Failure, SubscriptionEntity?>> getMySubscription() async =>
+      Right(activeSubscription);
+
+  @override
+  Future<Either<Failure, List<SubscriptionEntity>>>
+  getSubscriptionHistory() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, List<PlanEntity>>> getAvailablePlans() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, SubscriptionEntity?>> changePlan(int planId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, SubscriptionEntity?>> syncStorePurchase({
+    required int planId,
+    required String productId,
+    required String purchaseToken,
+    String? purchaseId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, SubscriptionEntity?>> cancelSubscription() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, SubscriptionEntity?>> renewSubscription({
+    required bool autoRenew,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, bool>> isStoreAvailable() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, List<StoreProductEntity>>> getStoreProducts(
+    Set<String> productIds,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, void>> buyProduct({
+    required String productId,
+    String? applicationUserName,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, void>> restorePurchases({
+    String? applicationUserName,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, void>> completePurchase(String productId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, void>> syncStoredUser({
+    SubscriptionEntity? activeSubscription,
+    List<SubscriptionEntity>? subscriptions,
+  }) async {
+    syncStoredUserCalled = true;
+    this.activeSubscription = activeSubscription;
+    return const Right(null);
+  }
+}
+
+SubscriptionEntity _buildActiveSubscription() {
+  return SubscriptionEntity(
+    id: 10,
+    status: 'ACTIVE',
+    startDate: DateTime.now().subtract(const Duration(days: 5)),
+    endDate: DateTime.now().add(const Duration(days: 25)),
+    autoRenew: true,
+    plan: PlanEntity(
+      id: 1,
+      code: 'premium_monthly',
+      name: 'anual',
+      description: 'Plano anual',
+      priceCents: 25490,
+      durationDays: 365,
+      color: '#111111',
+      isActive: true,
+    ),
+  );
 }
 
 class _FakePreferences implements AppPreferences {
@@ -197,6 +315,50 @@ void main() {
 
       Get.delete<SettingsController>();
     });
+
+    testWidgets(
+      'atualiza a assinatura do perfil quando o cache local esta desatualizado',
+      (tester) async {
+        final authRepository = _FakeAuthRepository()
+          ..storedUser = UserEntity(
+            id: 1,
+            email: 'samuel@example.com',
+            name: 'Samuel Vitor',
+            role: 'user',
+            isActive: true,
+            activeSubscription: null,
+          );
+        final subscriptionRepository = _FakeSubscriptionRepository()
+          ..activeSubscription = _buildActiveSubscription();
+        final preferences = _FakePreferences(initialValue: true);
+        final appBubbleService = _FakeAppBubbleService();
+        final controller = SettingsController(
+          appBubbleService: appBubbleService,
+          preferences: preferences,
+          getStoredUserUseCase: GetStoredUserUseCase(authRepository),
+          logoutUseCase: LogoutUseCase(authRepository),
+          updateProfilePhotoUseCase: UpdateProfilePhotoUseCase(authRepository),
+          getMySubscriptionUseCase: GetMySubscriptionUseCase(
+            subscriptionRepository,
+          ),
+          syncStoredUserSubscriptionUseCase:
+              SyncStoredUserSubscriptionUseCase(subscriptionRepository),
+        );
+        Get.put(controller);
+
+        await tester.pumpWidget(
+          GetMaterialApp(home: const Scaffold(body: SizedBox.shrink())),
+        );
+        await tester.pumpAndSettle();
+
+        expect(controller.planStatus.value, 'Ativo');
+        expect(controller.planName.value, 'anual');
+        expect(subscriptionRepository.syncStoredUserCalled, isTrue);
+        expect(find.text('Inativo'), findsNothing);
+
+        Get.delete<SettingsController>();
+      },
+    );
 
     test(
       'estado do balao rodando prevalece sobre preferencia local antiga',

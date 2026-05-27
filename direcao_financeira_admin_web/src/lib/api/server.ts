@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-import type { Plan, Subscription, User } from "@/lib/subscriptions";
+import type { HelpVideo, Plan, Subscription, User } from "@/lib/subscriptions";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,11 +31,27 @@ type SubscriptionRow = Omit<Subscription, "plan" | "payments"> & {
   userId: number;
   planId: number;
 };
+type HelpVideoRow = {
+  id: number;
+  title: string;
+  description: string | null;
+  video_url: string;
+  youtube_video_id: string;
+  category: string | null;
+  duration_label: string | null;
+  thumbnail_url: string | null;
+  is_featured: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
 
 const TABLES = {
   users: "User",
   plans: "Plan",
   subscriptions: "Subscription",
+  helpVideos: "videos",
 } as const;
 
 function createServerSupabase() {
@@ -207,6 +223,8 @@ export async function updateUser(id: number, payload: Partial<UserRow>) {
     .update({
       name: payload.name,
       email: payload.email,
+      phone: payload.phone,
+      companyPhone: payload.companyPhone,
       role: payload.role,
       isActive: payload.isActive,
       updatedAt: new Date().toISOString(),
@@ -288,6 +306,136 @@ export async function updatePlan(id: number, payload: Partial<Plan>) {
 
 function normalizePlanCode(code: string | undefined) {
   return code?.trim().toLowerCase() ?? '';
+}
+
+function mapHelpVideo(row: HelpVideoRow): HelpVideo {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? "",
+    videoUrl: row.video_url,
+    youtubeVideoId: row.youtube_video_id,
+    category: row.category ?? "",
+    durationLabel: row.duration_label ?? "",
+    thumbnailUrl: row.thumbnail_url ?? "",
+    isFeatured: row.is_featured,
+    isActive: row.is_active,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function normalizeYouTubeVideoId(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  try {
+    const url = new URL(raw);
+    if (url.hostname.includes("youtu.be")) {
+      return url.pathname.replace("/", "").trim();
+    }
+
+    const watchId = url.searchParams.get("v");
+    if (watchId) {
+      return watchId.trim();
+    }
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    const embedIndex = segments.indexOf("embed");
+    if (embedIndex >= 0 && segments[embedIndex + 1]) {
+      return segments[embedIndex + 1].trim();
+    }
+  } catch {
+    return raw;
+  }
+
+  return raw;
+}
+
+function buildHelpVideoPayload(payload: Partial<HelpVideo>) {
+  const title = String(payload.title ?? "").trim();
+  const description = String(payload.description ?? "").trim();
+  const youtubeVideoId = normalizeYouTubeVideoId(payload.youtubeVideoId);
+  const videoUrl =
+    String(payload.videoUrl ?? "").trim() ||
+    `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+
+  if (!title) {
+    throw new Error("Informe o titulo do video.");
+  }
+
+  if (!description) {
+    throw new Error("Informe a descricao do video.");
+  }
+
+  if (!youtubeVideoId) {
+    throw new Error("Informe o ID ou link do YouTube.");
+  }
+
+  return {
+    title,
+    description,
+    video_url: videoUrl,
+    youtube_video_id: youtubeVideoId,
+    category: String(payload.category ?? "").trim(),
+    duration_label: String(payload.durationLabel ?? "").trim(),
+    thumbnail_url: String(payload.thumbnailUrl ?? "").trim(),
+    is_featured: Boolean(payload.isFeatured),
+    is_active: payload.isActive ?? true,
+    sort_order: Number(payload.sortOrder ?? 0),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export async function listHelpVideos() {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from(TABLES.helpVideos)
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
+
+  assertNoError(error);
+
+  return ((data ?? []) as HelpVideoRow[]).map(mapHelpVideo);
+}
+
+export async function createHelpVideo(payload: Partial<HelpVideo>) {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from(TABLES.helpVideos)
+    .insert(buildHelpVideoPayload(payload))
+    .select()
+    .single();
+
+  assertNoError(error);
+
+  return mapHelpVideo(data as HelpVideoRow);
+}
+
+export async function updateHelpVideo(id: number, payload: Partial<HelpVideo>) {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from(TABLES.helpVideos)
+    .update(buildHelpVideoPayload(payload))
+    .eq("id", id)
+    .select()
+    .single();
+
+  assertNoError(error);
+
+  return mapHelpVideo(data as HelpVideoRow);
+}
+
+export async function deleteHelpVideo(id: number) {
+  const supabase = createServerSupabase();
+  const { error } = await supabase.from(TABLES.helpVideos).delete().eq("id", id);
+  assertNoError(error);
+
+  return { ok: true };
 }
 
 export async function deletePlan(id: number) {

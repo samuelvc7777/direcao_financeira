@@ -29,7 +29,14 @@ class TrafficLightSettingsModel extends TrafficLightSettingsEntity {
       ),
       monitoredApps: Map<String, bool>.from(
         json['monitoredApps'] ??
-            {'Uber': true, '99': true, 'inDrive': true, 'MoveSj': true},
+            {
+              'Uber': true,
+              '99': true,
+              'inDrive': true,
+              'MoveSj': true,
+              'MeLevaSJ': false,
+              'GooglePhotos': false,
+            },
       ),
       fontSize: (json['fontSize'] ?? 12.0).toDouble(),
       opacity: (json['opacity'] ?? 100.0).toDouble(),

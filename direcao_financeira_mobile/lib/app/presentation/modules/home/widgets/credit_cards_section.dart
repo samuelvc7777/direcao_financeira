@@ -305,178 +305,190 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     final nameSize = Responsive.sp(context, 14).clamp(13.0, 14.0);
     final valueSize = Responsive.sp(context, 15).clamp(14.0, 15.0);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (!isOpenInvoice && card.canPayInvoice)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: FilledButton.icon(
-              onPressed: isPaying
-                  ? null
-                  : () => _showPayInvoiceSheet(
-                      context: context,
-                      controller: controller,
-                      card: card,
-                    ),
-              style: FilledButton.styleFrom(
-                backgroundColor: card.isInvoiceOverdue
-                    ? AppColors.rose
-                    : cardColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+    return Container(
+      padding: EdgeInsets.all(cardPadding),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            cardColor.withValues(alpha: 0.16),
+            cardColor.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(cardRadius),
+        border: Border.all(color: cardColor.withValues(alpha: 0.42)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: iconBoxSize,
+                height: iconBoxSize,
+                decoration: BoxDecoration(
+                  color: cardColor.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                child: Icon(
+                  Icons.credit_card_rounded,
+                  size: Responsive.sp(context, 15).clamp(14.0, 15.0),
+                  color: cardColor,
                 ),
               ),
-              icon: isPaying
-                  ? SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
-                        ),
-                      ),
-                    )
-                  : const Icon(Icons.payments_rounded, size: 18),
-              label: Text(
-                isPaying
-                    ? 'Pagando...'
-                    : 'Pagar fatura ${isVisible ? currencyFormat.format(payableAmount) : ''}'
-                          .trim(),
-                style: const TextStyle(fontWeight: FontWeight.w700),
+              const Spacer(),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: badgeHorizontal,
+                  vertical: badgeVertical,
+                ),
+                decoration: BoxDecoration(
+                  color: cardColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  card.brand.toUpperCase(),
+                  style: TextStyle(
+                    color: cardColor,
+                    fontSize: Responsive.sp(context, 8).clamp(7.0, 8.0),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            card.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.86,
+              ),
+              fontSize: nameSize,
+              fontWeight: FontWeight.w500,
+              height: 1.15,
+            ),
+          ),
+          Text(
+            isOpenInvoice
+                ? _buildOpenInvoiceLabel(card.openInvoiceClosingDate)
+                : _buildClosedInvoiceLabel(card),
+            style: TextStyle(
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.38,
+              ),
+              fontSize: Responsive.sp(context, 10).clamp(9.0, 10.0),
+            ),
+          ),
+          SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              isVisible ? currencyFormat.format(invoiceAmount) : 'R\$ ....',
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurface,
+                fontSize: valueSize,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
-        Expanded(
-          child: Container(
-            padding: EdgeInsets.all(cardPadding),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  cardColor.withValues(alpha: 0.16),
-                  cardColor.withValues(alpha: 0.08),
-                ],
+          SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: usedPercentage,
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                usedPercentage > 0.9 ? AppColors.rose : cardColor,
               ),
-              borderRadius: BorderRadius.circular(cardRadius),
-              border: Border.all(color: cardColor.withValues(alpha: 0.42)),
+              minHeight: 4,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: iconBoxSize,
-                      height: iconBoxSize,
-                      decoration: BoxDecoration(
-                        color: cardColor.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.credit_card_rounded,
-                        size: Responsive.sp(context, 15).clamp(14.0, 15.0),
-                        color: cardColor,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: badgeHorizontal,
-                        vertical: badgeVertical,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cardColor.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        card.brand.toUpperCase(),
-                        style: TextStyle(
-                          color: cardColor,
-                          fontSize: Responsive.sp(context, 8).clamp(7.0, 8.0),
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  card.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(
-                      alpha: 0.86,
-                    ),
-                    fontSize: nameSize,
-                    fontWeight: FontWeight.w500,
-                    height: 1.15,
-                  ),
-                ),
-                Text(
-                  isOpenInvoice
-                      ? _buildOpenInvoiceLabel(card.openInvoiceClosingDate)
-                      : _buildClosedInvoiceLabel(card),
-                  style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(
-                      alpha: 0.38,
-                    ),
-                    fontSize: Responsive.sp(context, 10).clamp(9.0, 10.0),
-                  ),
-                ),
-                SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    isVisible
-                        ? currencyFormat.format(invoiceAmount)
-                        : 'R\$ ....',
-                    style: TextStyle(
-                      color: context.theme.colorScheme.onSurface,
-                      fontSize: valueSize,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                SizedBox(height: Responsive.vp(context, 0.5).clamp(4.0, 6.0)),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: usedPercentage,
-                    backgroundColor: Colors.white.withValues(alpha: 0.05),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      usedPercentage > 0.9 ? AppColors.rose : cardColor,
-                    ),
-                    minHeight: 4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isVisible
-                      ? 'Limite disponível: ${currencyFormat.format(availableLimit)}'
-                      : 'Limite disponível: R\$ ....',
-                  style: TextStyle(
-                    color: context.theme.colorScheme.onSurface.withValues(
-                      alpha: 0.38,
-                    ),
-                    fontSize: Responsive.sp(context, 9).clamp(8.0, 9.0),
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            isVisible
+                ? 'Limite disponível: ${currencyFormat.format(availableLimit)}'
+                : 'Limite disponível: R\$ ....',
+            style: TextStyle(
+              color: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.38,
+              ),
+              fontSize: Responsive.sp(context, 9).clamp(8.0, 9.0),
             ),
+          ),
+          if (!isOpenInvoice && card.canPayInvoice) ...[
+            const SizedBox(height: 8),
+            _buildPayInvoiceButton(
+              context: context,
+              controller: controller,
+              card: card,
+              cardColor: cardColor,
+              isVisible: isVisible,
+              isPaying: isPaying,
+              payableAmount: payableAmount,
+              currencyFormat: currencyFormat,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPayInvoiceButton({
+    required BuildContext context,
+    required HomeController controller,
+    required CreditCardEntity card,
+    required Color cardColor,
+    required bool isVisible,
+    required bool isPaying,
+    required double payableAmount,
+    required NumberFormat currencyFormat,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 34,
+      child: FilledButton.icon(
+        onPressed: isPaying
+            ? null
+            : () => _showPayInvoiceSheet(
+                context: context,
+                controller: controller,
+                card: card,
+              ),
+        style: FilledButton.styleFrom(
+          backgroundColor: card.isInvoiceOverdue ? AppColors.rose : cardColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
-      ],
+        icon: isPaying
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Icon(Icons.payments_rounded, size: 16),
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            isPaying
+                ? 'Pagando...'
+                : 'Pagar fatura ${isVisible ? currencyFormat.format(payableAmount) : ''}'
+                      .trim(),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
     );
   }
 

@@ -17,6 +17,21 @@ enum BackendProviderKind {
   }
 }
 
+const _defaultHelpVideoCatalogJson = '''
+[
+  {
+    "id": "video-teste-ajuda",
+    "title": "Video de teste",
+    "description": "Video temporario para validar o player interno da tela de ajuda.",
+    "youtubeVideoId": "HxgGW_ECu0w",
+    "category": "Teste",
+    "durationLabel": "Teste",
+    "isFeatured": true,
+    "sortOrder": 0
+  }
+]
+''';
+
 class AppEnvironment {
   const AppEnvironment({
     required this.backendProvider,
@@ -25,6 +40,10 @@ class AppEnvironment {
     required this.supabaseAnonKey,
     required this.enableRealtime,
     this.googleMapsApiKey = '',
+    this.helpVideoCatalogJson = '',
+    this.helpWhatsappPhone = '',
+    this.helpWhatsappUrl = '',
+    this.helpWhatsappInitialMessage = '',
   });
 
   final BackendProviderKind backendProvider;
@@ -33,6 +52,10 @@ class AppEnvironment {
   final String supabaseAnonKey;
   final bool enableRealtime;
   final String googleMapsApiKey;
+  final String helpVideoCatalogJson;
+  final String helpWhatsappPhone;
+  final String helpWhatsappUrl;
+  final String helpWhatsappInitialMessage;
 
   factory AppEnvironment.fromDartDefines() {
     return AppEnvironment(
@@ -64,6 +87,22 @@ class AppEnvironment {
       googleMapsApiKey: const String.fromEnvironment(
         'GOOGLE_MAPS_API_KEY',
         defaultValue: 'AIzaSyAB51isR9aIJCirO0YowxRujWA9S2VKokk',
+      ),
+      helpVideoCatalogJson: const String.fromEnvironment(
+        'HELP_VIDEO_CATALOG_JSON',
+        defaultValue: _defaultHelpVideoCatalogJson,
+      ),
+      helpWhatsappPhone: const String.fromEnvironment(
+        'HELP_WHATSAPP_PHONE',
+        defaultValue: '',
+      ),
+      helpWhatsappUrl: const String.fromEnvironment(
+        'HELP_WHATSAPP_URL',
+        defaultValue: '',
+      ),
+      helpWhatsappInitialMessage: const String.fromEnvironment(
+        'HELP_WHATSAPP_INITIAL_MESSAGE',
+        defaultValue: 'Ola, preciso de ajuda com o Direcao Financeira.',
       ),
     );
   }

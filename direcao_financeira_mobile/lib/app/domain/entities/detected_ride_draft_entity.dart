@@ -10,6 +10,7 @@ class DetectedRideDraftEntity {
     required this.gainPerKmCents,
     required this.gainPerHourCents,
     this.passengerName,
+    this.passengerRating,
     this.originAddress,
     this.destinationAddress,
     this.rideType,
@@ -25,6 +26,7 @@ class DetectedRideDraftEntity {
   final int gainPerKmCents;
   final int gainPerHourCents;
   final String? passengerName;
+  final double? passengerRating;
   final String? originAddress;
   final String? destinationAddress;
   final String? rideType;

@@ -106,7 +106,7 @@ class NinetyNineOcrParser {
             lines.filter { isAddressCandidate(it, passengerName) }
                 .distinct()
 
-        return candidates.getOrNull(0) to candidates.getOrNull(1)
+        return firstAndLastAddress(candidates)
     }
 
     private fun extractAddressesFromRouteStats(
@@ -131,8 +131,13 @@ class NinetyNineOcrParser {
             }
         }
 
-        val distinctAddresses = addresses.distinct()
-        return distinctAddresses.getOrNull(0) to distinctAddresses.getOrNull(1)
+        return firstAndLastAddress(addresses.distinct())
+    }
+
+    private fun firstAndLastAddress(addresses: List<String>): Pair<String?, String?> {
+        val originAddress = addresses.firstOrNull()
+        val destinationAddress = addresses.drop(1).lastOrNull()
+        return originAddress to destinationAddress
     }
 
     private fun extractAddressFromStatLine(

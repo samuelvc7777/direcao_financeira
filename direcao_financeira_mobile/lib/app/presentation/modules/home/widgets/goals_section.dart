@@ -1,211 +1,285 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../core/theme/app_colors.dart';
+import '../../../../domain/entities/goal_entity.dart';
 import '../home_controller.dart';
-import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 class GoalsSection extends GetView<HomeController> {
-  const GoalsSection({super.key});
+  GoalsSection({super.key});
+
+  final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(
+    locale: 'pt_BR',
+  );
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final metas = controller.metas;
-      final totalMetas = metas.length;
-      final concluidas = metas
-          .where((m) => (m['percentual'] as double) >= 100)
-          .length;
-      final progressoGeral = totalMetas > 0
-          ? metas.fold(0.0, (total, m) => total + (m['percentual'] as double)) /
-                totalMetas
+      final goals = controller.goals;
+      final totalGoals = goals.length;
+      final completed = goals.where((goal) => goal.isCompleted).length;
+      final overallProgress = totalGoals > 0
+          ? goals.fold<double>(
+                  0,
+                  (total, goal) => total + goal.cappedProgressPercent,
+                ) /
+                totalGoals
           : 0.0;
 
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final stackHeader = constraints.maxWidth < 400;
-
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: context.theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
-              ),
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: context.theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+        child: Column(
+          children: [
+            _Header(
+              completed: completed,
+              total: totalGoals,
+              onManage: controller.openGoals,
             ),
-            child: Column(
-              children: [
-                stackHeader
-                    ? Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.amber.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.flag_rounded,
-                                  color: AppColors.amber,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Minhas Metas',
-                                      style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      '$concluidas de $totalMetas concluidas',
-                                      style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: _buildManageButton(context),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.amber.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.flag_rounded,
-                                    color: AppColors.amber,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Minhas Metas',
-                                      style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      '$concluidas de $totalMetas concluidas',
-                                      style: TextStyle(
-                                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildManageButton(context),
-                        ],
-                      ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Progresso Geral',
-                      style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
-                        fontSize: 13,
-                      ),
-                    ),
-                    Text(
-                      '${progressoGeral.toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: progressoGeral / 100,
-                    backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.lime,
-                    ),
-                    minHeight: 6,
+            const SizedBox(height: 20),
+            if (goals.isEmpty)
+              _EmptyGoalsSummary(onManage: controller.openGoals)
+            else ...[
+              _OverallProgress(progressPercent: overallProgress),
+              const SizedBox(height: 16),
+              ...goals
+                  .take(3)
+                  .map(
+                    (goal) =>
+                        _GoalItem(goal: goal, currencyFormat: _currencyFormat),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ...metas.map((meta) => _buildGoalItem(context, meta)),
-              ],
-            ),
-          );
-        },
+            ],
+          ],
+        ),
       );
     });
   }
+}
 
-  Widget _buildManageButton(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Gerenciar',
-            style: TextStyle(
-              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              fontSize: 12,
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.completed,
+    required this.total,
+    required this.onManage,
+  });
+
+  final int completed;
+  final int total;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stackHeader = constraints.maxWidth < 400;
+        final title = Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.flag_rounded,
+                color: AppColors.amber,
+                size: 18,
+              ),
             ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Minhas Metas',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '$completed de $total concluidas',
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.4,
+                      ),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+
+        if (stackHeader) {
+          return Column(
+            children: [
+              title,
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _ManageButton(onTap: onManage),
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: title),
+            _ManageButton(onTap: onManage),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ManageButton extends StatelessWidget {
+  const _ManageButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.1),
           ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.chevron_right,
-            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            size: 16,
-          ),
-        ],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Gerenciar',
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.6,
+                ),
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right,
+              color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildGoalItem(BuildContext context, Map<String, dynamic> meta) {
-    final atual = meta['atual'] as double;
-    final objetivo = meta['meta'] as double;
-    final percentual = meta['percentual'] as double;
+class _OverallProgress extends StatelessWidget {
+  const _OverallProgress({required this.progressPercent});
 
+  final double progressPercent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Progresso Geral',
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.54,
+                ),
+                fontSize: 13,
+              ),
+            ),
+            Text(
+              '${progressPercent.toStringAsFixed(0)}%',
+              style: TextStyle(
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.54,
+                ),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progressPercent / 100,
+            backgroundColor: context.theme.colorScheme.onSurface.withValues(
+              alpha: 0.08,
+            ),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.lime),
+            minHeight: 6,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyGoalsSummary extends StatelessWidget {
+  const _EmptyGoalsSummary({required this.onManage});
+
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onManage,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.theme.colorScheme.onSurface.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Text(
+          'Nenhuma meta cadastrada ainda.',
+          style: TextStyle(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalItem extends StatelessWidget {
+  const _GoalItem({required this.goal, required this.currencyFormat});
+
+  final GoalEntity goal;
+  final NumberFormat currencyFormat;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
@@ -221,14 +295,22 @@ class GoalsSection extends GetView<HomeController> {
           Row(
             children: [
               Icon(
-                Icons.flag_outlined,
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                goal.isCompleted
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.flag_outlined,
+                color: goal.isCompleted
+                    ? AppColors.success
+                    : context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.38,
+                      ),
                 size: 18,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  meta['nome'],
+                  goal.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: context.theme.colorScheme.onSurface,
                     fontSize: 14,
@@ -237,9 +319,11 @@ class GoalsSection extends GetView<HomeController> {
                 ),
               ),
               Text(
-                '${percentual.toStringAsFixed(0)}%',
+                '${goal.cappedProgressPercent.toStringAsFixed(0)}%',
                 style: TextStyle(
-                  color: context.theme.colorScheme.onSurface.withValues(alpha: 0.54),
+                  color: context.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.54,
+                  ),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -247,12 +331,16 @@ class GoalsSection extends GetView<HomeController> {
             ],
           ),
           const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
+          Align(
+            alignment: Alignment.centerLeft,
             child: Text(
-              'R\$ ${atual.toStringAsFixed(2).replaceAll('.', ',')} de R\$ ${objetivo.toStringAsFixed(2).replaceAll('.', ',')}',
+              '${currencyFormat.format(goal.currentAmount)} de ${currencyFormat.format(goal.targetAmount)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: context.theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                color: context.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.4,
+                ),
                 fontSize: 12,
               ),
             ),
@@ -261,8 +349,10 @@ class GoalsSection extends GetView<HomeController> {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: percentual / 100,
-              backgroundColor: context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              value: goal.cappedProgressRatio,
+              backgroundColor: context.theme.colorScheme.onSurface.withValues(
+                alpha: 0.08,
+              ),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.teal),
               minHeight: 5,
             ),

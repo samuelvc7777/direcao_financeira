@@ -7,7 +7,7 @@ import 'package:direcao_financeira_mobile/app/domain/entities/paged_result_entit
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/entities/ride_import_entity.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_ride_repository.dart';
-import 'package:direcao_financeira_mobile/app/domain/services/movesj_history_screenshot_parser.dart';
+import 'package:direcao_financeira_mobile/app/domain/services/auto_ride_screenshot_parser.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/create_detected_ride_usecase.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/get_rides_usecase.dart';
 import 'package:direcao_financeira_mobile/app/presentation/modules/journey/import_ride_photo_controller.dart';
@@ -27,7 +27,7 @@ void main() {
         createFinishedRideUseCase: CreateFinishedRideUseCase(repository),
         updateFinishedRideUseCase: UpdateFinishedRideUseCase(repository),
         getRidesUseCase: GetRidesUseCase(repository),
-        parser: const MoveSjHistoryScreenshotParser(),
+        parser: const AutoRideScreenshotParser(),
         addressAutocompleteService: AddressAutocompleteService(),
         routeEstimator: _FakeRideRouteEstimator(),
       );
@@ -47,6 +47,7 @@ void main() {
       controller.parsedDateTime.value = DateTime(2026, 5, 12, 19);
       controller.amountController.text = 'R\$ 17,51';
       controller.passengerController.text = 'Carolina';
+      controller.passengerRatingController.text = '5,0';
       controller.originController.text = 'Rua A, 123';
       controller.destinationController.text = 'Rua B, 456';
       controller.distanceKmController.text = '8,5';
@@ -61,6 +62,7 @@ void main() {
         DateTime(2026, 5, 12, 19),
       );
       expect(repository.lastFinishedRide?.paymentMethod, 'PIX');
+      expect(repository.lastFinishedRide?.passengerRating, 5.0);
       expect(repository.lastFinishedRide?.totalKm, 9.5);
       expect(repository.lastFinishedRide?.totalTimeSeconds, 24 * 60);
       expect(repository.lastFinishedRide?.gainPerKmCents, 184);
@@ -79,7 +81,7 @@ void main() {
       createFinishedRideUseCase: CreateFinishedRideUseCase(repository),
       updateFinishedRideUseCase: UpdateFinishedRideUseCase(repository),
       getRidesUseCase: GetRidesUseCase(repository),
-      parser: const MoveSjHistoryScreenshotParser(),
+      parser: const AutoRideScreenshotParser(),
       addressAutocompleteService: AddressAutocompleteService(),
       routeEstimator: _FakeRideRouteEstimator(),
     );

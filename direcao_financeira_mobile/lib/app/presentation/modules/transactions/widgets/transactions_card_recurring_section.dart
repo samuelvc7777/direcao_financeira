@@ -17,9 +17,7 @@ class TransactionsCardRecurringSection extends StatelessWidget {
     required this.amountFormat,
     required this.compactAmountFormat,
     required this.onToggleExpanded,
-    required this.onQuickStatusChange,
-    required this.onEdit,
-    required this.onDelete,
+    required this.onTransactionTap,
   });
 
   final List<TransactionsDayGroup> groups;
@@ -28,9 +26,7 @@ class TransactionsCardRecurringSection extends StatelessWidget {
   final NumberFormat amountFormat;
   final NumberFormat compactAmountFormat;
   final VoidCallback onToggleExpanded;
-  final ValueChanged<TransactionEntity> onQuickStatusChange;
-  final ValueChanged<TransactionEntity> onEdit;
-  final ValueChanged<TransactionEntity> onDelete;
+  final ValueChanged<TransactionEntity> onTransactionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -125,9 +121,7 @@ class TransactionsCardRecurringSection extends StatelessWidget {
                           group: groups[index],
                           amountFormat: amountFormat,
                           compactAmountFormat: compactAmountFormat,
-                          onQuickStatusChange: onQuickStatusChange,
-                          onEdit: onEdit,
-                          onDelete: onDelete,
+                          onTransactionTap: onTransactionTap,
                         ),
                         if (index != groups.length - 1)
                           SizedBox(

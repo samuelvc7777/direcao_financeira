@@ -612,22 +612,6 @@ class _CreditCardTile extends StatelessWidget {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                Text(
-                                  '  •  ',
-                                  style: TextStyle(
-                                    color: onSurface.withValues(alpha: 0.25),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                Text(
-                                  '•••• ${card.lastFourDigits}',
-                                  style: TextStyle(
-                                    color: onSurface.withValues(alpha: 0.45),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
                               ],
                             ),
                           ],

@@ -33,7 +33,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
   late final TextEditingController _limitController;
   late final TextEditingController _closingDayController;
   late final TextEditingController _dueDayController;
-  late final TextEditingController _lastFourController;
   late String _selectedColor;
 
   bool get _isEditing => widget.card != null;
@@ -65,9 +64,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
     _dueDayController = TextEditingController(
       text: widget.card?.dueDay.toString() ?? '',
     );
-    _lastFourController = TextEditingController(
-      text: widget.card?.lastFourDigits ?? '',
-    );
     _selectedColor =
         widget.card?.color ?? widget.controller.colorOptions[5];
   }
@@ -80,7 +76,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
     _limitController.dispose();
     _closingDayController.dispose();
     _dueDayController.dispose();
-    _lastFourController.dispose();
     super.dispose();
   }
 
@@ -135,7 +130,6 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
                           _CreditCardPreview(
                             name: _nameController.text.trim(),
                             brand: _brandController.text.trim(),
-                            lastFour: _lastFourController.text.trim(),
                             accentColor: _accentColor,
                           ),
                           const SizedBox(height: 28),
@@ -160,47 +154,18 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
                                 textCapitalization: TextCapitalization.words,
                               ),
                               const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: _StyledTextField(
-                                      controller: _brandController,
-                                      label: 'Bandeira',
-                                      hint: 'Visa, Mastercard',
-                                      icon: Icons.branding_watermark_rounded,
-                                      accentColor: _accentColor,
-                                      validator: (v) =>
-                                          v?.trim().isEmpty ?? true
-                                              ? 'Informe.'
-                                              : null,
-                                      onChanged: (_) => setState(() {}),
-                                      textCapitalization:
-                                          TextCapitalization.words,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    flex: 2,
-                                    child: _StyledTextField(
-                                      controller: _lastFourController,
-                                      label: 'Final',
-                                      hint: '0000',
-                                      icon: Icons.pin_rounded,
-                                      accentColor: _accentColor,
-                                      keyboardType: TextInputType.number,
-                                      inputFormatters: [
-                                        LengthLimitingTextInputFormatter(4),
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      validator: (v) =>
-                                          v?.trim().length != 4
-                                              ? '4 dígitos.'
-                                              : null,
-                                      onChanged: (_) => setState(() {}),
-                                    ),
-                                  ),
-                                ],
+                              _StyledTextField(
+                                controller: _brandController,
+                                label: 'Bandeira',
+                                hint: 'Visa, Mastercard',
+                                icon: Icons.branding_watermark_rounded,
+                                accentColor: _accentColor,
+                                validator: (v) =>
+                                    v?.trim().isEmpty ?? true
+                                        ? 'Informe.'
+                                        : null,
+                                onChanged: (_) => setState(() {}),
+                                textCapitalization: TextCapitalization.words,
                               ),
                             ],
                           ),
@@ -357,6 +322,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
     final rawLimit =
         _limitController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final limitCents = int.tryParse(rawLimit) ?? 0;
+    final lastFourDigits = widget.card?.lastFourDigits ?? '0000';
 
     if (!_isEditing) {
       await widget.controller.createCreditCard(
@@ -366,7 +332,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
         limitCents: limitCents,
         closingDay: int.parse(_closingDayController.text),
         dueDay: int.parse(_dueDayController.text),
-        lastFourDigits: _lastFourController.text.trim(),
+        lastFourDigits: lastFourDigits,
       );
       return;
     }
@@ -379,7 +345,7 @@ class _CreditCardFormSheetState extends State<CreditCardFormSheet>
       limitCents: limitCents,
       closingDay: int.parse(_closingDayController.text),
       dueDay: int.parse(_dueDayController.text),
-      lastFourDigits: _lastFourController.text.trim(),
+      lastFourDigits: lastFourDigits,
     );
   }
 }
@@ -501,20 +467,17 @@ class _CreditCardPreview extends StatelessWidget {
   const _CreditCardPreview({
     required this.name,
     required this.brand,
-    required this.lastFour,
     required this.accentColor,
   });
 
   final String name;
   final String brand;
-  final String lastFour;
   final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
     final displayName = name.isEmpty ? 'Nome do cartão' : name;
     final displayBrand = brand.isEmpty ? 'Bandeira' : brand;
-    final displayLast = lastFour.isEmpty ? '••••' : lastFour;
 
     return Container(
       width: double.infinity,
@@ -607,11 +570,11 @@ class _CreditCardPreview extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Text(
-                displayLast,
-                style: const TextStyle(
-                  color: Colors.white,
+                'â€¢â€¢â€¢â€¢',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.45),
                   fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 3,
                 ),
               ),

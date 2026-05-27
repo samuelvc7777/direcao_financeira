@@ -6,12 +6,14 @@ import '../../../domain/repositories/i_auth_repository.dart';
 import '../../../domain/repositories/i_bank_account_repository.dart';
 import '../../../domain/repositories/i_category_repository.dart';
 import '../../../domain/repositories/i_credit_card_repository.dart';
+import '../../../domain/repositories/i_goal_repository.dart';
 import '../../../domain/repositories/i_transaction_repository.dart';
 import '../../../domain/services/invoice_payment_validator.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
+import '../../../domain/usecases/goal_use_cases.dart';
 import '../../../domain/usecases/transaction_use_cases.dart';
 import '../../../core/update/play_store_update_service.dart';
 import 'home_controller.dart';
@@ -74,6 +76,13 @@ class HomeBinding extends Bindings {
         fenix: true,
       );
     }
+    if (!Get.isRegistered<LoadGoalsUseCase>() &&
+        Get.isRegistered<IGoalRepository>()) {
+      Get.lazyPut(
+        () => LoadGoalsUseCase(Get.find<IGoalRepository>()),
+        fenix: true,
+      );
+    }
     if (!Get.isRegistered<InvoicePaymentValidator>()) {
       Get.lazyPut(() => const InvoicePaymentValidator(), fenix: true);
     }
@@ -98,6 +107,9 @@ class HomeBinding extends Bindings {
           createCategoryUseCase: Get.find<CreateCategoryUseCase>(),
           getTransactionsUseCase: Get.find<GetTransactionsUseCase>(),
           createInvoicePaymentUseCase: Get.find<CreateInvoicePaymentUseCase>(),
+          loadGoalsUseCase: Get.isRegistered<LoadGoalsUseCase>()
+              ? Get.find<LoadGoalsUseCase>()
+              : null,
           invoicePaymentValidator: Get.find<InvoicePaymentValidator>(),
           dashboardRefreshNotifier: Get.find<DashboardRefreshNotifier>(),
           homeTabNavigation: Get.find<HomeTabNavigation>(),

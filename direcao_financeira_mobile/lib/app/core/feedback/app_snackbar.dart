@@ -17,16 +17,17 @@ class AppSnackbar {
     bool isDismissible = true,
   }) {
     final theme = Get.theme;
-    final fallbackBackground = theme.colorScheme.inverseSurface;
+    final isDark = theme.brightness == Brightness.dark;
+    final fallbackBackground = isDark ? Colors.black : Colors.white;
     final resolvedBackground = backgroundColor == null
         ? fallbackBackground
         : Color.alphaBlend(backgroundColor, theme.colorScheme.surface);
-    final resolvedText = backgroundColor != null && backgroundColor.a < 0.4
-        ? ThemeData.estimateBrightnessForColor(resolvedBackground) ==
+    final resolvedText =
+        colorText ??
+        (ThemeData.estimateBrightnessForColor(resolvedBackground) ==
                 Brightness.dark
             ? Colors.white
-            : theme.colorScheme.onSurface
-        : colorText;
+            : Colors.black);
 
     return Get.snackbar(
       title,

@@ -31,12 +31,30 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  phone?: string | null;
+  companyPhone?: string | null;
   role: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   activeSubscription: Subscription | null;
   subscriptions: Subscription[];
+}
+
+export interface HelpVideo {
+  id: number;
+  title: string;
+  description: string;
+  videoUrl: string;
+  youtubeVideoId: string;
+  category: string;
+  durationLabel: string;
+  thumbnailUrl: string;
+  isFeatured: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RoleOption {

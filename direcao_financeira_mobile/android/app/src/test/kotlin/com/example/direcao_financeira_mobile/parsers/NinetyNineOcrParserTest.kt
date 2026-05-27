@@ -90,4 +90,31 @@ class NinetyNineOcrParserTest {
         )
         assertEquals("", offerData?.get("tipo_corrida"))
     }
+
+    @Test
+    fun `usa ultimo endereco como destino quando oferta da 99 tem parada`() {
+        val lines =
+            listOf(
+                "Pagamento no app",
+                "R$24,80",
+                "5,00 Â· 12 corridas",
+                "Perfil Essencial",
+                "4min (1,1km)",
+                "Rua Origem, 10 - Centro",
+                "7min (2,5km)",
+                "Rua Parada Intermediaria, 20 - Centro",
+                "13min (5,8km)",
+                "Avenida Destino Final, 300 - Bairro Final",
+            )
+
+        val rawText = lines.joinToString("\n")
+        val offerData = parser.parseOffer(rawText, lines)
+
+        assertNotNull(offerData)
+        assertEquals("Rua Origem, 10 - Centro", offerData?.get("origin_address"))
+        assertEquals(
+            "Avenida Destino Final, 300 - Bairro Final",
+            offerData?.get("destination_address"),
+        )
+    }
 }

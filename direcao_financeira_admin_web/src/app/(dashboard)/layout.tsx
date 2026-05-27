@@ -10,6 +10,7 @@ import {
   Gem,
   LayoutDashboard,
   LogOut,
+  PlaySquare,
   Search,
   Settings,
   TrendingUp,
@@ -113,9 +114,11 @@ export default function DashboardLayout({
   ];
 
   const reportItems = [
+    { label: "Videos", icon: PlaySquare, href: "/help-videos" },
     { label: "Faturamento", icon: TrendingUp, href: "/billing" },
     { label: "Configuracoes", icon: Settings, href: "/settings" },
   ];
+  const allNavigationItems = [...navItems, ...reportItems];
 
   const sidebarWidthClass = isSidebarCollapsed ? "w-24" : "w-72";
   const sidebarPaddingClass = isSidebarCollapsed ? "px-4" : "px-6";
@@ -164,17 +167,24 @@ export default function DashboardLayout({
           {!isSidebarCollapsed && (
             <p className="px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-8 mb-4">Relatorios</p>
           )}
-          {reportItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={`flex items-center gap-3 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-xl group ${navAlignmentClass}`}
-            >
-              <item.icon className="h-5 w-5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
-              {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          ))}
+          {reportItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                className={`flex items-center gap-3 py-3 text-sm font-medium transition-all rounded-xl group ${navAlignmentClass} ${
+                  isActive
+                    ? "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 font-semibold"
+                    : "text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                }`}
+              >
+                <item.icon className={`h-5 w-5 shrink-0 ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100 transition-opacity"}`} />
+                {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className={`${sidebarPaddingClass} pb-6 mt-auto transition-all duration-300`}>
@@ -227,7 +237,7 @@ export default function DashboardLayout({
 
             <div className="min-w-0">
               <h2 className="text-xl font-bold truncate">
-                {navItems.find((item) => item.href === pathname)?.label || "Painel Administrativo"}
+                {allNavigationItems.find((item) => item.href === pathname)?.label || "Painel Administrativo"}
               </h2>
               <p className="text-xs text-slate-400 dark:text-slate-500 font-medium truncate">Ola {user.name.split(" ")[0]}, bem-vindo de volta.</p>
             </div>

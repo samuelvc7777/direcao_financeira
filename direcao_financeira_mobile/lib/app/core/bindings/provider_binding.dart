@@ -7,8 +7,11 @@ import '../../data/datasources/bank_account_datasource.dart';
 import '../../data/datasources/category_datasource.dart';
 import '../../data/datasources/credit_card_datasource.dart';
 import '../../data/datasources/costs_gains_settings_datasource.dart';
+import '../../data/datasources/help_video_datasource.dart';
+import '../../data/datasources/goal_datasource.dart';
 import '../../data/datasources/i_journey_datasource.dart';
 import '../../data/datasources/i_ride_datasource.dart';
+import '../../data/datasources/invoice_notification_local_datasource.dart';
 import '../../data/datasources/journey_local_datasource.dart';
 import '../../data/datasources/journey_route_local_datasource.dart';
 import '../../data/datasources/location_tracking_datasource.dart';
@@ -35,6 +38,7 @@ import '../../data/providers/supabase/costs_gains/supabase_costs_gains_remote_da
 import '../../data/providers/supabase/finance/supabase_bank_account_remote_datasource.dart';
 import '../../data/providers/supabase/finance/supabase_category_remote_datasource.dart';
 import '../../data/providers/supabase/finance/supabase_credit_card_remote_datasource.dart';
+import '../../data/providers/supabase/finance/supabase_goal_remote_datasource.dart';
 import '../../data/providers/supabase/finance/supabase_transaction_remote_datasource.dart';
 import '../../data/providers/supabase/journey/supabase_journey_remote_datasource.dart';
 import '../../data/providers/supabase/journey/supabase_ride_remote_datasource.dart';
@@ -45,6 +49,9 @@ import '../../data/repositories/bank_account_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/credit_card_repository.dart';
 import '../../data/repositories/costs_gains_repository.dart';
+import '../../data/repositories/goal_repository.dart';
+import '../../data/repositories/help_repository.dart';
+import '../../data/repositories/invoice_notification_repository.dart';
 import '../../data/repositories/journey_repository_impl.dart';
 import '../../data/repositories/recording_repository_impl.dart';
 import '../../data/repositories/ride_repository_impl.dart';
@@ -56,6 +63,9 @@ import '../../domain/repositories/i_bank_account_repository.dart';
 import '../../domain/repositories/i_category_repository.dart';
 import '../../domain/repositories/i_credit_card_repository.dart';
 import '../../domain/repositories/i_costs_gains_repository.dart';
+import '../../domain/repositories/i_goal_repository.dart';
+import '../../domain/repositories/i_help_repository.dart';
+import '../../domain/repositories/i_invoice_notification_repository.dart';
 import '../../domain/repositories/i_journey_repository.dart';
 import '../../domain/repositories/i_recording_repository.dart';
 import '../../domain/repositories/i_ride_repository.dart';
@@ -64,11 +74,17 @@ import '../../domain/repositories/i_traffic_light_repository.dart';
 import '../../domain/repositories/i_transaction_repository.dart';
 import '../../domain/usecases/create_detected_ride_usecase.dart';
 import '../../domain/usecases/costs_gains_settings_use_cases.dart';
+import '../../domain/usecases/invoice_notification_use_cases.dart';
 import '../../domain/usecases/ride_status_use_cases.dart';
 import '../../domain/usecases/recording_use_cases.dart';
+import '../../domain/services/app_clock.dart';
+import '../../domain/services/invoice_notification_candidate_builder.dart';
+import '../../domain/services/invoice_notification_dedupe_service.dart';
 import '../config/app_environment.dart';
 import '../network/api_error_mapper.dart';
 import '../network/api_request_logger.dart';
+import '../notifications/invoice_notification_scheduler.dart';
+import '../notifications/local_invoice_notification_scheduler.dart';
 import '../network/realtime_client.dart';
 import '../session/session_coordinator.dart';
 import '../session/session_store.dart';
@@ -215,6 +231,7 @@ class ProviderBinding extends Bindings {
       RecordingNativeDataSourceImpl(),
       permanent: true,
     );
+    _registerHelpDependencies();
 
     Get.put<IAuthRepository>(
       AuthRepository(
@@ -327,6 +344,7 @@ class ProviderBinding extends Bindings {
       permanent: true,
     );
     _registerRecordingUseCases();
+    _registerInvoiceNotificationDependencies();
   }
 
   void _registerSupabaseProvider() {
@@ -416,8 +434,13 @@ class ProviderBinding extends Bindings {
       RecordingNativeDataSourceImpl(),
       permanent: true,
     );
+    _registerHelpDependencies(supabaseClient: supabaseClient);
     Get.put<ICostsGainsSettingsDataSource>(
       SupabaseCostsGainsRemoteDataSource(client: supabaseClient),
+      permanent: true,
+    );
+    Get.put<IGoalDataSource>(
+      SupabaseGoalRemoteDataSource(client: supabaseClient),
       permanent: true,
     );
 
@@ -468,6 +491,14 @@ class ProviderBinding extends Bindings {
     );
     Get.put<ITransactionRepository>(
       TransactionRepository(
+        dataSource: Get.find(),
+        apiErrorMapper: Get.find<ApiErrorMapper>(),
+        apiRequestLogger: Get.find<ApiRequestLogger>(),
+      ),
+      permanent: true,
+    );
+    Get.put<IGoalRepository>(
+      GoalRepository(
         dataSource: Get.find(),
         apiErrorMapper: Get.find<ApiErrorMapper>(),
         apiRequestLogger: Get.find<ApiRequestLogger>(),
@@ -552,6 +583,107 @@ class ProviderBinding extends Bindings {
       SaveCostsGainsSettingsUseCase(Get.find<ICostsGainsRepository>()),
       permanent: true,
     );
+    _registerInvoiceNotificationDependencies();
+  }
+
+  void _registerInvoiceNotificationDependencies() {
+    if (!Get.isRegistered<IInvoiceNotificationLocalDataSource>()) {
+      Get.put<IInvoiceNotificationLocalDataSource>(
+        InvoiceNotificationLocalDataSource(storage: Get.find()),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<IInvoiceNotificationRepository>()) {
+      Get.put<IInvoiceNotificationRepository>(
+        InvoiceNotificationRepository(localDataSource: Get.find()),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<AppClock>()) {
+      Get.put<AppClock>(const SystemAppClock(), permanent: true);
+    }
+    if (!Get.isRegistered<InvoiceNotificationCandidateBuilder>()) {
+      Get.put<InvoiceNotificationCandidateBuilder>(
+        InvoiceNotificationCandidateBuilder(),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<InvoiceNotificationDedupeService>()) {
+      Get.put<InvoiceNotificationDedupeService>(
+        InvoiceNotificationDedupeService(),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<InvoiceNotificationScheduler>()) {
+      Get.put<InvoiceNotificationScheduler>(
+        LocalInvoiceNotificationScheduler(),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<RescheduleInvoiceNotificationsUseCase>()) {
+      Get.put<RescheduleInvoiceNotificationsUseCase>(
+        RescheduleInvoiceNotificationsUseCase(
+          repository: Get.find<IInvoiceNotificationRepository>(),
+          scheduler: Get.find<InvoiceNotificationScheduler>(),
+          candidateBuilder: Get.find<InvoiceNotificationCandidateBuilder>(),
+          dedupeService: Get.find<InvoiceNotificationDedupeService>(),
+          clock: Get.find<AppClock>(),
+          preferences: Get.find<AppPreferences>(),
+        ),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<CancelInvoiceNotificationsUseCase>()) {
+      Get.put<CancelInvoiceNotificationsUseCase>(
+        CancelInvoiceNotificationsUseCase(
+          repository: Get.find<IInvoiceNotificationRepository>(),
+          scheduler: Get.find<InvoiceNotificationScheduler>(),
+        ),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<RefreshInvoiceNotificationsUseCase>()) {
+      Get.put<RefreshInvoiceNotificationsUseCase>(
+        RefreshInvoiceNotificationsUseCase(
+          creditCardRepository: Get.find<ICreditCardRepository>(),
+          rescheduleUseCase: Get.find<RescheduleInvoiceNotificationsUseCase>(),
+        ),
+        permanent: true,
+      );
+    }
+    if (!Get.isRegistered<SetInvoiceNotificationsEnabledUseCase>()) {
+      Get.put<SetInvoiceNotificationsEnabledUseCase>(
+        SetInvoiceNotificationsEnabledUseCase(
+          preferences: Get.find<AppPreferences>(),
+          cancelUseCase: Get.find<CancelInvoiceNotificationsUseCase>(),
+          refreshUseCase: Get.find<RefreshInvoiceNotificationsUseCase>(),
+        ),
+        permanent: true,
+      );
+    }
+  }
+
+  void _registerHelpDependencies({SupabaseClient? supabaseClient}) {
+    if (!Get.isRegistered<IHelpVideoDataSource>()) {
+      Get.put<IHelpVideoDataSource>(
+        HelpVideoDataSource(
+          environment: environment,
+          supabaseClient: supabaseClient,
+        ),
+        permanent: true,
+      );
+    }
+
+    if (!Get.isRegistered<IHelpRepository>()) {
+      Get.put<IHelpRepository>(
+        HelpRepository(
+          dataSource: Get.find<IHelpVideoDataSource>(),
+          apiErrorMapper: Get.find<ApiErrorMapper>(),
+          apiRequestLogger: Get.find<ApiRequestLogger>(),
+        ),
+        permanent: true,
+      );
+    }
   }
 
   void _registerRecordingUseCases() {

@@ -456,7 +456,7 @@ class _HeroCardPreview extends StatelessWidget {
                 Text(
                   card == null
                       ? 'Cadastre um cartao para ativar a leitura.'
-                      : 'Final ${card!.lastFourDigits}',
+                      : 'Fechamento ${card!.closingDay} | Vence ${card!.dueDay}',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.78)),
                 ),
               ],
@@ -896,7 +896,7 @@ class _CreditCardSpotlight extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Final ${card.lastFourDigits}  |  Fecha ${card.closingDay}  |  Vence ${card.dueDay}',
+                'Fecha ${card.closingDay}  |  Vence ${card.dueDay}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
