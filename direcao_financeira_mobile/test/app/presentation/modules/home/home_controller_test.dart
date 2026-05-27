@@ -14,6 +14,7 @@ import 'package:direcao_financeira_mobile/app/domain/repositories/i_bank_account
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_category_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_credit_card_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_transaction_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/services/invoice_payment_validator.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/auth_session_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/bank_account_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/category_use_cases.dart';
@@ -430,6 +431,7 @@ void main() {
         createInvoicePaymentUseCase: CreateInvoicePaymentUseCase(
           transactionRepository,
         ),
+        invoicePaymentValidator: const InvoicePaymentValidator(),
         dashboardRefreshNotifier: DefaultDashboardRefreshNotifier(),
         homeTabNavigation: _FakeHomeTabNavigation(),
         realtimeClient: realtimeClient,
@@ -606,6 +608,92 @@ void main() {
         TransactionType.income,
       );
       expect(categoryRepository.categories, hasLength(2));
+    });
+
+    test('paga fatura parcial usando o valor validado', () async {
+      final account = BankAccountEntity(
+        id: 10,
+        name: 'Conta Principal',
+        bankName: 'Nubank',
+        color: '#123456',
+        accountType: AccountType.checking,
+        initialBalanceCents: 200000,
+        currentBalanceCents: 200000,
+        isActive: true,
+      );
+      final card = CreditCardEntity(
+        id: 20,
+        name: 'Visa',
+        brand: 'visa',
+        color: '#654321',
+        limitCents: 500000,
+        availableLimitCents: 300000,
+        closingDay: 10,
+        dueDay: 20,
+        lastFourDigits: '1234',
+        isActive: true,
+        closedInvoiceCents: 120000,
+        payableInvoiceCents: 120000,
+        nextDueDate: DateTime(2026, 3, 25),
+      );
+
+      final error = await controller.submitInvoicePayment(
+        card: card,
+        bankAccount: account,
+        mode: InvoicePaymentMode.partial,
+        amountCents: 45000,
+      );
+
+      expect(error, isNull);
+      expect(transactionRepository.createdTransactions, hasLength(2));
+      expect(
+        transactionRepository.createdTransactions.first['amountCents'],
+        45000,
+      );
+      expect(
+        transactionRepository.createdTransactions.last['amountCents'],
+        45000,
+      );
+    });
+
+    test('bloqueia pagamento parcial igual ao saldo em aberto', () async {
+      final account = BankAccountEntity(
+        id: 10,
+        name: 'Conta Principal',
+        bankName: 'Nubank',
+        color: '#123456',
+        accountType: AccountType.checking,
+        initialBalanceCents: 200000,
+        currentBalanceCents: 200000,
+        isActive: true,
+      );
+      final card = CreditCardEntity(
+        id: 20,
+        name: 'Visa',
+        brand: 'visa',
+        color: '#654321',
+        limitCents: 500000,
+        availableLimitCents: 300000,
+        closingDay: 10,
+        dueDay: 20,
+        lastFourDigits: '1234',
+        isActive: true,
+        closedInvoiceCents: 120000,
+        payableInvoiceCents: 120000,
+      );
+
+      final error = await controller.submitInvoicePayment(
+        card: card,
+        bankAccount: account,
+        mode: InvoicePaymentMode.partial,
+        amountCents: 120000,
+      );
+
+      expect(
+        error,
+        'O pagamento parcial deve ser menor que o saldo em aberto.',
+      );
+      expect(transactionRepository.createdTransactions, isEmpty);
     });
 
     test('carrega estado de update disponivel na abertura', () async {

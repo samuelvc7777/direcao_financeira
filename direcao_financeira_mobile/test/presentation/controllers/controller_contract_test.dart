@@ -40,6 +40,7 @@ import 'package:direcao_financeira_mobile/app/domain/repositories/i_recording_re
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_ride_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_subscription_repository.dart';
 import 'package:direcao_financeira_mobile/app/domain/repositories/i_transaction_repository.dart';
+import 'package:direcao_financeira_mobile/app/domain/services/invoice_payment_validator.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/auth_session_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/bank_account_use_cases.dart';
 import 'package:direcao_financeira_mobile/app/domain/usecases/category_use_cases.dart';
@@ -880,6 +881,7 @@ void main() {
       createInvoicePaymentUseCase: CreateInvoicePaymentUseCase(
         transactionRepository,
       ),
+      invoicePaymentValidator: const InvoicePaymentValidator(),
       dashboardRefreshNotifier: notifier,
       homeTabNavigation: navigation,
       realtimeClient: realtimeClient,
@@ -1020,6 +1022,10 @@ void main() {
         buildCreditCard(isActive: true),
         buildCreditCard(id: 2, isActive: false),
       ];
+    final bankRepository = _FakeBankAccountRepository()
+      ..accounts = [buildBankAccount(isActive: true)];
+    final categoryRepository = _FakeCategoryRepository();
+    final transactionRepository = _FakeTransactionRepository();
     final notifier = DefaultDashboardRefreshNotifier();
     final controller = CreditCardsController(
       loadCreditCardsUseCase: LoadCreditCardsUseCase(repository),
@@ -1027,6 +1033,13 @@ void main() {
       updateCreditCardUseCase: UpdateCreditCardUseCase(repository),
       deactivateCreditCardUseCase: DeactivateCreditCardUseCase(repository),
       reactivateCreditCardUseCase: ReactivateCreditCardUseCase(repository),
+      loadBankAccountsUseCase: LoadBankAccountsUseCase(bankRepository),
+      loadCategoriesUseCase: LoadCategoriesUseCase(categoryRepository),
+      createCategoryUseCase: CreateCategoryUseCase(categoryRepository),
+      createInvoicePaymentUseCase: CreateInvoicePaymentUseCase(
+        transactionRepository,
+      ),
+      invoicePaymentValidator: const InvoicePaymentValidator(),
       dashboardRefreshNotifier: notifier,
     );
 

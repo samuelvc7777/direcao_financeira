@@ -5,9 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:direcao_financeira_mobile/app/core/theme/app_colors.dart';
 
 import '../../../../core/utils/responsive.dart';
-import '../../../../domain/entities/bank_account_entity.dart';
 import '../../../../domain/entities/credit_card_entity.dart';
 import '../home_controller.dart';
+import 'invoice_payment_sheet.dart';
 
 class CreditCardsSection extends StatefulWidget {
   const CreditCardsSection({super.key, required this.controller});
@@ -254,15 +254,17 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
       decoration: BoxDecoration(
         color: isActive
             ? (context.theme.brightness == Brightness.dark
-                ? const Color(0xFF24364E)
-                : context.theme.colorScheme.onSurface.withValues(alpha: 0.06))
+                  ? const Color(0xFF24364E)
+                  : context.theme.colorScheme.onSurface.withValues(alpha: 0.06))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: isActive
             ? Border.all(
                 color: context.theme.brightness == Brightness.dark
                     ? const Color(0xFF2F4367)
-                    : context.theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                    : context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.08,
+                      ),
               )
             : null,
       ),
@@ -313,11 +315,10 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
               onPressed: isPaying
                   ? null
                   : () => _showPayInvoiceSheet(
-                        context: context,
-                        controller: controller,
-                        card: card,
-                        currencyFormat: currencyFormat,
-                      ),
+                      context: context,
+                      controller: controller,
+                      card: card,
+                    ),
               style: FilledButton.styleFrom(
                 backgroundColor: card.isInvoiceOverdue
                     ? AppColors.rose
@@ -347,7 +348,7 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                 isPaying
                     ? 'Pagando...'
                     : 'Pagar fatura ${isVisible ? currencyFormat.format(payableAmount) : ''}'
-                        .trim(),
+                          .trim(),
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -437,7 +438,9 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    isVisible ? currencyFormat.format(invoiceAmount) : 'R\$ ....',
+                    isVisible
+                        ? currencyFormat.format(invoiceAmount)
+                        : 'R\$ ....',
                     style: TextStyle(
                       color: context.theme.colorScheme.onSurface,
                       fontSize: valueSize,
@@ -481,73 +484,20 @@ class _CreditCardsSectionState extends State<CreditCardsSection> {
     required BuildContext context,
     required HomeController controller,
     required CreditCardEntity card,
-    required NumberFormat currencyFormat,
   }) async {
-    final activeAccounts = controller.contas
-        .where((account) => account.isActive)
-        .toList();
-    if (activeAccounts.isEmpty) {
-      Get.snackbar('Atencao', 'Cadastre uma conta antes de pagar a fatura.');
-      return;
-    }
-
-    final selectedAccount = await showModalBottomSheet<BankAccountEntity>(
+    await showInvoicePaymentSheet(
       context: context,
-      backgroundColor: context.theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pagar fatura do ${card.name}',
-                  style: TextStyle(
-                    color: sheetContext.theme.colorScheme.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Escolha a conta para quitar ${currencyFormat.format(card.payableInvoice)}.',
-                  style: TextStyle(
-                    color: sheetContext.theme.colorScheme.onSurface.withValues(
-                      alpha: 0.62,
-                    ),
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...activeAccounts.map(
-                  (account) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.account_balance_wallet_rounded),
-                    title: Text(account.name),
-                    subtitle: Text(account.bankName),
-                    trailing: Text(
-                      currencyFormat.format(account.currentBalance),
-                    ),
-                    onTap: () => Navigator.of(sheetContext).pop(account),
-                  ),
-                ),
-              ],
-            ),
-          ),
+      card: card,
+      accounts: controller.contas,
+      onSubmit: (result) {
+        return controller.submitInvoicePayment(
+          card: card,
+          bankAccount: result.bankAccount,
+          mode: result.mode,
+          amountCents: result.amountCents,
         );
       },
     );
-
-    if (selectedAccount == null) {
-      return;
-    }
-
-    await controller.payInvoice(card: card, bankAccount: selectedAccount);
   }
 
   String _buildOpenInvoiceLabel(DateTime? closingDate) {

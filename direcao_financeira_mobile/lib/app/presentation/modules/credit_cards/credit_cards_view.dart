@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../home/widgets/invoice_payment_sheet.dart';
 import 'credit_cards_controller.dart';
 import 'widgets/credit_card_form_sheet.dart';
 
@@ -36,6 +37,7 @@ class CreditCardsView extends GetView<CreditCardsController> {
           inactiveCards: controller.inactiveCards,
           onCreatePressed: () => _showCardForm(),
           onCardPressed: (card) => _showCardForm(cardId: card.id),
+          onPayPressed: (card) => _showInvoicePaymentSheet(context, card),
           controller: controller,
         );
       }),
@@ -59,6 +61,25 @@ class CreditCardsView extends GetView<CreditCardsController> {
       backgroundColor: Colors.transparent,
     );
   }
+
+  Future<void> _showInvoicePaymentSheet(
+    BuildContext context,
+    CreditCardEntity card,
+  ) async {
+    await showInvoicePaymentSheet(
+      context: context,
+      card: card,
+      accounts: controller.bankAccounts,
+      onSubmit: (result) {
+        return controller.submitInvoicePayment(
+          card: card,
+          bankAccount: result.bankAccount,
+          mode: result.mode,
+          amountCents: result.amountCents,
+        );
+      },
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -71,6 +92,7 @@ class _CreditCardsBody extends StatelessWidget {
     required this.inactiveCards,
     required this.onCreatePressed,
     required this.onCardPressed,
+    required this.onPayPressed,
     required this.controller,
   });
 
@@ -78,6 +100,7 @@ class _CreditCardsBody extends StatelessWidget {
   final List<CreditCardEntity> inactiveCards;
   final VoidCallback onCreatePressed;
   final void Function(CreditCardEntity) onCardPressed;
+  final void Function(CreditCardEntity) onPayPressed;
   final CreditCardsController controller;
 
   @override
@@ -86,10 +109,7 @@ class _CreditCardsBody extends StatelessWidget {
       return _EmptyState(onCreatePressed: onCreatePressed);
     }
 
-    final totalLimit = activeCards.fold<int>(
-      0,
-      (sum, c) => sum + c.limitCents,
-    );
+    final totalLimit = activeCards.fold<int>(0, (sum, c) => sum + c.limitCents);
     final totalUsed = activeCards.fold<int>(
       0,
       (sum, c) => sum + (c.limitCents - c.availableLimitCents),
@@ -143,6 +163,9 @@ class _CreditCardsBody extends StatelessWidget {
                   card: card,
                   controller: controller,
                   onTap: () => onCardPressed(card),
+                  onPayPressed: card.canPayInvoice
+                      ? () => onPayPressed(card)
+                      : null,
                 );
               },
             ),
@@ -174,6 +197,7 @@ class _CreditCardsBody extends StatelessWidget {
                     card: card,
                     controller: controller,
                     onTap: () => onCardPressed(card),
+                    onPayPressed: null,
                     isInactive: true,
                   ),
                 );
@@ -225,8 +249,10 @@ class _HeroSliverAppBar extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          icon: Icon(Icons.tune_rounded,
-              color: onSurface.withValues(alpha: 0.6)),
+          icon: Icon(
+            Icons.tune_rounded,
+            color: onSurface.withValues(alpha: 0.6),
+          ),
           onPressed: () {},
         ),
       ],
@@ -270,8 +296,9 @@ class _HeroSliverAppBar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.cardsAccent
-                                  .withValues(alpha: 0.35),
+                              color: AppColors.cardsAccent.withValues(
+                                alpha: 0.35,
+                              ),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -372,10 +399,7 @@ class _HeroSliverAppBar extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 
 class _LimitSummaryBar extends StatelessWidget {
-  const _LimitSummaryBar({
-    required this.totalLimit,
-    required this.totalUsed,
-  });
+  const _LimitSummaryBar({required this.totalLimit, required this.totalUsed});
 
   final int totalLimit;
   final int totalUsed;
@@ -390,8 +414,8 @@ class _LimitSummaryBar extends StatelessWidget {
     final barColor = usedPercent >= 0.85
         ? AppColors.rose
         : usedPercent >= 0.60
-            ? AppColors.amber
-            : AppColors.cardsAccent;
+        ? AppColors.amber
+        : AppColors.cardsAccent;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -400,9 +424,7 @@ class _LimitSummaryBar extends StatelessWidget {
             ? onSurface.withValues(alpha: 0.04)
             : context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: barColor.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: barColor.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -474,12 +496,14 @@ class _CreditCardTile extends StatelessWidget {
     required this.card,
     required this.controller,
     required this.onTap,
+    required this.onPayPressed,
     this.isInactive = false,
   });
 
   final CreditCardEntity card;
   final CreditCardsController controller;
   final VoidCallback onTap;
+  final VoidCallback? onPayPressed;
   final bool isInactive;
 
   @override
@@ -492,8 +516,8 @@ class _CreditCardTile extends StatelessWidget {
     final usedColor = usedPercent >= 0.85
         ? AppColors.rose
         : usedPercent >= 0.60
-            ? AppColors.amber
-            : accentColor;
+        ? AppColors.amber
+        : accentColor;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -688,10 +712,7 @@ class _CreditCardTile extends StatelessWidget {
                   const SizedBox(height: 14),
 
                   // Barra de uso
-                  _UsageBar(
-                    usedPercent: usedPercent,
-                    barColor: usedColor,
-                  ),
+                  _UsageBar(usedPercent: usedPercent, barColor: usedColor),
 
                   const SizedBox(height: 14),
 
@@ -712,11 +733,55 @@ class _CreditCardTile extends StatelessWidget {
                       ),
                       _InfoChip(
                         icon: Icons.pie_chart_rounded,
-                        label: '${(usedPercent * 100).toStringAsFixed(0)}% usado',
+                        label:
+                            '${(usedPercent * 100).toStringAsFixed(0)}% usado',
                         color: usedColor,
                       ),
                     ],
                   ),
+                  if (onPayPressed != null) ...[
+                    const SizedBox(height: 16),
+                    Obx(() {
+                      final isPaying = controller.isProcessingInvoicePayment(
+                        card.id,
+                      );
+
+                      return SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: isPaying ? null : onPayPressed,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: card.isInvoiceOverdue
+                                ? AppColors.rose
+                                : accentColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          icon: isPaying
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.payments_rounded),
+                          label: Text(
+                            isPaying
+                                ? 'Pagando...'
+                                : 'Pagar ${formatter.format(card.payableInvoice)}',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ],
               ),
             ),
@@ -732,10 +797,7 @@ class _CreditCardTile extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 
 class _UsageBar extends StatelessWidget {
-  const _UsageBar({
-    required this.usedPercent,
-    required this.barColor,
-  });
+  const _UsageBar({required this.usedPercent, required this.barColor});
 
   final double usedPercent;
   final Color barColor;
@@ -885,10 +947,7 @@ class _StatusPill extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
           Text(
@@ -910,10 +969,7 @@ class _StatusPill extends StatelessWidget {
 // ─────────────────────────────────────────────────────────
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;

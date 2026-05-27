@@ -7,6 +7,7 @@ import '../../../domain/repositories/i_bank_account_repository.dart';
 import '../../../domain/repositories/i_category_repository.dart';
 import '../../../domain/repositories/i_credit_card_repository.dart';
 import '../../../domain/repositories/i_transaction_repository.dart';
+import '../../../domain/services/invoice_payment_validator.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/category_use_cases.dart';
@@ -73,6 +74,9 @@ class HomeBinding extends Bindings {
         fenix: true,
       );
     }
+    if (!Get.isRegistered<InvoicePaymentValidator>()) {
+      Get.lazyPut(() => const InvoicePaymentValidator(), fenix: true);
+    }
     if (!Get.isRegistered<HomeTabNavigation>()) {
       Get.lazyPut<HomeTabNavigation>(() => GetHomeTabNavigation(), fenix: true);
     }
@@ -94,6 +98,7 @@ class HomeBinding extends Bindings {
           createCategoryUseCase: Get.find<CreateCategoryUseCase>(),
           getTransactionsUseCase: Get.find<GetTransactionsUseCase>(),
           createInvoicePaymentUseCase: Get.find<CreateInvoicePaymentUseCase>(),
+          invoicePaymentValidator: Get.find<InvoicePaymentValidator>(),
           dashboardRefreshNotifier: Get.find<DashboardRefreshNotifier>(),
           homeTabNavigation: Get.find<HomeTabNavigation>(),
           realtimeClient: Get.find<RealtimeClient>(),

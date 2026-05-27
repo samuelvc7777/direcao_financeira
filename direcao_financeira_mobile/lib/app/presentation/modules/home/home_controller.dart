@@ -11,6 +11,7 @@ import '../../../domain/entities/bank_account_entity.dart';
 import '../../../domain/entities/category_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
+import '../../../domain/services/invoice_payment_validator.dart';
 import '../../../domain/usecases/auth_session_use_cases.dart';
 import '../../../domain/usecases/bank_account_use_cases.dart';
 import '../../../domain/usecases/category_use_cases.dart';
@@ -30,6 +31,7 @@ class HomeController extends GetxController {
     required this.createCategoryUseCase,
     required this.getTransactionsUseCase,
     required this.createInvoicePaymentUseCase,
+    required this.invoicePaymentValidator,
     required this.dashboardRefreshNotifier,
     required this.homeTabNavigation,
     required this.realtimeClient,
@@ -44,6 +46,7 @@ class HomeController extends GetxController {
   final CreateCategoryUseCase createCategoryUseCase;
   final GetTransactionsUseCase getTransactionsUseCase;
   final CreateInvoicePaymentUseCase createInvoicePaymentUseCase;
+  final InvoicePaymentValidator invoicePaymentValidator;
   final DashboardRefreshNotifier dashboardRefreshNotifier;
   final HomeTabNavigation homeTabNavigation;
   final RealtimeClient realtimeClient;
@@ -226,13 +229,92 @@ class HomeController extends GetxController {
   Future<void> payInvoice({
     required CreditCardEntity card,
     required BankAccountEntity bankAccount,
+    InvoicePaymentMode mode = InvoicePaymentMode.total,
+    int? amountCents,
   }) async {
-    if (card.payableInvoiceCents <= 0) {
-      _showFeedback('Atencao', 'Nao ha fatura vencendo para este cartao.');
+    final validation = invoicePaymentValidator.validate(
+      InvoicePaymentChoice(
+        bankAccountId: bankAccount.id,
+        creditCardId: card.id,
+        mode: mode,
+        amountCents: amountCents,
+        payableInvoiceCents: card.payableInvoiceCents,
+      ),
+    );
+    if (!validation.isValid) {
+      _showFeedback(
+        'Atencao',
+        validation.errorMessage ?? 'Revise os dados do pagamento.',
+      );
       return;
     }
-    if (isProcessingInvoicePayment(card.id)) {
+
+    final resolvedAmountCents = validation.resolvedAmountCents!;
+    final error = await _executeInvoicePayment(
+      card: card,
+      bankAccount: bankAccount,
+      resolvedAmountCents: resolvedAmountCents,
+    );
+    if (error != null) {
+      _showFeedback('Erro', error);
       return;
+    }
+
+    _showFeedback(
+      'Sucesso',
+      _buildInvoicePaymentSuccessMessage(
+        card: card,
+        bankAccount: bankAccount,
+        mode: mode,
+      ),
+    );
+  }
+
+  Future<String?> submitInvoicePayment({
+    required CreditCardEntity card,
+    required BankAccountEntity bankAccount,
+    required InvoicePaymentMode mode,
+    int? amountCents,
+  }) async {
+    final validation = invoicePaymentValidator.validate(
+      InvoicePaymentChoice(
+        bankAccountId: bankAccount.id,
+        creditCardId: card.id,
+        mode: mode,
+        amountCents: amountCents,
+        payableInvoiceCents: card.payableInvoiceCents,
+      ),
+    );
+    if (!validation.isValid) {
+      return validation.errorMessage ?? 'Revise os dados do pagamento.';
+    }
+
+    final error = await _executeInvoicePayment(
+      card: card,
+      bankAccount: bankAccount,
+      resolvedAmountCents: validation.resolvedAmountCents!,
+    );
+    if (error == null) {
+      _showFeedback(
+        'Sucesso',
+        _buildInvoicePaymentSuccessMessage(
+          card: card,
+          bankAccount: bankAccount,
+          mode: mode,
+        ),
+      );
+    }
+
+    return error;
+  }
+
+  Future<String?> _executeInvoicePayment({
+    required CreditCardEntity card,
+    required BankAccountEntity bankAccount,
+    required int resolvedAmountCents,
+  }) async {
+    if (isProcessingInvoicePayment(card.id)) {
+      return 'Pagamento ja esta em processamento.';
     }
 
     processingInvoiceCardIds.add(card.id);
@@ -256,28 +338,25 @@ class HomeController extends GetxController {
       final paymentResult = await createInvoicePaymentUseCase(
         bankAccountId: bankAccount.id,
         creditCardId: card.id,
-        amountCents: card.payableInvoiceCents,
+        amountCents: resolvedAmountCents,
         expenseCategoryId: expenseCategoryId,
         incomeCategoryId: incomeCategoryId,
         description: description,
         transactionDate: now,
       );
 
-      paymentResult.fold(
-        (failure) => throw _InvoicePaymentException(failure.message),
-        (_) {},
-      );
-
-      await loadDashboardData(silent: true);
-      dashboardRefreshNotifier.requestRefresh();
-      _showFeedback(
-        'Sucesso',
-        'Fatura do cartao "${card.name}" paga com ${bankAccount.name}.',
+      return await paymentResult.fold<Future<String?>>(
+        (failure) async => failure.message,
+        (_) async {
+          await loadDashboardData(silent: true);
+          dashboardRefreshNotifier.requestRefresh();
+          return null;
+        },
       );
     } on _InvoicePaymentException catch (error) {
-      _showFeedback('Erro', error.message);
+      return error.message;
     } catch (_) {
-      _showFeedback('Erro', 'Nao foi possivel pagar a fatura agora.');
+      return 'Nao foi possivel pagar a fatura agora.';
     } finally {
       processingInvoiceCardIds.remove(card.id);
     }
@@ -422,6 +501,18 @@ class HomeController extends GetxController {
       (failure) => throw _InvoicePaymentException(failure.message),
       (category) => category.id,
     );
+  }
+
+  String _buildInvoicePaymentSuccessMessage({
+    required CreditCardEntity card,
+    required BankAccountEntity bankAccount,
+    required InvoicePaymentMode mode,
+  }) {
+    if (mode == InvoicePaymentMode.partial) {
+      return 'Pagamento parcial da fatura "${card.name}" registrado com ${bankAccount.name}.';
+    }
+
+    return 'Fatura do cartao "${card.name}" paga com ${bankAccount.name}.';
   }
 
   Future<void> _checkForAppUpdate() async {

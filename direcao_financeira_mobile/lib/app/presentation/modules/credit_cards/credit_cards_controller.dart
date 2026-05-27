@@ -3,8 +3,15 @@ import 'package:get/get.dart';
 
 import '../../../core/dashboard/dashboard_refresh_notifier.dart';
 import '../../../core/feedback/app_snackbar.dart';
+import '../../../domain/entities/bank_account_entity.dart';
+import '../../../domain/entities/category_entity.dart';
 import '../../../domain/entities/credit_card_entity.dart';
+import '../../../domain/entities/transaction_entity.dart';
+import '../../../domain/services/invoice_payment_validator.dart';
+import '../../../domain/usecases/bank_account_use_cases.dart';
+import '../../../domain/usecases/category_use_cases.dart';
 import '../../../domain/usecases/credit_card_use_cases.dart';
+import '../../../domain/usecases/transaction_use_cases.dart';
 
 class CreditCardsController extends GetxController {
   CreditCardsController({
@@ -13,6 +20,11 @@ class CreditCardsController extends GetxController {
     required this.updateCreditCardUseCase,
     required this.deactivateCreditCardUseCase,
     required this.reactivateCreditCardUseCase,
+    required this.loadBankAccountsUseCase,
+    required this.loadCategoriesUseCase,
+    required this.createCategoryUseCase,
+    required this.createInvoicePaymentUseCase,
+    required this.invoicePaymentValidator,
     required this.dashboardRefreshNotifier,
   });
 
@@ -21,12 +33,24 @@ class CreditCardsController extends GetxController {
   final UpdateCreditCardUseCase updateCreditCardUseCase;
   final DeactivateCreditCardUseCase deactivateCreditCardUseCase;
   final ReactivateCreditCardUseCase reactivateCreditCardUseCase;
+  final LoadBankAccountsUseCase loadBankAccountsUseCase;
+  final LoadCategoriesUseCase loadCategoriesUseCase;
+  final CreateCategoryUseCase createCategoryUseCase;
+  final CreateInvoicePaymentUseCase createInvoicePaymentUseCase;
+  final InvoicePaymentValidator invoicePaymentValidator;
   final DashboardRefreshNotifier dashboardRefreshNotifier;
 
   final isLoading = true.obs;
   final isSubmitting = false.obs;
   final errorMessage = RxnString();
   final creditCards = <CreditCardEntity>[].obs;
+  final bankAccounts = <BankAccountEntity>[].obs;
+  final processingInvoiceCardIds = <int>[].obs;
+
+  static const _invoicePaymentExpenseCategoryName =
+      'Pagamento interno de fatura';
+  static const _invoicePaymentIncomeCategoryName =
+      'Recebimento interno de fatura';
 
   final colorOptions = const <String>[
     '#22c55e',
@@ -56,14 +80,97 @@ class CreditCardsController extends GetxController {
   Future<void> loadCreditCards() async {
     isLoading.value = true;
     errorMessage.value = null;
-    final result = await loadCreditCardsUseCase();
+    final cardsResult = await loadCreditCardsUseCase();
+    final accountsResult = await loadBankAccountsUseCase();
 
-    result.fold(
+    cardsResult.fold(
       (failure) => errorMessage.value = failure.message,
       (data) => creditCards.assignAll(data),
     );
+    accountsResult.fold(
+      (failure) => debugPrint(
+        '[CreditCardsController] Erro ao carregar contas: ${failure.message}',
+      ),
+      (data) => bankAccounts.assignAll(data.where((a) => a.isActive).toList()),
+    );
 
     isLoading.value = false;
+  }
+
+  bool isProcessingInvoicePayment(int cardId) =>
+      processingInvoiceCardIds.contains(cardId);
+
+  Future<String?> submitInvoicePayment({
+    required CreditCardEntity card,
+    required BankAccountEntity bankAccount,
+    required InvoicePaymentMode mode,
+    int? amountCents,
+  }) async {
+    final validation = invoicePaymentValidator.validate(
+      InvoicePaymentChoice(
+        bankAccountId: bankAccount.id,
+        creditCardId: card.id,
+        mode: mode,
+        amountCents: amountCents,
+        payableInvoiceCents: card.payableInvoiceCents,
+      ),
+    );
+    if (!validation.isValid) {
+      return validation.errorMessage ?? 'Revise os dados do pagamento.';
+    }
+    if (isProcessingInvoicePayment(card.id)) {
+      return 'Pagamento ja esta em processamento.';
+    }
+
+    processingInvoiceCardIds.add(card.id);
+    final now = DateTime.now();
+    final description =
+        '$kInternalInvoicePaymentDescriptionPrefix${card.id}:${bankAccount.id}:${now.toIso8601String()}';
+
+    try {
+      final expenseCategoryId = await _ensureInternalCategoryId(
+        name: _invoicePaymentExpenseCategoryName,
+        type: CategoryType.expense,
+        color: '#D97706',
+        icon: 'credit_card',
+      );
+      final incomeCategoryId = await _ensureInternalCategoryId(
+        name: _invoicePaymentIncomeCategoryName,
+        type: CategoryType.income,
+        color: '#0891B2',
+        icon: 'sync_alt',
+      );
+      final result = await createInvoicePaymentUseCase(
+        bankAccountId: bankAccount.id,
+        creditCardId: card.id,
+        amountCents: validation.resolvedAmountCents!,
+        expenseCategoryId: expenseCategoryId,
+        incomeCategoryId: incomeCategoryId,
+        description: description,
+        transactionDate: now,
+      );
+
+      return await result.fold<Future<String?>>(
+        (failure) async => failure.message,
+        (_) async {
+          await loadCreditCards();
+          dashboardRefreshNotifier.requestRefresh();
+          _showFeedback(
+            'Sucesso',
+            mode == InvoicePaymentMode.partial
+                ? 'Pagamento parcial registrado com sucesso.'
+                : 'Fatura paga com sucesso.',
+          );
+          return null;
+        },
+      );
+    } on _InvoicePaymentException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'Nao foi possivel pagar a fatura agora.';
+    } finally {
+      processingInvoiceCardIds.remove(card.id);
+    }
   }
 
   Future<void> createCreditCard({
@@ -197,6 +304,37 @@ class CreditCardsController extends GetxController {
     isSubmitting.value = false;
   }
 
+  Future<int> _ensureInternalCategoryId({
+    required String name,
+    required CategoryType type,
+    required String color,
+    required String icon,
+  }) async {
+    final categoriesResult = await loadCategoriesUseCase();
+    final categories = categoriesResult.fold<List<CategoryEntity>>(
+      (_) => const [],
+      (data) => data,
+    );
+    final existingCategory = categories.firstWhereOrNull(
+      (category) => category.name == name && category.type == type,
+    );
+    if (existingCategory != null) {
+      return existingCategory.id;
+    }
+
+    final createResult = await createCategoryUseCase(
+      name: name,
+      type: type,
+      color: color,
+      icon: icon,
+    );
+
+    return createResult.fold(
+      (failure) => throw _InvoicePaymentException(failure.message),
+      (category) => category.id,
+    );
+  }
+
   void _showFeedback(String title, String message, {bool isError = false}) {
     try {
       if (Get.testMode || Get.overlayContext == null) {
@@ -217,7 +355,9 @@ class CreditCardsController extends GetxController {
         colorText: Get.theme.colorScheme.onSurface,
       );
     } catch (_) {
-      debugPrint('[CreditCardsController] Feedback suprimido: $title - $message');
+      debugPrint(
+        '[CreditCardsController] Feedback suprimido: $title - $message',
+      );
     }
   }
 
@@ -229,4 +369,10 @@ class CreditCardsController extends GetxController {
 
     return Color(int.parse('FF$normalized', radix: 16));
   }
+}
+
+class _InvoicePaymentException implements Exception {
+  _InvoicePaymentException(this.message);
+
+  final String message;
 }
