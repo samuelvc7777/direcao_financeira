@@ -128,6 +128,12 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
       title: 'Jornada e Metas',
       items: const [
         SettingsItemData(
+          title: 'Horarios de Trabalho',
+          subtitle: 'Defina sua jornada semanal',
+          icon: Icons.schedule_rounded,
+          accentColor: AppColors.lime,
+        ),
+        SettingsItemData(
           title: 'Configurar Metas',
           subtitle: 'Metas pessoais e de faturamento',
           icon: Icons.emoji_events_outlined,
