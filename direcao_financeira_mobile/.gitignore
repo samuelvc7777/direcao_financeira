@@ -1,5 +1,7 @@
 # Miscellaneous
 *.class
+*.apk
+*.aab
 *.log
 *.pyc
 *.swp
@@ -45,6 +47,9 @@ app.*.map.json
 /android/app/release
 
 Thumbs.db
+out.txt
+TestLocalHost.java
+TestLoopback.java
 *.swo
 *~
 .vscode/
@@ -64,6 +69,8 @@ vendor/
 coverage/
 .cache/
 tmp/
+.bg-shell/
+supabase/.temp/
 .specify/extensions/.cache/
 .specify/extensions/.backup/
 .specify/extensions/*/local-config.yml
