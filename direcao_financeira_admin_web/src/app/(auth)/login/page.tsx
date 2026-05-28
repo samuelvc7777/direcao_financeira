@@ -9,7 +9,7 @@ export default function LoginPage() {
         <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-blue-500/5 blur-[120px]" />
       </div>
 
-      <div className="container relative z-10 flex items-center justify-center p-4">
+      <div className="container relative z-10 flex items-center justify-center px-4 py-6 sm:p-6">
         <LoginForm />
       </div>
 
@@ -20,3 +20,4 @@ export default function LoginPage() {
     </main>
   );
 }
+

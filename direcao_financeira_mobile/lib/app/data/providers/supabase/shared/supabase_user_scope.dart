@@ -103,8 +103,7 @@ class SupabaseUserScope {
   Future<SubscriptionModel?> getActiveSubscription(int userId) async {
     final history = await getSubscriptionHistory(userId);
     for (final subscription in history) {
-      final status = subscription.status.toUpperCase();
-      if (status == 'ACTIVE' || status == 'TRIAL') {
+      if (subscription.grantsAccess) {
         return subscription;
       }
     }

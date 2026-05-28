@@ -247,15 +247,6 @@ class _HeroSliverAppBar extends StatelessWidget {
         icon: Icon(Icons.arrow_back_ios_new_rounded, color: onSurface),
         onPressed: () => Get.back(),
       ),
-      actions: [
-        IconButton(
-          icon: Icon(
-            Icons.tune_rounded,
-            color: onSurface.withValues(alpha: 0.6),
-          ),
-          onPressed: () {},
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(

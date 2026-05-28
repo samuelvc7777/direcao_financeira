@@ -64,7 +64,9 @@ class SubscriptionController extends GetxController {
   final storeProductsById = <String, StoreProductEntity>{}.obs;
 
   StreamSubscription<StorePurchaseEventEntity>? _purchaseSubscription;
-  bool _didAttemptStartupRestore = false;
+  bool _didCompleteInitialBootstrap = false;
+  Future<void>? _activeLoadFuture;
+  DateTime? _manualRestoreSyncAllowedUntil;
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'pt_BR',
@@ -81,19 +83,66 @@ class SubscriptionController extends GetxController {
       '[SubscriptionController] onInit -> abrindo tela de assinatura.',
     );
     _listenToPurchaseUpdates();
-    loadData();
+    unawaited(loadData());
   }
 
   @override
   void onClose() {
     _purchaseSubscription?.cancel();
+    _activeLoadFuture = null;
+    _didCompleteInitialBootstrap = false;
     super.onClose();
   }
 
   Future<void> loadData() async {
-    debugPrint('[SubscriptionController] loadData -> iniciando carregamento.');
+    await _loadSubscriptionData(isBootstrap: true, source: 'loadData');
+  }
+
+  Future<void> reloadData() async {
+    await _loadSubscriptionData(isBootstrap: false, source: 'reloadData');
+  }
+
+  Future<void> _loadSubscriptionData({
+    required bool isBootstrap,
+    required String source,
+  }) async {
+    if (_activeLoadFuture != null) {
+      await _activeLoadFuture;
+      return;
+    }
+
+    if (isBootstrap && _didCompleteInitialBootstrap) {
+      debugPrint(
+        '[SubscriptionController] $source -> bootstrap inicial ja concluido, ignorando nova carga automatica.',
+      );
+      return;
+    }
+
+    final loadFuture = _performSubscriptionLoad(
+      isBootstrap: isBootstrap,
+      source: source,
+    );
+    _activeLoadFuture = loadFuture;
+    try {
+      await loadFuture;
+      if (isBootstrap) {
+        _didCompleteInitialBootstrap = true;
+      }
+    } finally {
+      if (identical(_activeLoadFuture, loadFuture)) {
+        _activeLoadFuture = null;
+      }
+    }
+  }
+
+  Future<void> _performSubscriptionLoad({
+    required bool isBootstrap,
+    required String source,
+  }) async {
+    debugPrint('[SubscriptionController] $source -> iniciando carregamento.');
     isLoading.value = true;
     errorMessage.value = null;
+    storeErrorMessage.value = null;
 
     final activeSubscriptionFuture = getMySubscriptionUseCase();
     final historyFuture = getSubscriptionHistoryUseCase();
@@ -126,9 +175,8 @@ class SubscriptionController extends GetxController {
       activeSubscription: activeSubscription.value,
       subscriptions: history,
     );
-    await _maybeRestorePurchasesOnStartup();
-    _logSubscriptionState('loadData');
-    _logActiveSubscriptionState('loadData');
+    _logSubscriptionState(source);
+    _logActiveSubscriptionState(source);
 
     isLoading.value = false;
   }
@@ -165,7 +213,12 @@ class SubscriptionController extends GetxController {
     }
 
     if (!usesPlayStoreBilling) {
-      await changePlan();
+      _showFeedback(
+        title: 'Play Store indisponivel',
+        message:
+            'Nao foi possivel abrir a assinatura pela Play Store neste aparelho.',
+        isError: true,
+      );
       return;
     }
 
@@ -209,6 +262,11 @@ class SubscriptionController extends GetxController {
 
   Future<void> restorePurchases({bool showFeedback = true}) async {
     isRestoringPurchases.value = true;
+    if (showFeedback) {
+      _manualRestoreSyncAllowedUntil = DateTime.now().add(
+        const Duration(seconds: 45),
+      );
+    }
 
     final result = await restorePurchasesUseCase();
     result.fold(
@@ -298,7 +356,7 @@ class SubscriptionController extends GetxController {
     }
 
     if (!usesPlayStoreBilling) {
-      return true;
+      return false;
     }
 
     if (isStoreCatalogLoading.value || storeErrorMessage.value != null) {
@@ -315,7 +373,7 @@ class SubscriptionController extends GetxController {
     }
 
     if (!usesPlayStoreBilling) {
-      return 'ALTERAR PLANO';
+      return 'ASSINAR NA PLAY STORE';
     }
 
     if (isCurrentPlan(plan)) {
@@ -364,6 +422,10 @@ class SubscriptionController extends GetxController {
 
   bool isCurrentPlan(PlanEntity plan) {
     return activeSubscription.value?.plan?.id == plan.id;
+  }
+
+  bool get isActiveSubscriptionGooglePlayManaged {
+    return activeSubscription.value?.isGooglePlayManaged ?? false;
   }
 
   Future<void> _loadStoreCatalog() async {
@@ -443,20 +505,18 @@ class SubscriptionController extends GetxController {
 
         if (products.isEmpty) {
           storeErrorMessage.value =
-              'A Google Play nao retornou o produto '
-              '$playStoreMonthlySubscriptionProductId para os planos atuais.';
+              'A Google Play nao retornou nenhum produto para os planos ativos.';
           debugPrint(
             '[SubscriptionController] _loadStoreCatalog -> catalogo vazio.',
           );
           return;
         }
 
-        if (!storeProductsById.containsKey(
-          playStoreMonthlySubscriptionProductId,
+        if (!storeProductsById.keys.any(
+          supportedAndroidSubscriptionProductIds.contains,
         )) {
           storeErrorMessage.value =
-              'O plano mensal Android precisa existir na Google Play com o ID '
-              '$playStoreMonthlySubscriptionProductId.';
+              'Nenhum plano oficial da Google Play foi encontrado para os planos ativos.';
           debugPrint(
             '[SubscriptionController] _loadStoreCatalog -> produto oficial nao encontrado.',
           );
@@ -505,7 +565,23 @@ class SubscriptionController extends GetxController {
           );
           break;
         case StorePurchaseStatus.purchased:
+          if (pendingPurchaseProductId.value != event.productId) {
+            debugPrint(
+              '[SubscriptionController] compra ignorada -> '
+              'productId=${event.productId} sem compra iniciada nesta sessao.',
+            );
+            return;
+          }
+          await _syncPurchaseWithSubscription(event);
+          break;
         case StorePurchaseStatus.restored:
+          if (!_canSyncRestoredPurchase()) {
+            debugPrint(
+              '[SubscriptionController] restore ignorado -> '
+              'productId=${event.productId} sem restauracao manual recente.',
+            );
+            return;
+          }
           await _syncPurchaseWithSubscription(event);
           break;
         case StorePurchaseStatus.canceled:
@@ -580,7 +656,7 @@ class SubscriptionController extends GetxController {
       },
       (_) async {
         await completePurchaseUseCase(event.productId);
-        await loadData();
+        await reloadData();
         _showFeedback(
           title: 'Sucesso',
           message: event.status == StorePurchaseStatus.restored
@@ -594,24 +670,9 @@ class SubscriptionController extends GetxController {
     pendingPurchaseProductId.value = null;
   }
 
-  Future<void> _maybeRestorePurchasesOnStartup() async {
-    if (_didAttemptStartupRestore || !usesPlayStoreBilling) {
-      return;
-    }
-
-    _didAttemptStartupRestore = true;
-
-    if (selectedPlan == null) {
-      debugPrint(
-        '[SubscriptionController] _maybeRestorePurchasesOnStartup -> sem plano selecionado, restauracao ignorada.',
-      );
-      return;
-    }
-
-    debugPrint(
-      '[SubscriptionController] _maybeRestorePurchasesOnStartup -> iniciando restore silencioso.',
-    );
-    await restorePurchases(showFeedback: false);
+  bool _canSyncRestoredPurchase() {
+    final allowedUntil = _manualRestoreSyncAllowedUntil;
+    return allowedUntil != null && DateTime.now().isBefore(allowedUntil);
   }
 
   PlanEntity? _findPlanByProductId(String productId) {
@@ -635,7 +696,7 @@ class SubscriptionController extends GetxController {
       (failure) =>
           _showFeedback(title: 'Erro', message: failure.message, isError: true),
       (_) async {
-        await loadData();
+        await reloadData();
         _showFeedback(title: 'Sucesso', message: successMessage);
       },
     );

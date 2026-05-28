@@ -131,48 +131,19 @@ class SupabaseSubscriptionRemoteDataSource
         .from(SupabaseTableNames.subscriptions)
         .select()
         .eq('googlePlayPurchaseToken', normalizedToken)
+        .limit(1)
         .maybeSingle();
 
     if (existingRow != null) {
-      final existingRowMap = Map<String, dynamic>.from(existingRow);
-      final existing = SubscriptionModel.fromJson({
-        ...existingRowMap,
-        'plan': plan.toJson(),
-      });
-      final preservedEndDate =
-          existing.endDate != null && existing.endDate!.isAfter(now)
-          ? existing.endDate!
-          : fallbackEndDate;
-      final existingGooglePlayExpiresAt = existingRowMap['googlePlayExpiresAt']
-          ?.toString();
-      final existingGooglePlayOrderId = existingRowMap['googlePlayOrderId']
-          ?.toString();
-
-      final updated = await client
-          .from(SupabaseTableNames.subscriptions)
-          .update({
-            'userId': userId,
-            'planId': plan.id,
-            'status': 'ACTIVE',
-            'endDate': preservedEndDate.toIso8601String(),
-            'canceledAt': null,
-            'autoRenew': existing.autoRenew,
-            'googlePlayProductId': productId,
-            'googlePlayOrderId': purchaseId ?? existingGooglePlayOrderId,
-            'googlePlayLinkedAt': now.toIso8601String(),
-            'googlePlayExpiresAt':
-                existingGooglePlayExpiresAt ??
-                preservedEndDate.toIso8601String(),
-            'updatedAt': now.toIso8601String(),
-          })
-          .eq('id', existing.id)
-          .select()
-          .single();
-
-      return SubscriptionModel.fromJson({
-        ...Map<String, dynamic>.from(updated),
-        'plan': plan.toJson(),
-      });
+      return _refreshExistingGooglePlaySubscription(
+        existingRow: Map<String, dynamic>.from(existingRow),
+        userId: userId,
+        plan: plan,
+        productId: productId,
+        purchaseId: purchaseId,
+        fallbackEndDate: fallbackEndDate,
+        now: now,
+      );
     }
 
     final active = await userScope.getActiveSubscription(userId);
@@ -188,28 +159,103 @@ class SupabaseSubscriptionRemoteDataSource
           .eq('id', active.id);
     }
 
-    final inserted = await client
+    Map<String, dynamic> inserted;
+    try {
+      inserted = Map<String, dynamic>.from(
+        await client
+            .from(SupabaseTableNames.subscriptions)
+            .insert({
+              'userId': userId,
+              'planId': plan.id,
+              'status': 'ACTIVE',
+              'startDate': now.toIso8601String(),
+              'endDate': fallbackEndDate.toIso8601String(),
+              'autoRenew': true,
+              'googlePlayProductId': productId,
+              'googlePlayPurchaseToken': normalizedToken,
+              'googlePlayOrderId': purchaseId,
+              'googlePlayLinkedAt': now.toIso8601String(),
+              'googlePlayExpiresAt': fallbackEndDate.toIso8601String(),
+              'createdAt': now.toIso8601String(),
+              'updatedAt': now.toIso8601String(),
+            })
+            .select()
+            .single(),
+      );
+    } on PostgrestException catch (error) {
+      final isDuplicatePurchaseToken =
+          error.code == '23505' &&
+          (error.message.contains('googlePlayPurchaseToken') ||
+              error.details.toString().contains('googlePlayPurchaseToken'));
+      if (!isDuplicatePurchaseToken) {
+        rethrow;
+      }
+
+      final duplicatedRow = await client
+          .from(SupabaseTableNames.subscriptions)
+          .select()
+          .eq('googlePlayPurchaseToken', normalizedToken)
+          .limit(1)
+          .single();
+
+      return _refreshExistingGooglePlaySubscription(
+        existingRow: Map<String, dynamic>.from(duplicatedRow),
+        userId: userId,
+        plan: plan,
+        productId: productId,
+        purchaseId: purchaseId,
+        fallbackEndDate: fallbackEndDate,
+        now: now,
+      );
+    }
+
+    return SubscriptionModel.fromJson({...inserted, 'plan': plan.toJson()});
+  }
+
+  Future<SubscriptionModel> _refreshExistingGooglePlaySubscription({
+    required Map<String, dynamic> existingRow,
+    required Object userId,
+    required PlanModel plan,
+    required String productId,
+    required String? purchaseId,
+    required DateTime fallbackEndDate,
+    required DateTime now,
+  }) async {
+    final existing = SubscriptionModel.fromJson({
+      ...existingRow,
+      'plan': plan.toJson(),
+    });
+    final preservedEndDate =
+        existing.endDate != null && existing.endDate!.isAfter(now)
+        ? existing.endDate!
+        : fallbackEndDate;
+    final existingGooglePlayExpiresAt = existingRow['googlePlayExpiresAt']
+        ?.toString();
+    final existingGooglePlayOrderId = existingRow['googlePlayOrderId']
+        ?.toString();
+
+    final updated = await client
         .from(SupabaseTableNames.subscriptions)
-        .insert({
+        .update({
           'userId': userId,
           'planId': plan.id,
           'status': 'ACTIVE',
-          'startDate': now.toIso8601String(),
-          'endDate': fallbackEndDate.toIso8601String(),
-          'autoRenew': true,
+          'endDate': preservedEndDate.toIso8601String(),
+          'canceledAt': null,
+          'autoRenew': existing.autoRenew,
           'googlePlayProductId': productId,
-          'googlePlayPurchaseToken': normalizedToken,
-          'googlePlayOrderId': purchaseId,
+          'googlePlayOrderId': purchaseId ?? existingGooglePlayOrderId,
           'googlePlayLinkedAt': now.toIso8601String(),
-          'googlePlayExpiresAt': fallbackEndDate.toIso8601String(),
-          'createdAt': now.toIso8601String(),
+          'googlePlayExpiresAt':
+              existingGooglePlayExpiresAt ?? preservedEndDate.toIso8601String(),
           'updatedAt': now.toIso8601String(),
         })
+        .eq('id', existing.id)
         .select()
         .single();
 
     return SubscriptionModel.fromJson({
-      ...Map<String, dynamic>.from(inserted),
+      ...Map<String, dynamic>.from(updated),
       'plan': plan.toJson(),
     });
   }

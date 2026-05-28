@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { fetchApi } from "@/lib/api/client";
 import { mapUserToListItem, type User, type UserListItem } from "@/lib/subscriptions";
+import { ResponsiveContainer } from "@/components/layout/responsive-container";
 
 interface DashboardData {
   metrics: {
@@ -74,8 +75,9 @@ export default function Home() {
   }
 
   return (
-    <div className="p-10 space-y-10 animate-fade-in-up">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <ResponsiveContainer>
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="responsive-grid-cards">
         <div className="p-6 bg-[var(--card)] rounded-3xl border border-[var(--border)] shadow-sm hover:shadow-md transition-all group">
           <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Users className="h-6 w-6" />
@@ -121,7 +123,7 @@ export default function Home() {
       </div>
 
       <div className="bg-[var(--card)] rounded-3xl border border-[var(--border)] shadow-sm overflow-hidden transition-colors duration-300">
-        <div className="p-8 border-b border-[var(--border)] flex items-center justify-between">
+        <div className="p-4 sm:p-6 lg:p-8 border-b border-[var(--border)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-lg font-bold">Últimos Usuários Cadastrados</h3>
           <Link
             href="/users"
@@ -135,16 +137,16 @@ export default function Home() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/30">
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                   Usuário
                 </th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                   Plano
                 </th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                   Status
                 </th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">
                   Ações
                 </th>
               </tr>
@@ -152,7 +154,7 @@ export default function Home() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {recentUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
                         {user.name
@@ -168,7 +170,7 @@ export default function Home() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5">
                     <span
                       className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase ${
                         user.activePlan
@@ -179,7 +181,7 @@ export default function Home() {
                       {user.activePlan?.name || "Sem Plano"}
                     </span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5">
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1.5 h-1.5 rounded-full ${user.isActive ? "bg-emerald-500" : "bg-red-500"}`}></div>
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
@@ -188,7 +190,7 @@ export default function Home() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5 text-right">
                     <Link
                       href={`/users/${user.id}`}
                       className="p-2 inline-block hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-600 transition-colors"
@@ -203,5 +205,6 @@ export default function Home() {
         </div>
       </div>
     </div>
+    </ResponsiveContainer>
   );
 }

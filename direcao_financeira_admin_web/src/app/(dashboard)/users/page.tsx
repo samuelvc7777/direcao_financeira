@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api/client';
+import { ResponsiveContainer } from '@/components/layout/responsive-container';
 import { mapUserToListItem, type User, type UserListItem } from '@/lib/subscriptions';
 
 interface Meta {
@@ -96,7 +97,8 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="p-10 space-y-8 animate-fade-in-up">
+    <ResponsiveContainer>
+    <div className="space-y-8 animate-fade-in-up">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Gestão de Usuários</h1>
@@ -142,16 +144,16 @@ export default function UsersPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-[var(--border)]">
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Usuário</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cargo</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Plano</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Ações</th>
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Usuário</th>
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cargo</th>
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Plano</th>
+                <th className="px-4 sm:px-6 lg:px-8 py-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
                         {user.name.split(' ').map((name) => name[0]).join('').slice(0, 2).toUpperCase()}
@@ -162,7 +164,7 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5">
                     <div className="flex items-center gap-1.5 text-xs font-semibold">
                       <Shield className={`w-3.5 h-3.5 ${user.roleLabel.name === 'ADMIN' ? 'text-amber-500' : 'text-blue-500'}`} />
                       <span className={user.roleLabel.name === 'ADMIN' ? 'text-amber-600' : 'text-slate-600 dark:text-slate-400'}>
@@ -170,7 +172,7 @@ export default function UsersPage() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5">
                     <div className="space-y-2">
                       <span className={`inline-flex px-3 py-1 text-[10px] font-bold rounded-full uppercase ${
                         user.activePlan
@@ -188,7 +190,7 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-4 sm:px-6 lg:px-8 py-5 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link href={`/users/${user.id}`} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-all">
                         <Edit2 className="w-4 h-4" />
@@ -229,5 +231,7 @@ export default function UsersPage() {
         )}
       </div>
     </div>
+    </ResponsiveContainer>
   );
 }
+

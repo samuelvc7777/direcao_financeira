@@ -18,6 +18,7 @@ import {
   type User,
   type Plan,
 } from '@/lib/subscriptions';
+import { ResponsiveContainer } from '@/components/layout/responsive-container';
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -85,8 +86,9 @@ export default function PlansPage() {
   }
 
   return (
+    <ResponsiveContainer>
     <div className="relative">
-      <div className="p-10 space-y-8 animate-fade-in-up">
+      <div className="space-y-8 animate-fade-in-up">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Planos & Assinaturas</h1>
@@ -107,7 +109,7 @@ export default function PlansPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="responsive-grid-cards">
           {plans.map((plan) => (
             <div key={plan.id} className="bg-[var(--card)] rounded-[2.5rem] border border-[var(--border)] shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group">
               <div className="p-8 space-y-6">
@@ -170,5 +172,6 @@ export default function PlansPage() {
         </div>
       </div>
     </div>
+    </ResponsiveContainer>
   );
 }
