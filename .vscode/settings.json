@@ -1,3 +1,7 @@
 {
-    "prisma.pinToPrisma6": false
+    "prisma.pinToPrisma6": false,
+    "git.autoRepositoryDetection": "subFolders",
+    "git.scanRepositories": [
+        "direcao_financeira_mobile"
+    ]
 }
