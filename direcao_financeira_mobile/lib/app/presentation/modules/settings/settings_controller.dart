@@ -256,50 +256,6 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
     isSubscriptionRefreshing.value = false;
   }
 
-  Future<void> pickProfilePhoto() async {
-    if (isProfilePhotoSaving.value) return;
-
-    final image = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 82,
-      maxWidth: 1024,
-      maxHeight: 1024,
-    );
-    if (image == null) {
-      return;
-    }
-
-    final bytes = await image.readAsBytes();
-    await updateProfilePhotoBytes(bytes);
-  }
-
-  Future<void> updateProfilePhotoBytes(Uint8List bytes) async {
-    if (bytes.isEmpty || isProfilePhotoSaving.value) {
-      return;
-    }
-
-    isProfilePhotoSaving.value = true;
-    try {
-      final encoded = base64Encode(bytes);
-      final result = await updateProfilePhotoUseCase(encoded);
-      result.fold(
-        (failure) =>
-            _showInfo('Nao foi possivel salvar a foto', failure.message),
-        (user) {
-          profilePhotoBase64.value = user.profilePhotoBase64;
-          userName.value = user.name;
-          userEmail.value = user.email;
-          _showInfo(
-            'Foto de perfil',
-            'Foto atualizada e salva no banco de dados.',
-          );
-        },
-      );
-    } finally {
-      isProfilePhotoSaving.value = false;
-    }
-  }
-
   void _loadSubscription(SubscriptionEntity? subscription) {
     if (subscription == null) {
       planName.value = 'Sem plano ativo';
@@ -346,6 +302,50 @@ class SettingsController extends GetxController with WidgetsBindingObserver {
     planProgress.value = subscription.status.toUpperCase() == 'ACTIVE'
         ? 1.0
         : 0.0;
+  }
+
+  Future<void> pickProfilePhoto() async {
+    if (isProfilePhotoSaving.value) return;
+
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (image == null) {
+      return;
+    }
+
+    final bytes = await image.readAsBytes();
+    await updateProfilePhotoBytes(bytes);
+  }
+
+  Future<void> updateProfilePhotoBytes(Uint8List bytes) async {
+    if (bytes.isEmpty || isProfilePhotoSaving.value) {
+      return;
+    }
+
+    isProfilePhotoSaving.value = true;
+    try {
+      final encoded = base64Encode(bytes);
+      final result = await updateProfilePhotoUseCase(encoded);
+      result.fold(
+        (failure) =>
+            _showInfo('Nao foi possivel salvar a foto', failure.message),
+        (user) {
+          profilePhotoBase64.value = user.profilePhotoBase64;
+          userName.value = user.name;
+          userEmail.value = user.email;
+          _showInfo(
+            'Foto de perfil',
+            'Foto atualizada e salva no banco de dados.',
+          );
+        },
+      );
+    } finally {
+      isProfilePhotoSaving.value = false;
+    }
   }
 
   void toggleTheme(bool value) {
