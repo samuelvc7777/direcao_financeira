@@ -67,14 +67,14 @@ export function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md p-8 bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-xl space-y-8 animate-fade-in-up">
+    <div className="w-full max-w-md sm:max-w-lg p-5 sm:p-8 bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-xl space-y-8 animate-fade-in-up">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20">
             D
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Direção Financeira</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Direção Financeira</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Portal Administrativo</p>
           </div>
         </div>
@@ -182,3 +182,4 @@ export function LoginForm() {
     </div>
   );
 }
+

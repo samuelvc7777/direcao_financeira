@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../core/subscription/subscription_access_gate.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../widgets/app_loading_indicator.dart';
@@ -85,10 +86,18 @@ class ShiftStartPanel extends StatelessWidget {
             child: Obx(
               () => ElevatedButton.icon(
                 onPressed: controller.canAddManualShift
-                    ? () => ManualShiftFormSheet.show(
-                        context,
-                        controller: controller,
-                      )
+                    ? () async {
+                        if (!await SubscriptionAccessGate.ensureAccess()) {
+                          return;
+                        }
+                        if (!context.mounted) {
+                          return;
+                        }
+                        ManualShiftFormSheet.show(
+                          context,
+                          controller: controller,
+                        );
+                      }
                     : null,
                 icon: controller.isAddingManualShift.value
                     ? const AppLoadingIndicator(

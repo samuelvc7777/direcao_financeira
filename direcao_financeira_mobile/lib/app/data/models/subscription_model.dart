@@ -11,6 +11,8 @@ class SubscriptionModel extends SubscriptionEntity {
     required super.autoRenew,
     super.createdAt,
     super.updatedAt,
+    super.googlePlayProductId,
+    super.googlePlayPurchaseToken,
     super.plan,
   });
 
@@ -26,6 +28,8 @@ class SubscriptionModel extends SubscriptionEntity {
       autoRenew: json['autoRenew'] ?? false,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
+      googlePlayProductId: json['googlePlayProductId']?.toString(),
+      googlePlayPurchaseToken: json['googlePlayPurchaseToken']?.toString(),
       plan: plan is Map
           ? PlanModel.fromJson(Map<String, dynamic>.from(plan))
           : null,
@@ -42,6 +46,8 @@ class SubscriptionModel extends SubscriptionEntity {
       'autoRenew': autoRenew,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'googlePlayProductId': googlePlayProductId,
+      'googlePlayPurchaseToken': googlePlayPurchaseToken,
       'plan': plan == null
           ? null
           : plan is PlanModel

@@ -67,6 +67,9 @@ class UserModel extends UserEntity {
               autoRenew: activeSubscription!.autoRenew,
               createdAt: activeSubscription!.createdAt,
               updatedAt: activeSubscription!.updatedAt,
+              googlePlayProductId: activeSubscription!.googlePlayProductId,
+              googlePlayPurchaseToken:
+                  activeSubscription!.googlePlayPurchaseToken,
               plan: activeSubscription!.plan,
             ).toJson(),
       'subscriptions': subscriptions
@@ -82,6 +85,9 @@ class UserModel extends UserEntity {
                     autoRenew: subscription.autoRenew,
                     createdAt: subscription.createdAt,
                     updatedAt: subscription.updatedAt,
+                    googlePlayProductId: subscription.googlePlayProductId,
+                    googlePlayPurchaseToken:
+                        subscription.googlePlayPurchaseToken,
                     plan: subscription.plan,
                   ).toJson(),
           )

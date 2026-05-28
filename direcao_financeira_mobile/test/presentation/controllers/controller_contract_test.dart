@@ -376,20 +376,27 @@ class _FakeSubscriptionRepository implements ISubscriptionRepository {
   List plans = [];
   bool storeAvailable = true;
   List<StoreProductEntity> products = [];
+  int changePlanCalls = 0;
+  int buyProductCalls = 0;
 
   @override
   Future<Either<Failure, void>> buyProduct({
     required String productId,
     String? applicationUserName,
-  }) async => const Right(null);
+  }) async {
+    buyProductCalls++;
+    return const Right(null);
+  }
 
   @override
   Future<Either<Failure, SubscriptionEntity?>> cancelSubscription() async =>
       Right(activeSubscription);
 
   @override
-  Future<Either<Failure, SubscriptionEntity?>> changePlan(int planId) async =>
-      Right(activeSubscription);
+  Future<Either<Failure, SubscriptionEntity?>> changePlan(int planId) async {
+    changePlanCalls++;
+    return Right(activeSubscription);
+  }
 
   @override
   Future<Either<Failure, SubscriptionEntity?>> syncStorePurchase({
@@ -1491,6 +1498,59 @@ void main() {
         controller.storeErrorMessage.value,
         contains('Nenhum plano compativel'),
       );
+    },
+  );
+
+  test(
+    'SubscriptionController nao cria assinatura manual quando Play Store esta indisponivel',
+    () async {
+      final repository = _FakeSubscriptionRepository()
+        ..storeAvailable = false
+        ..plans = [buildPlan()]
+        ..products = [buildStoreProduct()];
+      final controller = SubscriptionController(
+        getMySubscriptionUseCase: GetMySubscriptionUseCase(repository),
+        getSubscriptionHistoryUseCase: GetSubscriptionHistoryUseCase(
+          repository,
+        ),
+        getAvailablePlansUseCase: GetAvailablePlansUseCase(repository),
+        changePlanUseCase: ChangePlanUseCase(repository),
+        syncStorePurchaseUseCase: SyncStorePurchaseUseCase(repository),
+        cancelSubscriptionUseCase: CancelSubscriptionUseCase(repository),
+        renewSubscriptionUseCase: RenewSubscriptionUseCase(repository),
+        syncStoredUserSubscriptionUseCase: SyncStoredUserSubscriptionUseCase(
+          repository,
+        ),
+        isStoreAvailableUseCase: IsStoreAvailableUseCase(repository),
+        getStoreProductsUseCase: GetStoreProductsUseCase(repository),
+        buyStoreProductUseCase: BuyStoreProductUseCase(repository),
+        restorePurchasesUseCase: RestorePurchasesUseCase(repository),
+        completePurchaseUseCase: CompletePurchaseUseCase(repository),
+        watchStorePurchaseUpdatesUseCase: WatchStorePurchaseUpdatesUseCase(
+          repository,
+        ),
+      );
+
+      await controller.loadData();
+
+      expect(controller.canPurchaseSelectedPlan, isFalse);
+      expect(controller.ctaLabelForSelectedPlan(), 'ASSINAR NA PLAY STORE');
+      expect(repository.changePlanCalls, 0);
+      expect(repository.buyProductCalls, 0);
+    },
+  );
+
+  test(
+    'SubscriptionEntity identifica assinatura gerenciada pela Play Store pelos dados do banco',
+    () {
+      final manual = buildSubscription();
+      final playStore = buildSubscription(
+        googlePlayProductId: 'premium_monthly',
+        googlePlayPurchaseToken: 'token-123',
+      );
+
+      expect(manual.isGooglePlayManaged, isFalse);
+      expect(playStore.isGooglePlayManaged, isTrue);
     },
   );
 

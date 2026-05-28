@@ -141,6 +141,8 @@ SubscriptionModel buildSubscription({
   int id = 1,
   String status = 'ACTIVE',
   PlanModel? plan,
+  String? googlePlayProductId,
+  String? googlePlayPurchaseToken,
 }) {
   return SubscriptionModel(
     id: id,
@@ -148,6 +150,8 @@ SubscriptionModel buildSubscription({
     autoRenew: true,
     startDate: DateTime(2026, 1, 1),
     endDate: DateTime(2026, 2, 1),
+    googlePlayProductId: googlePlayProductId,
+    googlePlayPurchaseToken: googlePlayPurchaseToken,
     plan: plan ?? buildPlan(),
   );
 }

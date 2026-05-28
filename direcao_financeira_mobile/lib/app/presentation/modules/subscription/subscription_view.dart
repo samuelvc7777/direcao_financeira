@@ -27,14 +27,14 @@ class SubscriptionView extends GetView<SubscriptionController> {
         if (error != null) {
           return _SubscriptionErrorState(
             message: error,
-            onRetry: controller.loadData,
+            onRetry: controller.reloadData,
           );
         }
 
         final activeSubscription = controller.activeSubscription.value;
         return RefreshIndicator(
           color: cs.primary,
-          onRefresh: controller.loadData,
+          onRefresh: controller.reloadData,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 680;
@@ -147,6 +147,7 @@ class _ActivePlanExperience extends StatelessWidget {
         ? 'Periodo atual'
         : '${plan.durationDays} dias';
     final isRenewalCanceled = !subscription.autoRenew;
+    final isGooglePlayManaged = subscription.isGooglePlayManaged;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,9 +219,11 @@ class _ActivePlanExperience extends StatelessWidget {
                     color: AppColors.aqua,
                   ),
                   _InfoTileData(
-                    icon: Icons.autorenew_rounded,
-                    label: 'Renovacao',
-                    value: subscription.autoRenew ? 'Automatica' : 'Cancelada',
+                    icon: isGooglePlayManaged
+                        ? Icons.shop_2_outlined
+                        : Icons.admin_panel_settings_outlined,
+                    label: 'Origem',
+                    value: isGooglePlayManaged ? 'Google Play' : 'Painel admin',
                     color: subscription.autoRenew
                         ? AppColors.emerald
                         : AppColors.amber,
@@ -241,21 +244,28 @@ class _ActivePlanExperience extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              _PlayStoreNote(
-                title: 'Gerenciado pela Google Play',
-                message:
-                    'Use restaurar compras para sincronizar uma assinatura ativa neste aparelho.',
-              ),
-              const SizedBox(height: 16),
-              Obx(
-                () => CustomFilledButton(
-                  text: 'RESTAURAR COMPRAS',
-                  icon: Icons.sync_rounded,
-                  backgroundColor: cs.surfaceContainerHighest,
-                  isLoading: controller.isRestoringPurchases.value,
-                  onPressed: controller.restorePurchases,
+              if (isGooglePlayManaged) ...[
+                _PlayStoreNote(
+                  title: 'Gerenciado pela Google Play',
+                  message:
+                      'Use restaurar compras para sincronizar uma assinatura ativa neste aparelho.',
                 ),
-              ),
+                const SizedBox(height: 16),
+                Obx(
+                  () => CustomFilledButton(
+                    text: 'RESTAURAR COMPRAS',
+                    icon: Icons.sync_rounded,
+                    backgroundColor: cs.surfaceContainerHighest,
+                    isLoading: controller.isRestoringPurchases.value,
+                    onPressed: controller.restorePurchases,
+                  ),
+                ),
+              ] else
+                _PlayStoreNote(
+                  title: 'Liberado pelo painel admin',
+                  message:
+                      'Os dados desta assinatura vem do banco de dados. Para migrar para cobranca automatica, assine pela Play Store quando o plano atual nao estiver mais ativo.',
+                ),
               if (isRenewalCanceled) ...[
                 const SizedBox(height: 10),
                 Obx(
@@ -266,11 +276,9 @@ class _ActivePlanExperience extends StatelessWidget {
                         controller.isActionLoading.value ||
                         controller.isPurchaseLoading.value ||
                         controller.isStoreSyncingPurchase.value,
-                    onPressed:
-                        controller.usesPlayStoreBilling &&
-                            !controller.canPurchaseSelectedPlan
-                        ? null
-                        : controller.purchaseSelectedPlan,
+                    onPressed: controller.canPurchaseSelectedPlan
+                        ? controller.purchaseSelectedPlan
+                        : null,
                   ),
                 ),
               ],
@@ -468,7 +476,7 @@ class _StoreHealthCard extends StatelessWidget {
                 Text(
                   controller.usesPlayStoreBilling
                       ? 'Google Play conectada'
-                      : 'Compra pelo backend',
+                      : 'Google Play indisponivel',
                   style: TextStyle(
                     color: cs.onSurface,
                     fontWeight: FontWeight.w900,
@@ -484,9 +492,11 @@ class _StoreHealthCard extends StatelessWidget {
                 else
                   Text(
                     error ??
-                        (storeProduct == null
-                            ? 'Selecione um plano para verificar o produto.'
-                            : '${storeProduct.productId} - ${storeProduct.priceLabel}'),
+                        (controller.usesPlayStoreBilling
+                            ? storeProduct == null
+                                  ? 'Selecione um plano para verificar o produto.'
+                                  : '${storeProduct.productId} - ${storeProduct.priceLabel}'
+                            : 'A assinatura nao sera criada pelo backend do app; tente novamente em um aparelho com Google Play.'),
                     style: TextStyle(
                       color: cs.onSurface.withValues(alpha: 0.68),
                       height: 1.35,
@@ -668,11 +678,9 @@ class _SubscribeBottomBar extends StatelessWidget {
                   controller.isActionLoading.value ||
                   controller.isPurchaseLoading.value ||
                   controller.isStoreSyncingPurchase.value,
-              onPressed:
-                  controller.usesPlayStoreBilling &&
-                      !controller.canPurchaseSelectedPlan
-                  ? null
-                  : controller.purchaseSelectedPlan,
+              onPressed: controller.canPurchaseSelectedPlan
+                  ? controller.purchaseSelectedPlan
+                  : null,
             ),
           ),
           if (controller.usesPlayStoreBilling) ...[
